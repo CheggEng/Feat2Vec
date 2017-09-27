@@ -3,8 +3,7 @@ from setuptools import setup
 setup(name='dspytools',
       version='0.0.1',
       description='Feat2Vec Library',
-      author='Luis Armona',
-      author_email='larmona@stanford.edu ',
+      author='Anonymous Author for Peer Review',
       packages=[
                 'feat2vec'
 
