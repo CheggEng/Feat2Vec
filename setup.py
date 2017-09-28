@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='dspytools',
+setup(name='feat2vec',
       version='0.0.1',
       description='Feat2Vec Library',
       author='Anonymous Author for Peer Review',
