@@ -7,9 +7,9 @@ import tensorflow as tf
 import keras
 import re
 from matplotlib import pyplot as plt
-import deepfm
-reload(deepfm)
-from deepfm import DeepFM
+import feat2vec.deepfm
+reload(feat2vec.deepfm)
+from feat2vec.deepfm import DeepFM
 
 from keras.callbacks import EarlyStopping
 from keras.preprocessing import text,sequence
@@ -45,14 +45,11 @@ feature_dim = [len(testdata['cat1'].unique()),len(testdata['cat2'].unique()),1]
 realvals = [False,False,True]
 
 
-
-reload(deepfm)
-from deepfm import DeepFM
-fm_obj = DeepFM(feature_dim, embed_dim, 
+fm_obj = DeepFM(feature_dim, embed_dim,
                  feature_names=features, realval=realvals)
 
 
-fm=fm_obj.build_model(l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True, 
+fm=fm_obj.build_model(l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
     			    deep_out_bias=True, deep_out_activation = 'linear',
     			    deep_weight_groups = ['cat','cat','real'])
 print fm.summary()
@@ -109,7 +106,7 @@ for r in tokens:
 
 vocabsize = len(vocab)
 vocab_indices= {}
-index = 1 
+index = 1
 for v in vocab:
 	vocab_indices[v] = index
 	index+=1
@@ -142,16 +139,16 @@ inputs = [textdata['cat1'],textdata['cat2'],textdata['real1'],pd.Categorical(tex
 
 
 #build deep-in FM
-difm_obj = DeepFM(feature_dim, embed_dim, 
+difm_obj = DeepFM(feature_dim, embed_dim,
                  feature_names=features, realval=realvalued,
                  deepin_feature = deepin,
                  deepin_inputs=deep_inputs,deepin_layers=deep_feature)
 
 tf.set_random_seed(1)
 np.random.seed(1)
-difm=difm_obj.build_model(deep_out=False, 
+difm=difm_obj.build_model(deep_out=False,
                     bias_only = bias_only,
-    			    dropout_input=0, 
+    			    dropout_input=0,
                     dropout_layer=0)
 print difm.summary()
 earlyend = EarlyStopping(monitor='val_loss')

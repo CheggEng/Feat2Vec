@@ -39,6 +39,7 @@ with gzip.open(datadir + 'title.ratings.tsv.gz') as f:
 print ratings.head()
 
 
+
 #plot start year of films
 startyears = pd.to_numeric(titles.startYear,errors='coerce').dropna()
 print startyears.describe()
@@ -75,3 +76,18 @@ plt.hist(votes,bins=np.logspace(0, np.log10(np.max(votes)),100))
 plt.xscale('log')
 plt.savefig(os.path.join(outputdir,'numVotes_hist.pdf'))
 plt.show()
+
+
+
+###store some code here =/
+
+#some summ stats of the data
+for c in ['writers','directors','principalCast']:
+    print c
+    lencounts = df[c].map(lambda x:len(x))
+    print lencounts.describe()
+    plt.hist(lencounts,bins=100, normed=1, histtype='step',
+                           cumulative=True)
+    plt.xlim([0,10])
+    plt.show()
+    print ( lencounts <= 5 ).astype(int).mean()

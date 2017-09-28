@@ -178,7 +178,7 @@ class DeepFM():
             else:
                 ftemp_filtered = ftemp
             factor = Reshape((self.embedding_dimensions,),
-                name="factor_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
+                name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
             factor=None
         #bias term for categ. feature
@@ -217,7 +217,7 @@ class DeepFM():
                   use_bias = False,
                   kernel_regularizer=l2(self.l2_factors),
                   kernel_initializer='normal',
-                  name="factor_{}".format(self.feature_names[feature_index]))(feature_filtered)
+                  name="embedding_{}".format(self.feature_names[feature_index]))(feature_filtered)
 
         else:
             factor=None
