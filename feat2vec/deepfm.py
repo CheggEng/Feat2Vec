@@ -32,10 +32,10 @@ def nce_output_shape(input_shape):
 
 class DeepFM():
     def __init__(self,model_features, feature_dimensions, embedding_dimensions,
-                 feature_names=None, realval=None, obj='ns',
+                 feature_names=None, realval=None, obj='ns',mask_zero=False,
                  deepin_feature=None,deepin_inputs=None, deepin_layers = None):
         """
-        Initializes a Factorization Machine Model
+        Initializes a Deep Factorization Machine Model
         :param model_features: a list of lists of columns for each feature / embedding in the model
         :param feature_dimensions: A list where each entry represents the number of possible values
             a discrete feature has if it is a categorical. Otherwise, if the feature is real-valued, it
@@ -57,7 +57,7 @@ class DeepFM():
             specified in the feature_dimensions list.
         :param deepin_inputs: a list of keras layers, corresponding to each raw input feature for the feature extraction.
             this will be directly input into the keras model as an Input tensor.
-
+        :param mask_zero: a toggle to mask ALL zero values for categoricals as zero vectors
         """
         if realval is None:
             self.realval = [False]*len(feature_dimensions) #default to all categoricals
@@ -74,6 +74,7 @@ class DeepFM():
         self.embedding_dimensions = embedding_dimensions
         assert obj=='ns' or obj=='nce',"obj. function must be negative sampling (ns) or noise contrastive estimation (nce)"
         self.obj = obj
+        self.mask_zero=mask_zero
         #####
         #Deep-in feature indicators
         if deepin_feature == None:
@@ -173,6 +174,7 @@ class DeepFM():
                           embeddings_regularizer=l2(self.l2_factors),
                           input_length=feature_cols,
                           embeddings_initializer='normal',
+                          mask_zero = self.mask_zero,
                           name="embedding_{}".format(self.feature_names[feature_index]))(feature)
             if self.dropout_input > 0:
                 ftemp_filtered = SpatialDropout1D(self.dropout_input,
@@ -181,6 +183,8 @@ class DeepFM():
                 ftemp_filtered = ftemp
             if feature_cols > 1:
                 ftemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_embedding_{}".format(self.feature_names[feature_index]))(ftemp_filtered)
+            if self.mask_zero ==True:
+                ftemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
             factor = Reshape((self.embedding_dimensions,),
                 name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
@@ -190,6 +194,7 @@ class DeepFM():
             btemp = Embedding(input_dim=feature_dim,
                               output_dim=1,
                               input_length=feature_cols,
+                              mask_zero = self.mask_zero,
                               embeddings_regularizer=l2(self.l2_bias),
                               embeddings_initializer='normal',
                               name="bias_{}".format(self.feature_names[feature_index]))(feature)
@@ -199,7 +204,9 @@ class DeepFM():
             else:
                 btemp_filtered = btemp
             if feature_cols > 1:
-                btemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True)/feature_cols, name="avg_bias_{}".format(self.feature_names[feature_index]))(btemp_filtered)
+                btemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_bias_{}".format(self.feature_names[feature_index]))(btemp_filtered)
+            if self.mask_zero ==True:
+                btemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_bias_{}'.format(self.feature_names[feature_index]))(btemp_filtered)
             bias = Reshape((1,),
                            name="bias_{}_reshaped".format(self.feature_names[feature_index]))(btemp_filtered)
         else:

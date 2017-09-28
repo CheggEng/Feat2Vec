@@ -1,17 +1,22 @@
 from . import deepfm
 from . import implicitsampler
+reload(deepfm)
 from implicitsampler import ImplicitSampler,gen_step1_probs
 from deepfm import DeepFM
+
 from keras.optimizers import TFOptimizer
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 import keras
+
 class Feat2Vec:
     def __init__(self,df,model_feature_names,feature_dimensions,model_features,sampling_features,
         embedding_dim,feature_alpha=None,sampling_alpha=None,
         obj='nce', negative_samples=1,  sampling_bias=None,batch_size=None,
         realvalued=None,deepin_feature=None,deepin_inputs=None, deepin_layers = None,
         dropout = 0.,
+        mask_zero=False,
         sampling_items=None, sampling_probs=None,prob_dict=None,**kwargs):
         '''
         Initialize a feat2vec object
@@ -27,6 +32,7 @@ class Feat2Vec:
         self.model_feature_names.append('offset')
         self.model_features.append(['__offset__'])
         self.feature_dimensions.append(1)
+        self.mask_zero=mask_zero
         #sampling parameters
         self.negative_samples=negative_samples
         self.feature_alpha = feature_alpha
@@ -56,7 +62,7 @@ class Feat2Vec:
         deepfm_obj = DeepFM(model_features = self.model_features,
                   feature_dimensions=self.feature_dimensions,
                   embedding_dimensions=self.embedding_dim ,
-                  feature_names=self.model_feature_names, realval=self.realvalued, obj=self.obj,
+                  feature_names=self.model_feature_names, realval=self.realvalued, obj=self.obj, mask_zero = self.mask_zero,
                   deepin_feature=deepin_feature,deepin_inputs=deepin_inputs, deepin_layers = deepin_layers)
         self.model = deepfm_obj.build_model(l2_bias=0.0, l2_factors=0.0, l2_deep=0.0,
                   deep_out=False,
@@ -77,7 +83,7 @@ class Feat2Vec:
                   cache_epoch=False, sample_once=False,prob_dict=prob_dict)
 
     def fit_model(self,epochs=10,num_workers=1,max_queue_size = 1,
-                  optimizer= TFOptimizer(tf.train.AdamOptimizer()),callbacks = [],
+                  optimizer= TFOptimizer(tf.train.AdamOptimizer()),callbacks = None,
                   validation_split=None,validation_generator=None):
         '''
         fits the model. basically just a wrapper for keras fit_generator
@@ -107,22 +113,64 @@ class Feat2Vec:
                       keep_noise_probs=(self.obj=='nce'),prob_dict=self.sampler.prob_dict)
             num_train_steps = sum([1 for e in trainsampler.chunker(traindata,self.batch_size)])
             num_validation_steps = sum([1 for e in validationsampler.chunker(validationdata,self.batch_size)])
+            validation_data = validationsampler.keras_generator()
+            generator = trainsampler.keras_generator()
         elif validation_generator is not None:
             raise ValueError('Unfortunately, this is not implemented yet. =[')
+        elif validation_generator is None:
+            #if we want no validation data
+            validation_data = None
+            num_validation_steps=0
+            generator = self.sampler.keras_generator()
+            num_train_steps = sum([1 for e in self.sampler.chunker(self.df,self.batch_size)])
         #-----------------
         #fit model
         self.model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
-        self.model.fit_generator(generator=trainsampler.keras_generator(),
+        self.model.fit_generator(generator=generator,
             epochs=epochs,steps_per_epoch=num_train_steps,
-            validation_data=validationsampler.keras_generator(),
+            validation_data=validation_data,
             validation_steps=num_validation_steps,
             callbacks=callbacks,
             max_queue_size=max_queue_size,workers=num_workers,
             use_multiprocessing=True)
         print "Done!"
 
-    def get_embeddings(self):
+    def get_embeddings(self,vocab_map = None):
         '''
-        extract embeddings from keras model into a pretty pandas df
+        retrieve embeddings from keras model for each feature value, and export into a pretty df.
+        args:
+
+        vocab_map: an optional dictionaries of dictionaries for each model feature name.
+        the keys should be elements of model_feature_names and should point themselves to dictionaries
+        mapping categories to integers.
         '''
-        print "not ready!"
+        embed_names = ['dim_{}'.format(i) for i in range(1,self.embedding_dim+1)]
+        embeddings = []
+        print self.model_feature_names
+        for idx,l in enumerate(self.model_feature_names):
+            idx = self.model_feature_names.index(l)
+            if l=='offset':
+                continue
+            weights = self.model.get_layer('embedding_{}'.format(l)).get_weights()[0]
+            weights = pd.DataFrame(weights,columns = embed_names)
+            weights['feature'] = l
+            if self.realvalued[idx]:
+                weights['values'] = self.model_features[idx]
+            else:
+                if self.mask_zero:
+                    weights = weights.iloc[1:,:]
+                if vocab_map is None:
+                    if self.mask_zero:
+                        weights['values'] = range(1,self.feature_dimensions[idx])
+                    else:
+                        weights['values'] = range(self.feature_dimensions[idx])
+                else:
+                    reverse_dict = dict([(j,i) for i,j in vocab_map[l].iteritems()])
+                    if self.mask_zero:
+                        weights['values'] = [reverse_dict[i] for i in range(1,self.feature_dimensions[idx])]
+                    else:
+                        weights['values'] = [reverse_dict[i] for i in range(self.feature_dimensions[idx])]
+            embeddings.append(weights)
+        embeddings = pd.concat(embeddings)
+        embeddings = embeddings[['feature','values'] + embed_names]
+        return embeddings

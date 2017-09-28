@@ -10,8 +10,8 @@ import feat2vec
 import keras
 from keras.callbacks import EarlyStopping
 from feat2vec.feat2vec import Feat2Vec
-datadir = '/home/luis/Data/IMDB/'
-#datadir = '/media/luis/hdd3/Data/IMDB/'
+#datadir = '/home/luis/Data/IMDB/'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 
 #load data
 with open(os.path.join(datadir,'imdb_movie_data.p'),'r') as f:
@@ -59,13 +59,21 @@ for c in seqlengths.keys():
 #df['averageRating'] /= 10.
 #define feature space
 genrecols = [c for c in df.columns if c.startswith('genres_')]
-model_features = [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating'],genrecols]
-model_feature_names = ['startYear','isAdult','title','rating','genres']
-feature_dimensions = [np.max(df['tconst'])+1,
-                      np.max(df['startYear'])+1,
+castcols = [c for c in df.columns if c.startswith('principalCast_')]
+directorcols = [c for c in df.columns if c.startswith('directors_')]
+writercols = [c for c in df.columns if c.startswith('writers_')]
+model_features = [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating'],
+                  genrecols,castcols,directorcols,writercols]
+model_feature_names = ['tconst','startYear','isAdult','rating','genres','principalCast','directors','writers']
+feature_dimensions = [ len(vocab_maps['tconst'].keys()),
+                       len(vocab_maps['startYear'].keys()),
                       1,2,
-                      len(vocab_maps['genres'].keys())]
-sampling_features =  [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating'],genrecols]
+                      len(vocab_maps['genres'].keys()),
+                      len(vocab_maps['principalCast'].keys()),
+                      len(vocab_maps['directors'].keys()),
+                      len(vocab_maps['writers'].keys())]
+sampling_features =  [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating'],
+                      genrecols,castcols,directorcols,writercols]
 
 #define some hyperparameters
 batch_size=1000
@@ -73,6 +81,8 @@ feature_alpha=.25
 sampling_alpha=.5
 negative_samples=5
 dim = 100
+earlyend = EarlyStopping(patience=0,monitor='val_loss')
+callbacks=[earlyend]
 reload(feat2vec.feat2vec)
 reload(feat2vec.deepfm)
 import feat2vec
@@ -83,8 +93,12 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     sampling_features=sampling_features,
     embedding_dim=dim,
     dropout=0.,
+    mask_zero=True,
     feature_alpha=feature_alpha,sampling_alpha=sampling_alpha,
     negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
-print f2v.model.summary()
+#print f2v.model.summary()
 f2v.fit_model(epochs=1,validation_split=.1,
-    callbacks = [EarlyStopping(patience=0,monitor=['val_loss'])])
+    callbacks = callbacks)
+
+embeddings = f2v.get_embeddings(vocab_maps)
+embeddings.to_csv(os.path.join(datadir,'imdb_movie_embeddings.csv'),index=False)

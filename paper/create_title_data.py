@@ -6,8 +6,8 @@ import gzip
 import cPickle
 import os
 import matplotlib.pyplot as plt
-datadir = '/home/luis/Data/IMDB/'
-#datadir = '/media/luis/hdd3/Data/IMDB/'
+#datadir = '/home/luis/Data/IMDB/'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 movies_only = True
 #load data
 with gzip.open(datadir + 'title.basics.tsv.gz') as f:
