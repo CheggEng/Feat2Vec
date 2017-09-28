@@ -11,6 +11,7 @@ class Feat2Vec:
         embedding_dim,feature_alpha=None,sampling_alpha=None,
         obj='nce', negative_samples=1,  sampling_bias=None,batch_size=None,
         realvalued=None,deepin_feature=None,deepin_inputs=None, deepin_layers = None,
+        dropout = 0.,
         sampling_items=None, sampling_probs=None,prob_dict=None,**kwargs):
         '''
         Initialize a feat2vec object
@@ -40,7 +41,7 @@ class Feat2Vec:
             self.realvalued = [False]*len(self.model_feature_names)
             for m,d,i in zip(self.model_features,self.feature_dimensions,range(len(self.model_features))):
                 #print m,d,i
-                if len(m)>1 or d==len(m):
+                if  d==len(m):
                     #print "inferring {} is real (not categorical)".format(self.model_feature_names[i])
                     self.realvalued[i]=True
             print "inferred the following values for realvalued arg:",zip(self.model_features,self.realvalued)
@@ -52,14 +53,15 @@ class Feat2Vec:
         embeddings_only[self.model_feature_names.index('offset')] = False
         bias_only=[False]*len(self.model_features)
         bias_only[self.model_feature_names.index('offset')] = True
-        deepfm_obj = DeepFM(feature_dimensions=self.feature_dimensions,
+        deepfm_obj = DeepFM(model_features = self.model_features,
+                  feature_dimensions=self.feature_dimensions,
                   embedding_dimensions=self.embedding_dim ,
                   feature_names=self.model_feature_names, realval=self.realvalued, obj=self.obj,
                   deepin_feature=deepin_feature,deepin_inputs=deepin_inputs, deepin_layers = deepin_layers)
         self.model = deepfm_obj.build_model(l2_bias=0.0, l2_factors=0.0, l2_deep=0.0,
                   deep_out=False,
                   bias_only=bias_only,embeddings_only=embeddings_only,
-                  dropout_input=0.,
+                  dropout_input=dropout,
                   dropout_layer=0.,
                  **kwargs)
         step1_probs = gen_step1_probs(self.model,self.model_feature_names[:-1],self.feature_alpha)
@@ -114,7 +116,7 @@ class Feat2Vec:
             epochs=epochs,steps_per_epoch=num_train_steps,
             validation_data=validationsampler.keras_generator(),
             validation_steps=num_validation_steps,
-            callbacks=[keras.callbacks.EarlyStopping(monitor='val_loss')],
+            callbacks=callbacks,
             max_queue_size=max_queue_size,workers=num_workers,
             use_multiprocessing=True)
         print "Done!"

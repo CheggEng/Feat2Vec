@@ -31,11 +31,12 @@ def nce_output_shape(input_shape):
     return (1)
 
 class DeepFM():
-    def __init__(self, feature_dimensions, embedding_dimensions,
+    def __init__(self,model_features, feature_dimensions, embedding_dimensions,
                  feature_names=None, realval=None, obj='ns',
                  deepin_feature=None,deepin_inputs=None, deepin_layers = None):
         """
         Initializes a Factorization Machine Model
+        :param model_features: a list of lists of columns for each feature / embedding in the model
         :param feature_dimensions: A list where each entry represents the number of possible values
             a discrete feature has if it is a categorical. Otherwise, if the feature is real-valued, it
             indicates the dimensionality of the feature (how many cols)
@@ -68,7 +69,7 @@ class DeepFM():
         else:
             self.feature_names = feature_names
         assert type(self.feature_names)==list and len(self.feature_names) == len(feature_dimensions),            "feature_names must either be a list with length = #features, or None"
-
+        self.model_features = model_features
         self.feature_dimensions = feature_dimensions
         self.embedding_dimensions = embedding_dimensions
         assert obj=='ns' or obj=='nce',"obj. function must be negative sampling (ns) or noise contrastive estimation (nce)"
@@ -164,12 +165,13 @@ class DeepFM():
             feature_index: the position of the feature in question in our list of features
         '''
         feature_dim = self.feature_dimensions[feature_index]
-        feature = Input(batch_shape=(None, 1), name=self.feature_names[feature_index])
+        feature_cols = len(self.model_features[feature_index])
+        feature = Input(batch_shape=(None, feature_cols), name=self.feature_names[feature_index])
         if (self.embedding_dimensions > 0) and (not self.bias_only[feature_index]):
             ftemp = Embedding(input_dim=feature_dim,
                           output_dim=self.embedding_dimensions,
                           embeddings_regularizer=l2(self.l2_factors),
-                          input_length=1,
+                          input_length=feature_cols,
                           embeddings_initializer='normal',
                           name="embedding_{}".format(self.feature_names[feature_index]))(feature)
             if self.dropout_input > 0:
@@ -177,6 +179,8 @@ class DeepFM():
                     name='dropout_embedding_{}'.format(self.feature_names[feature_index]))(ftemp)
             else:
                 ftemp_filtered = ftemp
+            if feature_cols > 1:
+                ftemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_embedding_{}".format(self.feature_names[feature_index]))(ftemp_filtered)
             factor = Reshape((self.embedding_dimensions,),
                 name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
@@ -185,7 +189,7 @@ class DeepFM():
         if not self.embeddings_only[feature_index]:
             btemp = Embedding(input_dim=feature_dim,
                               output_dim=1,
-                              input_length=1,
+                              input_length=feature_cols,
                               embeddings_regularizer=l2(self.l2_bias),
                               embeddings_initializer='normal',
                               name="bias_{}".format(self.feature_names[feature_index]))(feature)
@@ -194,6 +198,8 @@ class DeepFM():
                     name='dropout_biased_{}'.format(self.feature_names[feature_index]))(btemp)
             else:
                 btemp_filtered = btemp
+            if feature_cols > 1:
+                btemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True)/feature_cols, name="avg_bias_{}".format(self.feature_names[feature_index]))(btemp_filtered)
             bias = Reshape((1,),
                            name="bias_{}_reshaped".format(self.feature_names[feature_index]))(btemp_filtered)
         else:
@@ -209,7 +215,7 @@ class DeepFM():
         feature_dim = self.feature_dimensions[feature_index]
         feature = Input(batch_shape=(None, feature_dim), name=self.feature_names[feature_index])
         if self.dropout_input > 0:
-            feature_filtered = Dropout(dropout_input)(feature)
+            feature_filtered = Dropout(self.dropout_input,name='dropout_{}'.format(self.feature_names[feature_index]))(feature)
         else:
             feature_filtered = feature
         if (self.embedding_dimensions > 0) and (not self.bias_only[feature_index]):

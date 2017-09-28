@@ -7,6 +7,8 @@ import cPickle
 import os
 import matplotlib.pyplot as plt
 import feat2vec
+import keras
+from keras.callbacks import EarlyStopping
 from feat2vec.feat2vec import Feat2Vec
 datadir = '/home/luis/Data/IMDB/'
 #datadir = '/media/luis/hdd3/Data/IMDB/'
@@ -56,19 +58,23 @@ for c in seqlengths.keys():
 #df['numVotes'] = df['numVotes']/np.max(df['numVotes'])
 #df['averageRating'] /= 10.
 #define feature space
-model_features = [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating']]
-model_feature_names = ['startYear','isAdult','title','rating']
+genrecols = [c for c in df.columns if c.startswith('genres_')]
+model_features = [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating'],genrecols]
+model_feature_names = ['startYear','isAdult','title','rating','genres']
 feature_dimensions = [np.max(df['tconst'])+1,
                       np.max(df['startYear'])+1,
-                      1,2]
-sampling_features =  [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating']]
+                      1,2,
+                      len(vocab_maps['genres'].keys())]
+sampling_features =  [['tconst'],['startYear'],['isAdult'],['averageRating','mi_rating'],genrecols]
+
 #define some hyperparameters
-batch_size=5000
+batch_size=1000
 feature_alpha=.25
 sampling_alpha=.5
 negative_samples=5
 dim = 100
 reload(feat2vec.feat2vec)
+reload(feat2vec.deepfm)
 import feat2vec
 from feat2vec.feat2vec import Feat2Vec
 f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
@@ -76,8 +82,9 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     model_features=model_features,
     sampling_features=sampling_features,
     embedding_dim=dim,
+    dropout=0.,
     feature_alpha=feature_alpha,sampling_alpha=sampling_alpha,
     negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
 print f2v.model.summary()
-
-f2v.fit_model(epochs=1,validation_split=.5)
+f2v.fit_model(epochs=1,validation_split=.1,
+    callbacks = [EarlyStopping(patience=0,monitor=['val_loss'])])
