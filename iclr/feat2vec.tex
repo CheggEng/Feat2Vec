@@ -4,7 +4,10 @@
 \usepackage{url}
 
 
-\title{Formatting Instructions for ICLR 2018 / \\ Conference Submissions}
+%%% custom packages by JPG and LA:
+\usepackage[most]{tcolorbox}
+
+\title{Feat2Vec: Continuous Representations for Structured Data}
 
 % Authors must not appear in the submitted version. They should be hidden
 % as long as the \iclrfinalcopy macro remains commented out below.
@@ -49,225 +52,80 @@ Address \\
 \maketitle
 
 \begin{abstract}
-The abstract paragraph should be indented 1/2~inch (3~picas) on both left and
-right-hand margins. Use 10~point type, with a vertical spacing of 11~points.
-The word \textsc{Abstract} must be centered, in small caps, and in point size 12. Two
-line spaces precede the abstract. The abstract must be limited to one
-paragraph.
+We implement a novel algorithm using Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features. Motivated by \texttt{word2vec}, this algorithm exploits the structure of a dataframe to more efficiently learn embeddings in a way that is structurally more sensible. This algorithm could be used to create general purpose embeddings for users, products, characteristics, and any other relevant attributes or characteristics that a business or researcher would be interested in representing in a common vector space. Applications include using similarity measures between vectors for recommender systems, importing embeddings into small-data settings that contain rich external information, and dramatically reducing model complexities by fixing in advance parameters for features we have vector representations of, rather than relearning the parameters for a specific task. Using propietary Chegg Data and a public IMDB dataset, we show that \texttt{feat2vec} outperforms \texttt{word2vec} both in recommending similar items to a user known from a left-out dataset, and in learning a prediction model for a new feature that we exclude from the training process.
+
 \end{abstract}
 
-\section{Submission of conference papers to ICLR 2018}
+\section{Introduction}
 
-ICLR requires electronic submissions, processed by
-\url{https://openreview.net/}. See ICLR's website for more instructions.
+\section{Feat2Vec}
+\subsection{Structured Deep Factorization Machine}
 
-If your paper is ultimately accepted, the statement {\tt
-  {\textbackslash}iclrfinalcopy} should be inserted to adjust the
-format to the camera ready requirements.
+\subsection{Sampling}
 
-The format for the submissions is a variant of the NIPS format.
-Please read carefully the instructions below, and follow them
-faithfully.
 
-\subsection{Style}
+The basic idea is how to create a $d$-dimensional vector representations $\phi_i$ of Chegg entities/features $x_i$ that are not targeted towards a specific prediction task. 
+The building block of our model are Factorization Machines \cite{fm}, which scores the likelihood of an observation being labeled positive / negative $Y \in \{0,1\}$ as proportional to the sum of all pairwise interactions of $p$ features embeddings $\vec{\phi}$:
+\[Pr(Y=1|\vec{\phi},\vec{b},\vec{x}) = \sigma(s(\vec{x},\vec{b},\vec{\phi}))=\sigma( b_0 + \sum_{i=1}^p b_i x_i + \sum_{i=1}^p \sum_{j=i+1}^p <\phi_i x_i,\phi_j x_j> ) \]
+where $\vec{b}$ is the vector of all additional bias terms for each feature, along with a general intercept term $b_o$. While bias terms are allowed, we discard them (i.e. set $\vec{b}=\vec{0}$) since we cannot easily transport this inforamtion to other settings. This type of model is typically used to learn latent preferences for products in a market; the archetypal example of this application is learning user preferences of movies on the Netflix Platform\cite{mfRecs}. 
 
-Papers to be submitted to ICLR 2018 must be prepared according to the
-instructions presented here.
+Often, due to the large \# of possible values for a given feature type (i.e. millions of users/movies), it is overwhelmingly costly to feed the model all negative labels, particularly if the model is fairly sparse. A shortcut around this is a concept known as \textit{implicit sampling}, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record. Typically one samples the feature $w$ that define how the negative labels are constructed (i.e. movies a user didn't watch in the Netflix example) from a flattened multionomial distribution $MN(\{w\},\alpha)$: 
+\[Pr(W=w|\mathbf{x},Y=0)  \propto \hat p_w^\alpha,\alpha \in [0,1] \] 
+here $\hat p_b$  is the empirical frequency of the $w$ in the dataset, and $\alpha$ is a flattening hyperparameter. This distribution is actually quite general, with $\alpha=1$ corresponding to the empirical frequency distribution, and $\alpha=0$ to a uniform distribution across books.
 
-%% Please note that we have introduced automatic line number generation
-%% into the style file for \LaTeXe. This is to help reviewers
-%% refer to specific lines of the paper when they make their comments. Please do
-%% NOT refer to these line numbers in your paper as they will be removed from the
-%% style file for the final version of accepted papers.
 
-Authors are required to use the ICLR \LaTeX{} style files obtainable at the
-ICLR website. Please make sure you use the current files and
-not previous versions. Tweaking the style files may be grounds for rejection.
+Our project extends this application by introducing a new implicit sampling method that allows researchers to learn unsupervised embeddings. We can learn the correlation structure within a dataset without any positive or negative labels, simply by generating ``unobserved'' records as our negative sample. I now discuss our method.
 
-\subsection{Retrieval of style files}
-
-The style files for ICLR and other conference information are available on the World Wide Web at
-\begin{center}
-   \url{http://www.iclr.cc/}
-\end{center}
-The file \verb+iclr2018_conference.pdf+ contains these
-instructions and illustrates the
-various formatting requirements your ICLR paper must satisfy.
-Submissions must be made using \LaTeX{} and the style files
-\verb+iclr2018_conference.sty+ and \verb+iclr2018_conference.bst+ (to be used with \LaTeX{}2e). The file
-\verb+iclr2018_conference.tex+ may be used as a ``shell'' for writing your paper. All you
-have to do is replace the author, title, abstract, and text of the paper with
-your own.
-
-The formatting instructions contained in these style files are summarized in
-sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
-
-\section{General formatting instructions}
-\label{gen_inst}
-
-The text must be confined within a rectangle 5.5~inches (33~picas) wide and
-9~inches (54~picas) long. The left margin is 1.5~inch (9~picas).
-Use 10~point type with a vertical spacing of 11~points. Times New Roman is the
-preferred typeface throughout. Paragraphs are separated by 1/2~line space,
-with no indentation.
-
-Paper title is 17~point, in small caps and left-aligned.
-All pages should start at 1~inch (6~picas) from the top of the page.
-
-Authors' names are
-set in boldface, and each name is placed above its corresponding
-address. The lead author's name is to be listed first, and
-the co-authors' names are set to follow. Authors sharing the
-same address can be on the same line.
-
-Please pay special attention to the instructions in section \ref{others}
-regarding figures, tables, acknowledgments, and references.
-
-\section{Headings: first level}
-\label{headings}
-
-First level headings are in small caps,
-flush left and in point size 12. One line space before the first level
-heading and 1/2~line space after the first level heading.
-
-\subsection{Headings: second level}
-
-Second level headings are in small caps,
-flush left and in point size 10. One line space before the second level
-heading and 1/2~line space after the second level heading.
-
-\subsubsection{Headings: third level}
-
-Third level headings are in small caps,
-flush left and in point size 10. One line space before the third level
-heading and 1/2~line space after the third level heading.
-
-\section{Citations, figures, tables, references}
-\label{others}
-
-These instructions apply to everyone, regardless of the formatter being used.
-
-\subsection{Citations within the text}
-
-Citations within the text should be based on the \texttt{natbib} package
-and include the authors' last names and year (with the ``et~al.'' construct
-for more than two authors). When the authors or the publication are
-included in the sentence, the citation should not be in parenthesis (as
-in ``See \citet{Hinton06} for more information.''). Otherwise, the citation
-should be in parenthesis (as in ``Deep learning shows promise to make progress towards AI~\citep{Bengio+chapter2007}.'').
-
-The corresponding references are to be listed in alphabetical order of
-authors, in the \textsc{References} section. As to the format of the
-references themselves, any style is acceptable as long as it is used
-consistently.
-
-\subsection{Footnotes}
-
-Indicate footnotes with a number\footnote{Sample of the first footnote} in the
-text. Place the footnotes at the bottom of the page on which they appear.
-Precede the footnote with a horizontal rule of 2~inches
-(12~picas).\footnote{Sample of the second footnote}
-
-\subsection{Figures}
-
-All artwork must be neat, clean, and legible. Lines should be dark
-enough for purposes of reproduction; art work should not be
-hand-drawn. The figure number and caption always appear after the
-figure. Place one line space before the figure caption, and one line
-space after the figure. The figure caption is lower case (except for
-first word and proper nouns); figures are numbered consecutively.
-
-Make sure the figure caption does not get separated from the figure.
-Leave sufficient space to avoid splitting the figure and figure caption.
-
-You may use color figures.
-However, it is best for the
-figure captions and the paper body to make sense if the paper is printed
-either in black/white or in color.
-\begin{figure}[h]
-\begin{center}
-%\framebox[4.0in]{$\;$}
-\fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-\end{center}
-\caption{Sample figure caption.}
+We start with a dataset $S$ of records with $p$ features. Features need not be individual numeric columns, but instead can be multiple columns that are sensibly grouped together (say, grouping non-mutually exclusive indicators for comedy,action,drame film as a ``genre'' feature), or even images and text\footnote{this requires usage of \textit{deep-in} Factorization Machines, an extension created by Ralph and Jose previously. It would involve building intermediate layers (e.g. convolutional layers) to map a image/text to a vector}. Often, they are categories, such as user ID, movie ID, book ID, etc. We then mark all observed records as positive, and for each positive record, we generate $k$ negative labels using the following 2-step algorithm:
+\\ \\
+\begin{figure}
+\begin{tcolorbox}
+\noindent$\texttt{for }  s \in S \{$
+\begin{enumerate}
+	\item randomly choose  one of the features to alter for the negative samples from a multinomial over the feature types
+	$ f_s \sim \text{MN}(\{|\vec{\phi}|_i\}_{i=1}^p,\alpha_1) $, where $|\vec{\phi}|_i$ denotes the number of parameters associated with feature $i$, representing the feature's relative complexity.
+	\item $\texttt{for } (j \in 1,\ldots,k)$
+	\begin{itemize}
+		\item Assign the negative label an attribute from noise distribution $x_{s,j} \sim \text{MN}(\mathrm{X}_{f_s},\alpha)$, where $\text{MN}(\mathrm{X}_{f_s},\alpha_2)$ is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $f_s$.
+	\end{itemize}
+	$\}$
+\end{enumerate}
+$\}$
+\end{tcolorbox}
+\caption{2-step algorithm for sampling negative label data}
 \end{figure}
+%we should make note at some point of the impossible interpretability of ``intermediately'' populated features/values because of the wierd hyperbolic shape
+%of the probability over alpha (not a mix of alpha=0 to alpha=1). See plot I shared with Jose.
+Explained in words, our negative sampling method is to randomly select one of the features, and choose another value for it from a noise distribution $q()$ (here, the empirical flattened multinomial distribution is our noise distribution). Of course, this method will sometimes by chance generate observations with negative labels that \textit{do} in fact exist in our sample of observed records. For this reason, among others, we employ  a technique known as noise contrastive estimation\cite{nce} which uses basic probability laws to adjust the structural statistical model $Pr(Y=1|\vec{\phi},\vec{x})$ to account for the possibility of random negative labels that appear identical to positively labeled data. An additional burden of this method, however, is we need to learn additional nuisance parameters $Z_{\vec{x}}$ for each unique record type $\vec{x}$ that transform the score function $s(.)$ into a well-behaved probability distribution that integrates to 1. This introduces an astronomical amount of new parameters and greatly increase the complexity of the model. Instead of estimating these, we appeal to the work of \cite{fastnnlang}, who show in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.\footnote{\cite{fastnnlang} suggests one can set the normalizing constant to 1 because the neural net model has enough free parameters that it will effectively just learn the probabilities itself so that it does not over/under predict the probabilities on average (since that will result in penalties on the loss function). Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about astronomically low probabilities.}  Written explicitly, the new structural probability model is just:
+\[Pr(Y=1|\vec{\phi},\vec{x}) = \frac{e^{s(\vec{x}_i,\vec{\phi}) })}{e^{s(\vec{x}_i,\vec{\phi}) } + q(\vec{x}_i) }\]
 
-\subsection{Tables}
-
-All tables must be centered, neat, clean and legible. Do not use hand-drawn
-tables. The table number and title always appear before the table. See
-Table~\ref{sample-table}.
-
-Place one line space before the table title, one line space after the table
-title, and one line space after the table. The table title must be lower case
-(except for first word and proper nouns); tables are numbered consecutively.
-
-\begin{table}[t]
-\caption{Sample table title}
-\label{sample-table}
-\begin{center}
-\begin{tabular}{ll}
-\multicolumn{1}{c}{\bf PART}  &\multicolumn{1}{c}{\bf DESCRIPTION}
-\\ \hline \\
-Dendrite         &Input terminal \\
-Axon             &Output terminal \\
-Soma             &Cell body (contains cell nucleus) \\
-\end{tabular}
-\end{center}
-\end{table}
-
-\section{Final instructions}
-Do not change any aspects of the formatting parameters in the style files.
-In particular, do not modify the width or length of the rectangle the text
-should fit into, and do not change font sizes (except perhaps in the
-\textsc{References} section; see below). Please note that pages should be
-numbered.
-
-\section{Preparing PostScript or PDF files}
-
-Please prepare PostScript or PDF files with paper size ``US Letter'', and
-not, for example, ``A4''. The -t
-letter option on dvips will produce US Letter files.
-
-Consider directly generating PDF files using \verb+pdflatex+
-(especially if you are a MiKTeX user).
-PDF figures must be substituted for EPS figures, however.
-
-Otherwise, please generate your PostScript and PDF files with the following commands:
-\begin{verbatim}
-dvips mypaper.dvi -t letter -Ppdf -G0 -o mypaper.ps
-ps2pdf mypaper.ps mypaper.pdf
-\end{verbatim}
-
-\subsection{Margins in LaTeX}
-
-Most of the margin problems come from figures positioned by hand using
-\verb+\special+ or other commands. We suggest using the command
-\verb+\includegraphics+
-from the graphicx package. Always specify the figure width as a multiple of
-the line width as in the example below using .eps graphics
-\begin{verbatim}
-   \usepackage[dvips]{graphicx} ...
-   \includegraphics[width=0.8\linewidth]{myfile.eps}
-\end{verbatim}
-or % Apr 2009 addition
-\begin{verbatim}
-   \usepackage[pdftex]{graphicx} ...
-   \includegraphics[width=0.8\linewidth]{myfile.pdf}
-\end{verbatim}
-for .pdf graphics.
-See section~4.4 in the graphics bundle documentation (\url{http://www.ctan.org/tex-archive/macros/latex/required/graphics/grfguide.ps})
-
-A number of width problems arise when LaTeX cannot properly hyphenate a
-line. Please give LaTeX hyphenation hints using the \verb+\-+ command.
+We can show, with relatively little effort,that our 2-step sampler has some interesting theoretical properties. Namely, the embeddings learned under this model will be equivalent to a convex combination of the embeddings learned from $p$ individual Factorization Machines. We show this in a short proof below. let $S_f$ denote the records whose corresponding negative samples resample feature $f$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the \texttt{feat2vec} model, as follows:
 
 
-\subsubsection*{Acknowledgments}
+\begin{align*}
+ L(\vec{\mathbf{x}} | \vec{\phi} ) & =  \frac{1}{|S|} \sum_{i \in S} \Big(\log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x_i}}  ) ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(\vec{\mathbf{x_i}})}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x_{j}}})) \Big) \\
+ & = \frac{1}{|S|} \sum_{i \in S} \Big( \log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x_i}}, i \in S_f )p(i \in S_f) ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(\vec{\mathbf{x_i}})}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x_{j}}},i \in S_f)p(i \in S_f)) \Big) \\
+  & = \frac{1}{|S|}\sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + q(\vec{\mathbf{x}}_i | i \in S_f) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(\vec{\mathbf{x_i}} | i \in S_f)}^k \log(\frac{ q(\vec{\mathbf{x}}_{j} | i \in S_f)p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + q(\vec{\mathbf{x}}_{j}| i \in S_f)}) \Big) \\
+  & = \frac{1}{|S|}\sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + q(\vec{\mathbf{x}}_i | i \in S_f) }) + \log(p(i \in S_f)^{k+1})\\
+  &   +  \sum_{\vec{\mathbf{x}}_{j} \sim q(\vec{\mathbf{x_i}} | i \in S_f)}^k \log(\frac{ q(\vec{\mathbf{x}}_{j} | i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + q(\vec{\mathbf{x}}_{j}| i \in S_f)})   \Big) \\
+   & \propto \frac{1}{|S|} \sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + q(x_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(\vec{\mathbf{x_i}} | i \in S_f)}^k \log(\frac{ q(x_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + q(x_{j,f})}) \Big) \\
+   & \xrightarrow[|S|\rightarrow \infty]{ }   \sum_{f=1}^p p(i \in S_f) E\Big[ \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + q(x_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(\vec{\mathbf{x_i}} | i \in S_f)}^k \log(\frac{ q(x_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + q(x_{j,f})}) \Big] \\
+   & = \sum_{f=1}^p p(i \in S_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]
+\end{align*}
+where the third to last line drops the probability of assignment to a feature type term since it is outside of the model parameters $\vec{\phi}$ and fixed in advance.
+Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient. Thus it will learn a convex combination of the embeddings for each classifier, with weights proportional to the feature type sampling probabilities in step 1. of the sampling algorithm.
 
-Use unnumbered third level headings for the acknowledgments. All
-acknowledgments, including those to funding agencies, go at the end of the paper.
+\section{Empirical Results}
 
-\bibliography{iclr2018_conference}
+
+\section{Relation to Prior Work}
+
+
+\section{Conclusion}
+
+
+
+\bibliography{joseg}
 \bibliographystyle{iclr2018_conference}
 
 \end{document}
