@@ -2,12 +2,19 @@
 \usepackage{iclr2018_conference,times}
 \usepackage{hyperref}
 \usepackage{url}
+\usepackage{amssymb}
 
 
 %%% custom packages by JPG and LA:
 \usepackage[most]{tcolorbox}
+\usepackage{amsmath}
+\usepackage{soul}
+\newcommand{\vect}[1]{\vec{#1}}
+\newcommand{\dotp}{\boldsymbol{\cdot} }
+\renewcommand{\cite}[1]{\citep{#1}}
 
-\title{Feat2Vec: Continuous Representations for Structured Data}
+
+\title{Feat2Vec: Continuous Representations for Data with Structured Features}
 
 % Authors must not appear in the submitted version. They should be hidden
 % as long as the \iclrfinalcopy macro remains commented out below.
@@ -52,8 +59,16 @@ Address \\
 \maketitle
 
 \begin{abstract}
-We implement a novel algorithm using Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features. Motivated by \texttt{word2vec}, this algorithm exploits the structure of a dataframe to more efficiently learn embeddings in a way that is structurally more sensible. This algorithm could be used to create general purpose embeddings for users, products, characteristics, and any other relevant attributes or characteristics that a business or researcher would be interested in representing in a common vector space. Applications include using similarity measures between vectors for recommender systems, importing embeddings into small-data settings that contain rich external information, and dramatically reducing model complexities by fixing in advance parameters for features we have vector representations of, rather than relearning the parameters for a specific task. Using propietary Chegg Data and a public IMDB dataset, we show that \texttt{feat2vec} outperforms \texttt{word2vec} both in recommending similar items to a user known from a left-out dataset, and in learning a prediction model for a new feature that we exclude from the training process.
+Methods that calculate dense embeddings of unstructured data have proven to be very successful for knowledge representation.
+Surprisingly, very little work has focused on methods that leverage the internal structure of the data, such as when there are features that  group into different types.
 
+In this paper, we propose Feat2vec as an algorithm that learns a continuous representation for a list of features, where each feature exists in a different higher-dimensional space. 
+Feat2Vec is a novel method that is able  to represent the different features in a common space. 
+We demonstrate our work on two datasets.  
+The first one is collected from a leading educational technology firm, and we discover a common continuous space for universities, courses, textbooks and students.  
+The second dataset is the public IMDB dataset, and we discover embeddings for actors, movies and producers. 
+Our empirical experiments suggest that Feat2Vec significantly outperforms existing algorithms that discover embeddings from unstructured data.
+ 
 \end{abstract}
 
 \section{Introduction}
@@ -61,13 +76,59 @@ We implement a novel algorithm using Factorization Machines with implicit sampli
 \section{Feat2Vec}
 \subsection{Structured Deep Factorization Machine}
 
+Feat2Vec relies on Structured Deep-In Factorization Machine, which we describe in detail in a companion paper \cite{deepfm}.
+For brevity, we just explain it as an extension to Factorization Machine~\cite{rendle2010factorization}, which is a binary classifier that scores the likelihood of an observation $\vect{x} \in \mathbb{R}^n$ being labeled  $y \in \{0,1\}$, as proportional to the sum of all pairwise interactions:
+
+\begin{align}
+%\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})= 
+p \bigl(\hat{y}=1| \vect{\vphantom{\phi}x}  \bigr ) &= 
+\sigma \biggl( 
+                       \sum_{i =1}^{n} \sum_{j=i}^{n}  \langle   \vect{x}_i,   \vect{x}_j \rangle
+  \biggr)
+\end{align}
+Here, $\sigma$ is the sigmoid activation:
+\begin{equation}
+\sigma(x) = \log \left(\frac{\exp(x)}{\exp(x+1)} \right)
+\end{equation}
+
+Structured Deep-In Factorization Machine extends this model in two ways:
+\begin{itemize}
+\item \textbf{Structured features}.
+Feature vectors  may have some latent structure that is known before hand.
+For example, consider multiple discrete entity types, like universities, students, and books.
+To model this data, one would typically concatenate the one-hot encoding representation of each entity into a single feature vector. 
+However, Factorization Machine does not make use of the information that a particular dimension of the feature vector belongs to an entity type.
+\item \textbf{Automatic feature extraction}. \hl{complete}
+\end{itemize}
+
+To address this, Structured Deep-In Factorization Machine defines $G$ as a set of sets that defines groups of features. 
+Instead of a feature interacting with all other features, they interact with features from different groups.
+For example, consider a model with four features ($n=4$).
+If we define G as:
+$
+G = \{ \{1, 2 \}, \{ 3 , 4 \} \}
+$.
+The structure would not allow $x_1$ to interact with $x_2$, or $x_3$ to interact with $x_4$.
+Additionally, for each group of features, the model would apply a feature extraction function $phi$ that calculates \hl{blah}.
+More formally, this is:
+\begin{align}
+%\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})= 
+p \bigl(\hat{y}=1| \vect{\vphantom{\phi}x};  \vect{\phi}, \vect{\vphantom{\phi}G}, \bigr ) &= 
+\sigma \biggl( 
+                       \sum_{i =1}^{|\vect{G}|} \sum_{j=i}^{|{G}|}  \langle  \phi_i( {x}_{G_i}),  \phi_j( \vect{x}_{G_j}) \rangle
+  \biggr)
+\end{align}
+In this notation, $\vect{x}_{G_i}$ is a vector that contains all of the features that belong to the group $G_i$.
+Thus, $x_{G_i} =  \{ x_k | i \in G_i\}$. 
+Here, $\phi_i$ is a feature extraction feature that inputs the $i$-th feature group of the instance, and returns an embedding.
+The simplest implementation is a fully-connected layer (input size  $|\vect{G}_i|$, and output size $r$).
+
+
+
+
 \subsection{Sampling}
 
 
-The basic idea is how to create a $d$-dimensional vector representations $\phi_i$ of Chegg entities/features $x_i$ that are not targeted towards a specific prediction task. 
-The building block of our model are Factorization Machines \cite{fm}, which scores the likelihood of an observation being labeled positive / negative $Y \in \{0,1\}$ as proportional to the sum of all pairwise interactions of $p$ features embeddings $\vec{\phi}$:
-\[Pr(Y=1|\vec{\phi},\vec{b},\vec{x}) = \sigma(s(\vec{x},\vec{b},\vec{\phi}))=\sigma( b_0 + \sum_{i=1}^p b_i x_i + \sum_{i=1}^p \sum_{j=i+1}^p <\phi_i x_i,\phi_j x_j> ) \]
-where $\vec{b}$ is the vector of all additional bias terms for each feature, along with a general intercept term $b_o$. While bias terms are allowed, we discard them (i.e. set $\vec{b}=\vec{0}$) since we cannot easily transport this inforamtion to other settings. This type of model is typically used to learn latent preferences for products in a market; the archetypal example of this application is learning user preferences of movies on the Netflix Platform\cite{mfRecs}. 
 
 Often, due to the large \# of possible values for a given feature type (i.e. millions of users/movies), it is overwhelmingly costly to feed the model all negative labels, particularly if the model is fairly sparse. A shortcut around this is a concept known as \textit{implicit sampling}, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record. Typically one samples the feature $w$ that define how the negative labels are constructed (i.e. movies a user didn't watch in the Netflix example) from a flattened multionomial distribution $MN(\{w\},\alpha)$: 
 \[Pr(W=w|\mathbf{x},Y=0)  \propto \hat p_w^\alpha,\alpha \in [0,1] \] 
