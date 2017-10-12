@@ -18,6 +18,7 @@ setup(name='feat2vec',
       install_requires=[
                      "tensorflow>=1.1.0",
                      "keras>=2.0.8",
+                     "dask>=0.15.0", 
                      "pandas>=0.19.2"
                      "numpy>=1.13.1"
                      "tables>=3.3.0"
