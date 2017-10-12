@@ -71,7 +71,7 @@ class DeepFM():
 
         self.feature_dimensions = feature_dimensions
         self.embedding_dimensions = embedding_dimensions
-        assert obj=='ns' or obj=='nce',"obj. function must be negative sampling (ns) or noise contrastive estimation (nce)"
+        assert obj=='ns' or obj=='nce' or obj=='linear', "obj. function must be negative sampling (ns) or noise contrastive estimation (nce), or linear"
         self.obj = obj
         #####
         #Deep-in feature indicators
@@ -372,6 +372,8 @@ class DeepFM():
             output_layer = bias_term  # Lambda(lambda x: K.sum(x, axis=-1, keepdims=True), name="output_layer")(biases)
         if self.obj=='ns':
             output = Reshape((1,),name='final_output')(Activation('sigmoid', name="sigmoid")(output_layer))
+        elif self.obj=="linear":
+            output = Reshape((1,), name='final_output')(Activation('linear', name="linear")(output_layer))
         elif self.obj=='nce':
             noise_probs = Input(batch_shape=(None, 1), name='noise_probs')
             features.append(noise_probs)  
