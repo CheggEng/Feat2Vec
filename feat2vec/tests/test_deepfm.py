@@ -42,10 +42,11 @@ class TestDeepFM(TestCase):
         feature_dim = [len(testdata['cat1'].unique()), len(testdata['cat2'].unique()), 1]
         realvals = [False, False, True]
 
-        fm_obj = DeepFM(feature_dim, embed_dim,
+        fm_obj = DeepFM(feature_dim,
                         feature_names=features, realval=realvals)
 
-        fm = fm_obj.build_model(l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
+        fm = fm_obj.build_model(embed_dim,
+                                l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
                                 deep_out_bias=True, deep_out_activation='linear',
                                 deep_weight_groups=['cat', 'cat', 'real'])
         print fm.summary()
@@ -142,14 +143,15 @@ class TestDeepFM(TestCase):
                   sequence_mat]
 
         # build deep-in FM
-        difm_obj = DeepFM(feature_dim, embed_dim,
+        difm_obj = DeepFM(feature_dim,
                           feature_names=features, realval=realvalued,
                           deepin_feature=deepin,
                           deepin_inputs=deep_inputs, deepin_layers=deep_feature)
 
         tf.set_random_seed(1)
         np.random.seed(1)
-        difm = difm_obj.build_model(deep_out=False,
+        difm = difm_obj.build_model(embed_dim,
+                                    deep_out=False,
                                     bias_only=bias_only,
                                     dropout_input=0,
                                     dropout_layer=0)
@@ -163,7 +165,7 @@ class TestDeepFM(TestCase):
         # now add a deep-out layer for the interactions
         tf.set_random_seed(1)
         np.random.seed(1)
-        diofm = difm_obj.build_model(deep_out=True)
+        diofm = difm_obj.build_model(embed_dim, deep_out=True)
         # print diofm.summary()
         earlyend = EarlyStopping(monitor='val_loss')
         diofm.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())

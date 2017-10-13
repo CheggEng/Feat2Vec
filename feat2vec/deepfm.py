@@ -31,7 +31,7 @@ def nce_output_shape(input_shape):
     return (1)
 
 class DeepFM():
-    def __init__(self, feature_dimensions, embedding_dimensions, 
+    def __init__(self, feature_dimensions,
                  feature_names=None, realval=None, obj='ns',
                  deepin_feature=None,deepin_inputs=None, deepin_layers = None):
         """
@@ -39,10 +39,6 @@ class DeepFM():
         :param feature_dimensions: A list where each entry represents the number of possible values  
             a discrete feature has if it is a categorical. Otherwise, if the feature is real-valued, it 
             indicates the dimensionality of the feature (how many cols)
-        :param embedding_dimensions: The number of dimensions of the embeddings
-         (just a number)
-         If zero, only biases will be used, and there will be no embeddings.
-         If you only have one feature, this MUST be zero (because there are no interactions)
         :param feature_names: the names of the features to be used in the training sample
         :param realval: whether or not features are real-valued:
         (either True or False which indicates all are Real-valued or categories/indices, respectively,
@@ -70,7 +66,7 @@ class DeepFM():
         assert type(self.feature_names)==list and len(self.feature_names) == len(feature_dimensions),            "feature_names must either be a list with length = #features, or None"
 
         self.feature_dimensions = feature_dimensions
-        self.embedding_dimensions = embedding_dimensions
+
         assert obj=='ns' or obj=='nce' or obj=='linear', "obj. function must be negative sampling (ns) or noise contrastive estimation (nce), or linear"
         self.obj = obj
         #####
@@ -209,7 +205,7 @@ class DeepFM():
         feature_dim = self.feature_dimensions[feature_index]
         feature = Input(batch_shape=(None, feature_dim), name=self.feature_names[feature_index])
         if self.dropout_input > 0:
-            feature_filtered = Dropout(dropout_input)(feature)
+            feature_filtered = Dropout(self.dropout_input)(feature)
         else:
             feature_filtered = feature
         if (self.embedding_dimensions > 0) and (not self.bias_only[feature_index]):
@@ -268,6 +264,7 @@ class DeepFM():
                                 bias_regularizer=l2(self.l2_deep))(factors_term)
         return factors_revised
     def build_model(self,
+                    embedding_dimensions,
                     l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True, 
                     bias_only=None,embeddings_only=None,deep_weight_groups=None,
                     deep_out_bias=True, deep_out_activation = 'linear',
@@ -276,6 +273,10 @@ class DeepFM():
                     **kwargs):
         """
         Builds the FM model in Keras Network
+        :param embedding_dimensions: The number of dimensions of the embeddings
+         (just a number)
+         If zero, only biases will be used, and there will be no embeddings.
+         If you only have one feature, this MUST be zero (because there are no interactions)
         :param l2_bias: L2 regularization for bias terms
         :param l2_factors: L2 regularization for interaction terms
         :param l2_deep: L2 regularization for the deep layer
@@ -295,6 +296,8 @@ class DeepFM():
         :param kwargs: any additional arguments passed directly to the Model Keras class initializer
         Returns a Keras model
         """
+        self.embedding_dimensions = embedding_dimensions # This shouldn't be in the constructor, but maybe shouldn' be an instance variable either
+
         self.check_build_params(l2_bias, l2_factors, l2_deep,bias_only,embeddings_only,deep_weight_groups,
                     deep_out_bias, deep_out_activation,
                     dropout_input, 
