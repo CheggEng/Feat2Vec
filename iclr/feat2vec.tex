@@ -14,7 +14,7 @@
 \renewcommand{\cite}[1]{\citep{#1}}
 
 
-\title{Feat2Vec: Continuous Representations for Structured Features}
+\title{Feat2Vec: Continuous Representations for Datasets with Features}
 
 % Authors must not appear in the submitted version. They should be hidden
 % as long as the \iclrfinalcopy macro remains commented out below.
@@ -59,19 +59,35 @@ Address \\
 \maketitle
 
 \begin{abstract}
-Methods that calculate dense embeddings of unstructured data have proven to be very successful for knowledge representation.
-Surprisingly, very little work has focused on methods that leverage the internal structure of the data, such as when there are features that  group into different types.
+Methods that calculate dense embeddings for features in unstructured data--such as words in a document--have proven to be very successful for knowledge representation.
+Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---this is, not just words.
 
-In this paper, we propose Feat2vec as an algorithm that learns a continuous representation for a list of features, where each feature exists in a different higher-dimensional space. 
-Feat2Vec is a novel method that is able  to represent the different features in a common space. 
+We study how to estimate a continuous representation for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space. 
+Feat2Vec is a novel method that is able  to represent the different feature types in a common space. 
 We demonstrate our work on two datasets.  
-The first one is collected from a leading educational technology firm, and we discover a common continuous space for universities, courses, textbooks and students.  
-The second dataset is the public IMDB dataset, and we discover embeddings for actors, movies and producers. 
-Our empirical experiments suggest that Feat2Vec significantly outperforms existing algorithms that discover embeddings from unstructured data.
+The first one is collected from a leading educational technology firm, and thus we are able to discover a common continuous space for entities such as universities, courses, textbooks and students.  
+The second dataset is the public IMDB dataset, and we discover embeddings for entities that include actors, movies and producers. 
+Our empirical experiments suggest that Feat2Vec significantly outperforms existing algorithms that do not leverage the structure of the data.
  
 \end{abstract}
 
-\section{Introduction}
+\section{Preliminaries}
+Consider datapoints  $\vect{x} \in \mathbb{R}^n$ drawn from high-dimensional space.
+For example, these datapoints can be words from a vocabulary of size $n$, and in such case, $\vect{x}$ would be sparse because words and other categorical variables are typically modeled in one-hot encoding.
+Informally, an \textit{embedding} function finds a a vector $\vect{y} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation $\vect{x}$, and can be used to replace the original vector  in downstream prediction tasks.
+Embeddings are often used to compress sparse categorical variables, and they result into continuous representation of them.
+For example,  in a continuous vector space of words,   semantically similar words are mapped to nearby points.
+
+Word2vec is an extremely successful software package that contains a suite of embedding functions~\cite{mikolov2013efficient,mikolov2013distributed}  for natural language.
+\begin{align}
+\text{Word2Vec}(\vect{x}):&  \{ \vect{x} \in \mathbb{R}^n \rightarrow  \mathbb{R}^r \}
+\intertext{On the other hand}
+\text{Feat2Vec}(\vect{x}): & \{ \vect{x} \in \langle \mathbb{R}^{d_1}, \mathbb{R}^{d_2}, \dots \mathbb{R}^{d_n} \rangle \rightarrow \mathbb{R}^r \}
+\end{align}
+
+
+
+
 
 \section{Feat2Vec}
 \subsection{Structured Deep Factorization Machine}
