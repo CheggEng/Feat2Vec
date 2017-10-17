@@ -80,6 +80,7 @@ class DeepFM():
         if deepin_feature == None:
             self.deepin_feature = [False]*len(feature_dimensions) #default to all categoricals
         else:
+            print len(deepin_feature),len(feature_dimensions)
             assert len(deepin_feature) == len(feature_dimensions), "must provide boolean list w/ length=#features"
             self.deepin_feature = deepin_feature
 

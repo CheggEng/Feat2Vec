@@ -16,7 +16,7 @@ class Feat2Vec:
         obj='nce', negative_samples=1,  sampling_bias=None,batch_size=None,
         realvalued=None,deepin_feature=None,deepin_inputs=None, deepin_layers = None,
         dropout = 0.,
-        mask_zero=False,
+        mask_zero=False,step1_probs=None,
         sampling_items=None, sampling_probs=None,prob_dict=None,**kwargs):
         '''
         Initialize a feat2vec object
@@ -27,10 +27,16 @@ class Feat2Vec:
         self.model_features = [i for i in model_features]
         self.sampling_features = [i for i in sampling_features]
         self.model_feature_names = [i for i in model_feature_names]
+        self.deepin_feature = [i for i in deepin_feature]
+        self.deepin_inputs = deepin_inputs
+        self.deepin_layers = deepin_layers
+        self.step1_probs = step1_probs
         #add intercept term
         self.df['__offset__'] = 1
         self.model_feature_names.append('offset')
         self.model_features.append(['__offset__'])
+        if self.deepin_feature is not None:
+            self.deepin_feature.append(False)
         self.feature_dimensions.append(1)
         self.mask_zero=mask_zero
         #sampling parameters
@@ -63,21 +69,22 @@ class Feat2Vec:
                   feature_dimensions=self.feature_dimensions,
                   embedding_dimensions=self.embedding_dim ,
                   feature_names=self.model_feature_names, realval=self.realvalued, obj=self.obj, mask_zero = self.mask_zero,
-                  deepin_feature=deepin_feature,deepin_inputs=deepin_inputs, deepin_layers = deepin_layers)
+                  deepin_feature=self.deepin_feature,deepin_inputs=deepin_inputs, deepin_layers = deepin_layers)
         self.model = deepfm_obj.build_model(l2_bias=0.0, l2_factors=0.0, l2_deep=0.0,
                   deep_out=False,
                   bias_only=bias_only,embeddings_only=embeddings_only,
                   dropout_input=dropout,
                   dropout_layer=0.,
                  **kwargs)
-        step1_probs = gen_step1_probs(self.model,self.model_feature_names[:-1],self.feature_alpha)
+        if self.step1_probs is None:
+            self.step1_probs = gen_step1_probs(self.model,self.model_feature_names[:-1],self.feature_alpha)
 
         self.sampler = ImplicitSampler( df, negative_samples=self.negative_samples,
                   sampling_features=self.sampling_features,model_features=self.model_features,
                   sampling_items=sampling_items, sampling_probs=sampling_probs,
                   batch_size=batch_size,
                   sampling_strategy=None, sampling_alpha=self.sampling_alpha,sampling_bias=sampling_bias,
-                  oversampler='twostep',init_probs = step1_probs,
+                  oversampler='twostep',init_probs = self.step1_probs,
                   keep_noise_probs=(self.obj=='nce'),
                   text_dict=None,text_cutoff=None,
                   cache_epoch=False, sample_once=False,prob_dict=prob_dict)
@@ -126,7 +133,7 @@ class Feat2Vec:
         #-----------------
         #fit model
         self.model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
-        self.model.fit_generator(generator=generator,
+        history = self.model.fit_generator(generator=generator,
             epochs=epochs,steps_per_epoch=num_train_steps,
             validation_data=validation_data,
             validation_steps=num_validation_steps,
@@ -134,6 +141,7 @@ class Feat2Vec:
             max_queue_size=max_queue_size,workers=num_workers,
             use_multiprocessing=True)
         print "Done!"
+        return history
 
     def get_embeddings(self,vocab_map = None):
         '''
@@ -146,30 +154,58 @@ class Feat2Vec:
         '''
         embed_names = ['dim_{}'.format(i) for i in range(1,self.embedding_dim+1)]
         embeddings = []
+        deep_count = 0
         print self.model_feature_names
         for idx,l in enumerate(self.model_feature_names):
+            print l
             idx = self.model_feature_names.index(l)
             if l=='offset':
                 continue
-            weights = self.model.get_layer('embedding_{}'.format(l)).get_weights()[0]
-            weights = pd.DataFrame(weights,columns = embed_names)
-            weights['feature'] = l
-            if self.realvalued[idx]:
-                weights['values'] = self.model_features[idx]
-            else:
-                if self.mask_zero:
-                    weights = weights.iloc[1:,:]
-                if vocab_map is None:
-                    if self.mask_zero:
-                        weights['values'] = range(1,self.feature_dimensions[idx])
-                    else:
-                        weights['values'] = range(self.feature_dimensions[idx])
+            if self.deepin_feature[idx]:
+                print self.df[self.model_features[idx]]
+                if len(self.model_features[idx])==1:
+                    levels = np.array(pd.unique(self.df[self.model_features[idx][0]]))
+                    levels = levels[:,np.newaxis]
+                    print levels.shape
                 else:
-                    reverse_dict = dict([(j,i) for i,j in vocab_map[l].iteritems()])
+                    levels= np.array(self.df[self.model_features[idx]].drop_duplicates())
+                if len(self.deepin_inputs) != len(self.model_features):
+                    deepinNetwork = keras.models.Model(inputs=[self.deepin_inputs[deep_count]],outputs=[self.deepin_layers[deep_count]])
+                else:
+                    deepinNetwork = keras.models.Model(inputs=[self.deepin_inputs[idx]],outputs=[self.deepin_layers[idx]])
+                deepinNetwork.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
+                weights=deepinNetwork.predict(x=[np.array(levels)])
+                print weights
+                weights= pd.DataFrame(weights,columns = embed_names)
+                weights['feature'] = l
+                if 'max' in vocab_map[l].keys():
+                    levels[:,self.model_features[idx].index(l)] = levels[:,self.model_features[idx].index(l)] * (vocab_map[l]['max']-vocab_map[l]['min']) + vocab_map[l]['min']
+                if len(self.model_features[idx])==1:
+                    weights['values'] = levels
+                else:
+                    levels =  tuple(map(tuple, levels))
+                    weights['values'] = levels
+                deep_count +=1
+            else:
+                weights = self.model.get_layer('embedding_{}'.format(l)).get_weights()[0]
+                weights = pd.DataFrame(weights,columns = embed_names)
+                weights['feature'] = l
+                if self.realvalued[idx]:
+                    weights['values'] = self.model_features[idx]
+                else:
                     if self.mask_zero:
-                        weights['values'] = [reverse_dict[i] for i in range(1,self.feature_dimensions[idx])]
+                        weights = weights.iloc[1:,:]
+                    if vocab_map is None:
+                        if self.mask_zero:
+                            weights['values'] = range(1,self.feature_dimensions[idx])
+                        else:
+                            weights['values'] = range(self.feature_dimensions[idx])
                     else:
-                        weights['values'] = [reverse_dict[i] for i in range(self.feature_dimensions[idx])]
+                        reverse_dict = dict([(j,i) for i,j in vocab_map[l].iteritems()])
+                        if self.mask_zero:
+                            weights['values'] = [reverse_dict[i] for i in range(1,self.feature_dimensions[idx])]
+                        else:
+                            weights['values'] = [reverse_dict[i] for i in range(self.feature_dimensions[idx])]
             embeddings.append(weights)
         embeddings = pd.concat(embeddings)
         embeddings = embeddings[['feature','values'] + embed_names]
