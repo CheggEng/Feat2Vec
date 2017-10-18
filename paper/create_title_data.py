@@ -9,8 +9,8 @@ import cPickle
 import os
 import matplotlib.pyplot as plt
 nltk.download('stopwords')
-datadir = '/home/luis/Data/IMDB/'
-#datadir = '/media/luis/hdd3/Data/IMDB/'
+#datadir = '/home/luis/Data/IMDB/'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 movies_only = True
 #load data
 with gzip.open(datadir + 'title.basics.tsv.gz') as f:
@@ -49,8 +49,8 @@ stemmer = nltk.stem.snowball.SnowballStemmer("english")
 texts = texts.map(lambda x: [stemmer.stem(w) for w in x])
 print df['primaryTitle'].tail(15)
 df['titleSeq'] = texts
-df.loc[df['titleSeq'].map(len)==0,'titleSeq'] = [r'\N']
-print df['titleSeq'].tail(15)
+df.loc[df['titleSeq']==r'\N','titleSeq'] = df.loc[df['titleSeq']==r'\N','titleSeq'].map(lambda x: [r'\N'])
+print df['titleSeq'].head(15)
 #create genre matrix
 #print "creating genre matrix"
 #genstrMat = df['genres'].str.split(',',expand=True)
@@ -126,14 +126,14 @@ print "saving to file"
 if movies_only:
     with open(os.path.join(datadir,'imdb_movie_data.p'),'w') as f:
         cPickle.dump(df,f)
-    with open(os.path.join(datadir,'imdb_test_movie_data.p'),'w') as f:
-        cPickle.dump(df,f)
     with open(os.path.join(datadir,'imdb_train_movie_data.p'),'w') as f:
-        cPickle.dump(df,f)
+        cPickle.dump(traindf,f)
+    with open(os.path.join(datadir,'imdb_test_movie_data.p'),'w') as f:
+        cPickle.dump(testdf,f)
 else:
     with open(os.path.join(datadir,'imdb_title_data.p'),'w') as f:
         cPickle.dump(df,f)
 
 print "Done!"
 
-print df
+print len(df),len(traindf)+len(testdf)

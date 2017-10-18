@@ -13,27 +13,39 @@ from gensim.models.keyedvectors import KeyedVectors
 from sklearn.metrics.pairwise import cosine_similarity
 import feat2vec
 datadir = '/home/luis/Data/IMDB/'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
-
+outputdir= 'paper/output/baseline/'
 #load both sets of vectors
+print "Loading w2v/f2v embeddings..."
 w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
 
 f2v = pd.read_csv(os.path.join(datadir,'imdb_movie_embeddings.tsv'),sep='\t')
 f2v = f2v.set_index(['feature','values'])
+
+
+#f2v.loc['directors'].loc[r'\N'].values
+#f2v_dict = { [ (idx,f2v.loc['directors'].loc[idx].values) for idx in f2v.loc['directors'].index.tolist()]}
+#f2v.loc['directors'].index
+#f2v.loc['directors'].loc[r'\N'].values
+#f2v_dict[r'\N']
+
 print f2v.head()
 
 
 #print f2v.loc['titleSeq'].loc['maya']
+print "Loading df..."
 with open(os.path.join(datadir,'imdb_test_movie_data.p'),'r') as f:
     testdf = cPickle.load(f)
 
-fixlist = lambda x: [x]
-testdf.loc[testdf['titleSeq']=='\\N','titleSeq'] = testdf.loc[testdf['titleSeq']=='\\N','titleSeq'].map(fixlist)
-print testdf['titleSeq'][4432635]
-print np.sum(testdf['titleSeq']=='\\N')
+#fixlist = lambda x: [x]
+#testdf.loc[testdf['titleSeq']=='\\N','titleSeq'] = testdf.loc[testdf['titleSeq']=='\\N','titleSeq'].map(fixlist)
+#print testdf['titleSeq'][4432635]
+#print np.sum(testdf['titleSeq']=='\\N')
 
 
 #create document list vsn of test dataframe
+print "cleaning df..."
 tempdf = testdf.copy()
 exclude_tokens = set(['isAdult_0','mi_rating_0'])
 sentence_fcn = lambda x: ' '.join([w for w in x if w not in exclude_tokens])
@@ -73,6 +85,7 @@ for c in testdf.columns:
         testdf[c] = testdf[c].map(seq_tag)
 
 print testdf['directors'].head()
+testdf = testdf.reset_index(drop=True)
 
 def rank_byfeature_w2v(doc_list,target_feature,source_feature):
     '''
@@ -93,7 +106,7 @@ def rank_byfeature_w2v(doc_list,target_feature,source_feature):
             continue
         y = np.zeros(len(target_tokens))
         y[target_tokens.index(targetid)] = 1
-        sourcevec = np.sum([w2v[w] for w in doc if w.startswith(source_feature+'_')],axis=0)[:,np.newaxis]
+        sourcevec = np.sum([w2v[w] for w in doc if w.startswith(source_feature+'_') if w in w2v.vocab],axis=0)[:,np.newaxis]
         #print sourcevec.shape
         scores = cosine_similarity(sourcevec.T,target_vecs)[0]
         temp = np.argsort(-scores)
@@ -116,7 +129,7 @@ def rank_byfeature_w2v2(doc_list,target_feature,source_feature):
     target_vecs = np.concatenate([np.expand_dims(w2v[i],axis=0) for i in target_tokens],axis=0)
     print target_vecs.shape
     rankings=[]
-    source_vecs =np.concatenate([ np.sum([w2v[w] for w in doc if w.startswith(source_feature+'_')],axis=0)[:,np.newaxis] for doc in doc_list ],axis=1)
+    source_vecs =np.concatenate([ np.sum([w2v[w] for w in doc if w.startswith(source_feature+'_') if w in w2v.vocab],axis=0)[:,np.newaxis] for doc in doc_list ],axis=1)
     source_vecs = source_vecs.T
     print source_vecs.shape
     print "Scoring data..."
@@ -135,13 +148,44 @@ def rank_byfeature_w2v2(doc_list,target_feature,source_feature):
     return rankings
 
 
-w2v_ranks = rank_byfeature_w2v2(test_docs[0:1000],target_feature = 'directors',source_feature='principalCast')
-w2v_ranks_old = rank_byfeature_w2v(test_docs[0:10],target_feature = 'directors',source_feature='principalCast')
-print w2v_ranks[0:10]
-print w2v_ranks_old
+w2v_ranks = rank_byfeature_w2v(test_docs,target_feature = 'directors',source_feature='principalCast')
+#w2v_ranks_old = rank_byfeature_w2v(test_docs[0:10],target_feature = 'directors',source_feature='principalCast')
+#print w2v_ranks[0:10]
+#print w2v_ranks_old
+
 
 
 def rank_byfeature_f2v(df,target_feature,source_feature):
+    '''
+    Rank a set of features associated with a given vetor.
+    feature is the var name
+    feature_weight_name is the name of the embedding layer the embeddings come from.
+    '''
+    target_tokens = f2v.loc[target_feature].index.tolist()
+    target_vecs = np.array(f2v.loc[target_feature])
+    source_vecs = f2v.loc[source_feature]
+    print target_vecs.shape
+    rankings=[]
+    def sum_vec(x):
+        return  np.sum([source_vecs.loc[w] for w in x],axis=0)
+    #def first_elem(x):
+    #    return x[0]
+    for index, row in df.iterrows():
+        targetid = row[target_feature][0]
+        sourcevec = np.sum([source_vecs.loc[w] for w in row[source_feature] if w in source_vecs.index ],axis=0)[:,np.newaxis]
+        #print sourcevec.shape
+        scores = cosine_similarity(sourcevec.T,target_vecs)[0]
+        temp = np.argsort(-scores)
+        ranks = np.empty(len(scores), int)
+        ranks[temp] = np.arange(len(scores))
+        rank=ranks[target_tokens.index(targetid)]
+        sys.stdout.write("\r Ranking: {s}/{l}".format(s=index,l=len(df)))
+        sys.stdout.flush()
+        rankings.append(rank)
+    return rankings
+
+
+def rank_byfeature_f2v2(df,target_feature,source_feature):
     '''
     Rank a set of features associated with a given vetor.
     feature is the var name
@@ -157,7 +201,7 @@ def rank_byfeature_f2v(df,target_feature,source_feature):
     source_vecs =df[source_feature].map(sum_vec)
 
     #source_vecs = source_vecs.T
-    print source_vecs.shape
+    #print source_vecs.shape
     print "Scoring data..."
     scores = cosine_similarity(source_vecs,target_vecs)
     print scores.shape
@@ -173,10 +217,73 @@ def rank_byfeature_f2v(df,target_feature,source_feature):
     #     rankings.append(rank)
     # return rankings
 
-f2v_ranks = rank_byfeature_f2v(testdf.iloc[0:10,:],target_feature='directors',source_feature='principalCast')
+f2v_ranks = rank_byfeature_f2v(testdf,target_feature='directors',source_feature='principalCast')
 
-print testdf['principalCast']
-plt.hist(w2v_ranks)
+#descriptives
+maxrank =  len(f2v.loc['directors'])
+
+#hists
+plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=100,histtype='step')
+plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=100,histtype='step')
+plt.xlim([0, maxrank])
+plt.xlabel('Rankings')
+plt.ylabel('Counts')
+plt.legend()
+plt.savefig(os.path.join(outputdir,'rankhist.pdf'))
 plt.show()
 
-print f2v[f2v.feature=='directors'].head()
+#cdf
+plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.xlim([0, maxrank])
+plt.xlabel('Rankings')
+plt.ylabel('CDF')
+plt.legend(loc=2)
+plt.savefig(os.path.join(outputdir,'rankcdf.pdf'))
+plt.show()
+
+
+#cdf mediumzoomed
+plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.xlim([0, maxrank/10])
+plt.ylim([0.,.6])
+plt.xlabel('Rankings')
+plt.ylabel('CDF')
+plt.legend(loc=2)
+plt.savefig(os.path.join(outputdir,'rankcdf_10pct.pdf'))
+plt.show()
+
+#cdf super zoom
+plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.xlim([0, 50])
+plt.ylim([0.,.2])
+plt.xlabel('Rankings')
+plt.ylabel('CDF')
+plt.legend(loc=2)
+plt.savefig(os.path.join(outputdir,'rankcdf_top50.pdf'))
+plt.show()
+
+np.min(w2v_ranks)
+#summary statistics
+def MPR(ranks):
+    return np.mean(ranks)/maxrank
+
+def MRR(ranks):
+    return np.mean(1/(np.array(ranks,dtype='float')+1))
+
+def MDNR(ranks):
+    return np.median(ranks)
+def Top1Precision(ranks):
+    return np.mean([r==0 for r in ranks])
+with open(os.path.join(outputdir,'summstats.txt'),'w') as f:
+    for stat in [MPR, MRR, MDNR,Top1Precision]:
+        print "*"*30
+        print stat.__name__
+        print "F2V:", stat(f2v_ranks)
+        print "W2V:",  stat(w2v_ranks)
+        f.write( "*"*30)
+        f.write( stat.__name__)
+        f.write( "F2V:{}".format( stat(f2v_ranks) ) )
+        f.write( "W2V:".format( stat(w2v_ranks)    )   )

@@ -10,8 +10,8 @@ import feat2vec
 import gensim
 import itertools
 from gensim.models.word2vec import Word2Vec
-datadir = '/home/luis/Data/IMDB/'
-#datadir = '/media/luis/hdd3/Data/IMDB/'
+#datadir = '/home/luis/Data/IMDB/'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 batch_size=1000
 negative_samples=5
 dim = 50
@@ -60,6 +60,7 @@ for i,df in enumerate([traindf,valdf,df]):
         else:
             tag_fcn = lambda x: c  + "_" + str(x)
             newdf[c] = newdf[c].map(tag_fcn)
+    print "generating sentences..."
     docs.append([sentence_fcn(r) for r in newdf.values.tolist()])
     docs[i] = [s.split(' ') for s in docs[i]]
     print newdf.head(1)

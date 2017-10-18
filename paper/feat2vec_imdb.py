@@ -12,8 +12,8 @@ reload(keras)
 from keras.callbacks import EarlyStopping
 from keras.layers import Input,Dense
 from feat2vec.feat2vec import Feat2Vec
-datadir = '/home/luis/Data/IMDB/'
-#datadir = '/media/luis/hdd3/Data/IMDB/'
+#datadir = '/home/luis/Data/IMDB/'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 batch_size=1000
 feature_alpha=.25
 sampling_alpha=.5
@@ -50,7 +50,6 @@ for c in ['runtimeMinutes', 'averageRating','numVotes']:
 
 #map lists to integer sequences so keras can work with them
 #limit to 5 writers, directors, 10 cast members
-
 seqlengths = {'genres':3,'writers':5,'directors':5,'principalCast':10,'titleSeq':5}
 for c in seqlengths.keys():
     print 'transferring {} to integer sequence '.format(c)
@@ -79,7 +78,8 @@ for c in deepin_features:
     deep_input  = Input(batch_shape=(None, len(c)), name='input_{}'.format(c[0]))
     deep_input_layers.append(deep_input)
     deeplayer = Dense(units=dim,activation='relu',use_bias=False,name='intermed_{}'.format(c[0]))(deep_input)
-    deeplayer = Dense(units=dim,activation='relu',use_bias=False,name='embed_{}'.format(c[0]))(deeplayer)
+    deeplayer = Dense(units=dim,use_bias=False,name='intermed2_{}'.format(c[0]))(deeplayer)
+    deeplayer = Dense(units=dim,activation='linear',use_bias=False,name='embed_{}'.format(c[0]))(deeplayer)
     deep_embed_layers.append(deeplayer)
 
 
@@ -117,14 +117,14 @@ param_counts[sampling_features.index(directorcols)] = len(vocab_maps['directors'
 param_counts[sampling_features.index(writercols)] = len(vocab_maps['writers'])*dim
 param_counts[sampling_features.index(['startYear'])] = len(vocab_maps['startYear'])*dim
 param_counts[sampling_features.index(['isAdult'])] = dim
-param_counts[sampling_features.index(['runtimeMinutes'])] = 1*dim + dim*dim
-param_counts[sampling_features.index(['averageRating','numVotes','mi_rating'])] = 2*(1*dim + dim*dim)
+param_counts[sampling_features.index(['runtimeMinutes'])] = 1*dim + dim*dim + dim*dim
+param_counts[sampling_features.index(['averageRating','numVotes','mi_rating'])] = 2*(2*dim + dim*dim + dim*dim)
 print param_counts
 init_probs = np.power(param_counts,sampling_alpha)
 init_probs /= np.sum(init_probs)
 print init_probs
 
-#define some hyperparameters
+#CV over epoch count
 earlyend = EarlyStopping(patience=0,monitor='val_loss')
 callbacks=[earlyend]
 reload(feat2vec.feat2vec)
@@ -144,12 +144,15 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     feature_alpha=feature_alpha,sampling_alpha=sampling_alpha,
     negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
 
+
 print f2v.model.summary()
-history = f2v.fit_model(epochs=25,validation_split=.1,
+f2v.fit_model(epochs=25,validation_split=.1,
     callbacks = callbacks)
-#dir(f2v.model.history)
-opt_epoch = len(f2v.model.history.epoch)
+print f2v.model.get_layer('embedding_titleSeq').get_weights()[0]
+
+opt_epoch = len(f2v.model.history.epoch) - 1
 print "Optimal Epochs: ", opt_epoch
+#run final model on full dataset
 f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     feature_dimensions=feature_dimensions,
     model_features=model_features,
@@ -167,9 +170,14 @@ f2v.fit_model(epochs=opt_epoch,validation_split=None)
 #opt_epochs =
 f2v.model.save(os.path.join(datadir,'f2v_imdb.h5'))
 
+
+
 embeddings = f2v.get_embeddings(vocab_maps)
 embeddings.to_csv(os.path.join(datadir,'imdb_movie_embeddings.tsv'),sep='\t',index=False)
 
 #save the vocab_maps to a pickle file to infer categories later
 with open(os.path.join(datadir,'f2v_vocab_map.p'),'w') as f:
     cPickle.dump(vocab_maps,f)
+
+
+print embeddings
