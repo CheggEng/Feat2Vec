@@ -11,10 +11,13 @@
 \usepackage{upgreek}
 \usepackage{amsthm}
 \usepackage{soul}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \newcommand{\vect}[1]{\vec{#1}}
 \newtheorem{theorem}{Theorem}
 \DeclareMathOperator{\Feat2Vec}{Feat2Vec}
 \DeclareMathOperator{\Word2Vec}{Word2Vec}
+\DeclareMathOperator{\MN}{MN}
 \newcommand{\dotp}{\boldsymbol{\cdot} }
 \renewcommand{\cite}[1]{\citep{#1}}
 
@@ -65,7 +68,7 @@ Address \\
 
 \begin{abstract}
 Methods that calculate dense embeddings for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
-Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---this is, datasets that have features beyond words.
+Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---this is, datasets that have arbitrary features beyond words.
 
 We study how to estimate  continuous representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
 $\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing \textit{semantic modularity} across features---all different feature types exist in a common space.
@@ -96,8 +99,13 @@ We call this approach  $\Feat2Vec$:}
 Here, $\vect{\mathcal{F}}$ is a structured feature set---where each dimension represents a different feature type.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
 However,   $\Feat2Vec$  leverage the features' structure  to enforce  \textit{semantic modularity} across features.
+<<<<<<< HEAD
 This is, the embedding of an observation is additive in respect to the embeddings of its feature groups $\mathcal{F}_i$;
 thus, each feature group must be  projected into the same embedding space.
+=======
+This is, the embedding of an observation is additive in respect to the embeddings of its feature types;
+thus, each feature type  $\mathcal{F}_i$ must be  projected into the same embedding space.
+>>>>>>> 4bb975b026cf1082e7c946166e2a4e9ff207948f
 Semantic modularity is useful because it enables making principled comparisons between different feature types.
 For example, on an educational dataset that contains many feature types, including  students and courses, semantic modularity enables inferring course preferences for students.
 %On the other hand, $\Feat2Vec$ is able to generalize on  $\Word2Vec$ when there is only one feature type $\mathcal{F}(n)$.
@@ -109,8 +117,8 @@ For example, on an educational dataset that contains many feature types, includi
 The rest of this section describes the three parts of a $\Feat2Vec$ implementation.
 \S~\ref{sec:model} describes a  model that infers an  embedding from an observation.
 To learn this model we need positive and negative examples:
- a positive example occurs in the dataset, and a negative does not.
-This is similar how a positive example in $\Word2Vec$ is a word-context pair drawn from the training documents, and negative examples are sampled.
+ a positive example is ``semantic'' and it is observed during training, but negative examples are not.
+This is similar how a positive example in $\Word2Vec$ are grammatical co-ocurrences, and negative examples are generated.
 \S~\ref{sec:sampling} describes our novel sampling strategy.
 %This is similar of how $\Word2Vec$ learns the relationships of words  that co-occur.
 %Both $\Word2Vec$ and $\Feat2Vec$ resort to sampling implicit samples,  though we propose a different algorithm.
@@ -141,6 +149,7 @@ For example, consider multiple discrete entity types, like universities, student
 To model this data, a Shallow Factorization Machine would  ignore the structure and simply concatenate the one-hot encoding representation of each entity into a single feature vector.
 Feat2Vec relies on an novel extension to factorization called  Structured Deep-In Factorization Machine, which we describe in detail in a \hl{companion paper} \cite{deepfm}.
 %On the other hand, Structured Deep-In Factorization Machine considers the structure explicitly.
+<<<<<<< HEAD
 While Shallow Factorization Machine  learns an embedding per feature, the Structured Deep-In model allows greater flexibility.
 For example, on a shallow model if the input is text, the shallow model must learn an embedding for each word; if its input is an image,  it must learn an embedding per pixel.
 The structured model enables higher-level of abstraction, and it could learn an embedding per passage of text, or an embedding per image.
@@ -149,6 +158,16 @@ The structured model enables higher-level of abstraction, and it could learn an 
 Structured Deep-In Factorization Machine inputs $\vect{\upkappa}$  as a vector of vectors that define  the structure of the groups of features.
 Each entry in $\vect{\upkappa}$  is a vector of size $d_i$ and represents a feature group $\mathcal{F}$.
 %LA i'm having trouble following this explanation.
+=======
+While Shallow Factorization Machine  learns an embedding per feature, the Structured Deep-In model allows greater flexibility.
+For example, consider using images or text on these factorization models.
+The shallow model learns an embedding for each word, or an embedding per pixel.
+The structured model enables higher-level of abstraction and flexibility, and it can learn an embedding per passage of text, or an embedding per image.
+
+
+Structured Deep-In Factorization Machine inputs $\vect{\upkappa}$  as a vector of vectors that define  the structure of the groups of features.
+Each entry $i$  is a vector of size $d_i$ and it is used to represent the feature types of $\mathcal{F}_i$.
+>>>>>>> 4bb975b026cf1082e7c946166e2a4e9ff207948f
 In a shallow model, a feature interacts with all other features, but in the structured model they only interact with features from different groups.
 For example, consider a model with four features.
 If we define
@@ -164,6 +183,7 @@ p \bigl(Y=1| \vect{\vphantom{\phi}x};  \vect{\phi}, \vect{\vphantom{\phi}\upkapp
 \sigma \biggl(
                        \sum_{i =1}^{|{\vect{\upkappa}}|} \sum_{j=i}^{|{\vect{\upkappa}}|}   \bigl\langle \,  \phi_i( \vect{x}_{\vect{\upkappa}_i}), \; \phi_j( \vect{x}_{\vect{\upkappa}_j}) \, \bigr\rangle
   \biggr)
+\label{eq:deepfm}
 \end{align}
 In this notation, $\vect{x}_{\vect{\upkappa}_i}$ is a subvector that contains all of the features that belong to the group $\upkappa_i$.
 Thus, $\vect{x}_{\vect{\upkappa}_i} =  \bigl[ \, x_{i_a} | a \in \{1, 2, \dots, {|\upkappa_i|} \} \, \bigr]$.
@@ -183,7 +203,76 @@ We build the $\Feat2Vec$ embedding for an observation $\vect{x}$ as:
 \subsection{Sampling}
 \label{sec:sampling}
 
+The training dataset for a $\Feat2Vec$ model consists of only semantic observations.
+In natural language, these would be documents written by humans.
+Since Structured Deep-In Factorization Machine~(Equation \ref{eq:deepfm}) requires positive and negative examples, we also need to supply  observations that are not semantic.
+Consider a  feature type $\mathcal{F}_i \in \mathbb{R}^{d_i}$, that exists in very high dimensional space ($d_i$ is large).
+For example, this could happen because we are modeling with one-hot encoding a categorical variable with   large number of possible values.
+In such scenario, it is overwhelmingly costly to feed the model all negative labels, particularly if the model is fairly sparse.
 
+A shortcut around this is a concept known as \textit{implicit sampling}, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
+$\Word2Vec$ makes use of an algorithm called Negative Sampling~\cite{samplingnotes}.
+In short, their approach samples a negative observation of a feature $w$  from a noise distribution $q$: % $\MN(\{w\},\alpha)$:
+\begin{align}
+\text{Draw } w  & \thicksim  p(W|Y=0, X)  \\
+%                        & \thicksim  \MN(\{w\},\alpha)   \text{\hl{ What is \{w\}?! }}    \\
+                        %& \propto \hat p_w^\alpha,\quad  \alpha \in [0,1]
+                          &\approx q(\{w_1, w_2, \dots, w_n \}, \alpha)
+\end{align}
+
+Here  $q$ is the empirical frequency of  $w$ in the dataset, exponentiated by $\alpha$, a flattening hyper-parameter:
+\begin{equation}
+q(W,  \alpha)  =  \frac{ c_X(w)^\alpha }{ \sum\limits_{w' \in W} c_X(w') ^\alpha  }
+\end{equation}
+%P(wi)=f(wi)3/4?nj=0(f(wj)3/4)
+
+Here, $c_X(w)$ is the number of times a feature $w$ appeared in the training dataset X.
+With $\alpha=1$, the noise distribution corresponds to the empirical frequency distribution, and with $\alpha=0$ to the uniform distribution.
+Intermediate values are intended to be continuous progressions to these two extremes, but in Appendix~\ref{sec:w2vproblem} we document that this is not necessarily the case.
+
+Our main contribution is introducing a new implicit sampling method that enables learning embedding for structured feature sets.
+We can learn the correlation of features within a dataset by imputing negative labels, simply by generating ``unobserved'' records as our negative sample.
+% replaced n <- p;  because we use p for probabilities
+Unlike $\Word2Vec$, we do not constraint features types to be words.
+Features types can be  individual numeric columns,  but they need not to be.
+By defining feature types as groups of subfeatures (using $\upkappa$ parameter in Equation \ref{eq:deepfm}), the model can reason on more complex entities.
+For example, in our experiments on a movie dataset, we use a ``genre'' feature type, where we  group non-mutually exclusive indicators for comedy, action, and drama films.
+For more involved feature types (e.g., an image),  one would need to  define a function $\phi$ that builds intermediate layers  to map the entity to an embedding .
+
+We start with a dataset $S^+ $ of records with $n$ feature types.
+We then mark all observed records in the training set as positive examples.
+For each positive record, we generate $k$ negative labels using the following 2-step algorithm:
+
+\begin{algorithm}
+ \caption{Implicit sampling algorithm for $\Feat2Vec$}
+\begin{algorithmic}[1]
+\Function{Feat2Vec\_Sample}{$S^+, k, \alpha_1, \alpha_2$}
+\State $S^-  \leftarrow \emptyset $
+\For {$s \in S^+ $}
+	\State Draw a random feature type $\upkappa_i  \sim q(\{d_i\}_{i=1}^n,\alpha_1) $
+	\For {$j \in \{1,\ldots,k\}$}
+			\State $\vect{e}  \leftarrow \vect{x}^{(s)}$ \Comment  set initially to be equal to a positive sample
+			\State Draw a random (sub-)feature  $\vect{r} \sim q(\mathrm{X}_{ \upkappa_i },\alpha_2)$
+			\State $\vect{e}_{\upkappa_i}  \leftarrow \vect{r}$ \Comment{substitute the $i$-th feature type with a sampled one}
+			\State  $S^-  \leftarrow S^-  + \{  \vect{e} \}$
+	\EndFor
+\EndFor
+\State \Return $S^-$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+Here $q(\mathrm{X}_{\upkappa_i}, \alpha_2)$ is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $f_s$:
+\begin{equation}
+\text{\hl{write!}}
+\end{equation}
+
+\hl{we also need to write the first noise distribution}
+
+
+
+
+<<<<<<< HEAD
 Often, due to the large \# of possible values for a given feature type (i.e. millions of users/movies), it is overwhelmingly costly to feed the model all negative labels, particularly if the model is fairly sparse.
 A shortcut around this is a concept known as \textit{implicit sampling}, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
 Typically one resamples the feature $f$ that define how the negative labels are constructed (i.e. movies a user didn't watch in the Netflix example) from a flattened multionomial distribution :
@@ -235,18 +324,28 @@ s(x,\vec{\phi}) =
 \sum_{j =1}^p \sum_{k=j+1}^{p}   \bigl\langle \,  \phi_j( \vect{x}_{j}), \; \phi_k( \vect{x}_{k}) \, \bigr\rangle
 \]
 We can show, with relatively little effort,that our 2-step sampler has some interesting theoretical properties. Namely, the embeddings learned under this model will be equivalent to a convex combination of the embeddings learned from $p$ individual Factorization Machines.
+=======
+%we should make note at some point of the impossible interpretability of ``intermediately'' populated features/values because of the wierd hyperbolic shape
+%of the probability over alpha (not a mix of alpha=0 to alpha=1). See plot I shared with Jose.
+Explained in words, our negative sampling method is to randomly select one of the features, and choose another value for it from a noise distribution $q()$ (here, the empirical flattened multinomial distribution is our noise distribution). Of course, this method will sometimes by chance generate observations with negative labels that \textit{do} in fact exist in our sample of observed records.
+>>>>>>> 4bb975b026cf1082e7c946166e2a4e9ff207948f
 
 \subsection{Learning From data}
 \label{sec:learning}
 
-\hl{We need to write this}
+We optimize Noise Contrastive Estimation\cite{nce} loss, which uses basic probability laws to adjust the structural statistical model $p(Y=1|\vec{\phi},\vec{x})$ to account for the possibility of random negative labels that appear identical to positively labeled data. An additional burden of this method, however, is we need to learn additional nuisance parameters $Z_{\vec{x}}$ \hl{What is this?} for each unique record type $\vec{x}$ that transform the score function $s(.)$ \hl{what is this?} into a well-behaved probability distribution that integrates to 1. This introduces an astronomical amount of new parameters and greatly increase the complexity of the model. Instead of estimating these, we appeal to the work of \cite{fastnnlang}, who show in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.\footnote{\cite{fastnnlang} suggests one can set the normalizing constant to 1 because the neural net model has enough free parameters that it will effectively just learn the probabilities itself so that it does not over/under predict the probabilities on average (since that will result in penalties on the loss function). Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about astronomically low probabilities.}  Written explicitly, the new structural probability model is just:
+\begin{equation}
+p(Y=1|\vec{\phi},\vec{x}) = \frac{e^{s(\vec{x}_i,\vec{\phi}) })}{e^{s(\vec{x}_i,\vec{\phi}) } + q(\vec{x}_i) }
+\end{equation}
+
+We can show, with relatively little effort,that our 2-step sampler has some interesting theoretical properties. Namely, the embeddings learned under this model will be equivalent to a convex combination of the embeddings learned from $p$ individual Factorization Machines.
 
 \begin{theorem}
 The embeddings learned with $\Feat2Vec$ are  a convex combination of the embeddings learned from $p$ individual Factorization Machines.
 \begin{proof}
 Let $S_f$ denote the records whose corresponding negative samples resample feature $f$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
 
-\hl{Need to edit:}
+\hl{Need to use consistent notation in the paper.  This notation is really nice:}
 \begin{align*}
  L(\vec{\mathbf{x}} | \vec{\phi} )  =&   \frac{1}{|S|} \sum_{i \in S} \Big(\log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i  ) ) + \sum_{\vec{\mathbf{x}}_j \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j)) \Big) \\
   =&  \frac{1}{|S|} \sum_{i \in S} \Big( \log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i, i \in S_f )p(i \in S_f) ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j,i \in S_f)p(i \in S_f)) \Big) \\
@@ -263,14 +362,26 @@ Let $S_f$ denote the records whose corresponding negative samples resample featu
    & = \sum_{f=1}^p p(i \in S_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]
 \end{align*}
 
+<<<<<<< HEAD
 Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient since:
 
 \[\frac{\partial }{\partial \phi}\sum_{f=1}^p p(i \in S_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big] =
  \sum_{f=1}^p p(i \in S_f) \frac{\partial }{\partial \phi}E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]\]
  Thus the algorithm will, at each step, learn a convex combination of the gradient for a targeted classifier on feature $f$, with weights proportional to the feature type sampling probabilities in step 1 of the sampling algorithm.
+=======
+Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient. Thus it will learn a convex combination of the embeddings for each classifier, with weights proportional to \hl{the feature type sampling probabilities in step 1} of the sampling algorithm.
+>>>>>>> 4bb975b026cf1082e7c946166e2a4e9ff207948f
 
 \end{proof}
 \end{theorem}
+
+\section{Limitations}
+
+\hl{
+Continuous features  require a sensible feature function, and future work could focus on them.
+
+Feature engineering (grouping) is important.
+}
 
 
 \section{Empirical Results}
@@ -280,6 +391,13 @@ Thus, the loss function is just a convex combination  of the loss functions of t
 
 
 \section{Conclusion}
+
+
+\appendix
+\section{Appendixes}
+\subsection{Problems with Flattening Multinomial of $\Word2Vec$}
+\label{sec:w2vproblem}
+\hl{Write}
 
 
 
