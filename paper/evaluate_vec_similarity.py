@@ -15,7 +15,7 @@ import feat2vec
 datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
-outputdir= 'paper/output/equal_samplealpha/'
+outputdir= 'paper/output/alpha_75_75/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
 w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
@@ -219,6 +219,8 @@ def rank_byfeature_f2v2(df,target_feature,source_feature):
 
 f2v_ranks = rank_byfeature_f2v(testdf,target_feature='directors',source_feature='principalCast')
 
+
+
 #descriptives
 maxrank =  len(f2v.loc['directors'])
 
@@ -295,3 +297,8 @@ with open(os.path.join(datadir,'f2v_test_ranks.p'),'w') as f:
 
 with open(os.path.join(datadir,'w2v_test_ranks.p'),'w') as f:
     cPickle.dump(w2v_ranks,f)
+
+
+
+with open(os.path.join(datadir,'w2v_test_ranks.p'),'r') as f:
+    w2v_ranks=cPickle.load(f)
