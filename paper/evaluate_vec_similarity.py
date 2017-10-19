@@ -15,7 +15,7 @@ import feat2vec
 datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
-outputdir= 'paper/output/baseline/'
+outputdir= 'paper/output/equal_samplealpha/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
 w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
@@ -42,7 +42,7 @@ with open(os.path.join(datadir,'imdb_test_movie_data.p'),'r') as f:
 #testdf.loc[testdf['titleSeq']=='\\N','titleSeq'] = testdf.loc[testdf['titleSeq']=='\\N','titleSeq'].map(fixlist)
 #print testdf['titleSeq'][4432635]
 #print np.sum(testdf['titleSeq']=='\\N')
-
+print testdf.head()
 
 #create document list vsn of test dataframe
 print "cleaning df..."
@@ -255,8 +255,8 @@ plt.savefig(os.path.join(outputdir,'rankcdf_10pct.pdf'))
 plt.show()
 
 #cdf super zoom
-plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.xlim([0, 50])
 plt.ylim([0.,.2])
 plt.xlabel('Rankings')
@@ -283,7 +283,15 @@ with open(os.path.join(outputdir,'summstats.txt'),'w') as f:
         print stat.__name__
         print "F2V:", stat(f2v_ranks)
         print "W2V:",  stat(w2v_ranks)
-        f.write( "*"*30)
-        f.write( stat.__name__)
-        f.write( "F2V:{}".format( stat(f2v_ranks) ) )
-        f.write( "W2V:".format( stat(w2v_ranks)    )   )
+        f.write( "*"*30 + "\n")
+        f.write( stat.__name__ + '\n')
+        f.write( "F2V:{}\n".format( stat(f2v_ranks) ) )
+        f.write( "W2V:{}\n".format( stat(w2v_ranks)    )   )
+
+
+with open(os.path.join(datadir,'f2v_test_ranks.p'),'w') as f:
+    cPickle.dump(f2v_ranks,f)
+
+
+with open(os.path.join(datadir,'w2v_test_ranks.p'),'w') as f:
+    cPickle.dump(w2v_ranks,f)

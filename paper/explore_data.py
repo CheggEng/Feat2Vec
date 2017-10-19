@@ -2,6 +2,7 @@
 #explore the IMDB data, clean it up, etc.
 import pandas as pd
 import numpy as np
+import cPickle
 import gzip
 import os
 import matplotlib.pyplot as plt
@@ -9,6 +10,12 @@ datadir = '/home/luis/Downloads/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 outputdir = '/home/luis/feat2vec/paper/output/'
 #load titles data
+
+with open(os.path.join(datadir,'imdb_movie_data.p'),'r') as f:
+    df= cPickle.load(f)
+
+print df['directors'].map(len).value_counts()/np.sum(df['directors'].map(len).value_counts())
+
 with gzip.open(datadir + 'title.basics.tsv.gz') as f:
     titles = pd.read_csv(f,sep='\t')
 
