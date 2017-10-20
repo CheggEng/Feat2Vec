@@ -15,7 +15,7 @@ import feat2vec
 datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
-outputdir= 'paper/output/alpha_75_75/'
+outputdir= 'paper/output/alpha_75_0/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
 w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)

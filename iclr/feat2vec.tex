@@ -8,20 +8,22 @@
 %%% custom packages by JPG and LA:
 \usepackage[most]{tcolorbox}
 \usepackage{amsmath}
+
 \usepackage{upgreek}
-\usepackage{amsthm}
+
 \usepackage{soul}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+
 \newcommand{\vect}[1]{\vec{#1}}
-\newtheorem{theorem}{Theorem}
 \DeclareMathOperator{\Feat2Vec}{Feat2Vec}
 \DeclareMathOperator{\Word2Vec}{Word2Vec}
 \DeclareMathOperator{\MN}{MN}
 \newcommand{\dotp}{\boldsymbol{\cdot} }
 \renewcommand{\cite}[1]{\citep{#1}}
-
-
+\usepackage{amsthm}
+\usepackage{thmtools,thm-restate}
+\declaretheorem{theorem}
 \title{Feat2Vec:  Semantic Modularity for Continuous Representations of Data with Features}
 
 % Authors must not appear in the submitted version. They should be hidden
@@ -165,12 +167,14 @@ More formally, this is:
 \begin{align}
 %\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})=
 p \bigl(Y=1| \vect{\vphantom{\phi}x};  \vect{\phi}, \vect{\vphantom{\phi}\upkappa} \bigr ) &=
+\sigma \biggl(s(\vec{x},\vec{\phi})\biggl)=
 \sigma \biggl(
                        \sum_{i =1}^{|{\vect{\upkappa}}|} \sum_{j=i}^{|{\vect{\upkappa}}|}   \bigl\langle \,  \phi_i( \vect{x}_{\vect{\upkappa}_i}), \; \phi_j( \vect{x}_{\vect{\upkappa}_j}) \, \bigr\rangle
   \biggr)
 \label{eq:deepfm}
 \end{align}
-In this notation, $\vect{x}_{\vect{\upkappa}_i}$ is a subvector that contains all of the features that belong to the group $\upkappa_i$.
+
+In this notation, $\vect{x}_{\vect{\upkappa}_i}$ is a subvector that contains all of the features that belong to the group $\upkappa_i$, and $s(\vec{x},\vec{\phi})$ is the score function.
 Thus, $\vect{x}_{\vect{\upkappa}_i} =  \bigl[ \, x_{i_a} | a \in \{1, 2, \dots, {|\upkappa_i|} \} \, \bigr]$.
 The simplest   implementation for $\phi_i$ is a linear fully-connected layer, where the output of the $r$-th entry is:
 \[
@@ -197,12 +201,12 @@ In such scenario, it is overwhelmingly costly to feed the model all negative lab
 
 A shortcut around this is a concept known as \textit{implicit sampling}, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
 $\Word2Vec$ makes use of an algorithm called Negative Sampling~\cite{samplingnotes}.
-In short, their approach samples a negative observation of a feature $w$  from a noise distribution $q$: % $\MN(\{w\},\alpha)$:
+In short, their approach samples a negative observation $w$  from a noise distribution $q$: % $\MN(\{w\},\alpha)$:
 \begin{align}
 \text{Draw } w  & \thicksim  p(W|Y=0, X)  \\
 %                        & \thicksim  \MN(\{w\},\alpha)   \text{\hl{ What is \{w\}?! }}    \\
                         %& \propto \hat p_w^\alpha,\quad  \alpha \in [0,1]
-                          &\approx q(\{w_1, w_2, \dots, w_n \}, \alpha)
+                          &= q(\{w_1, w_2, \dots, w_n \}, \alpha)
 \end{align}
 
 Here  $q$ is the empirical frequency of  $w$ in the dataset, exponentiated by $\alpha$, a flattening hyper-parameter:
@@ -213,7 +217,7 @@ q(W,  \alpha)  =  \frac{ c_X(w)^\alpha }{ \sum\limits_{w' \in W} c_X(w') ^\alpha
 
 Here, $c_X(w)$ is the number of times a feature $w$ appeared in the training dataset X.
 With $\alpha=1$, the noise distribution corresponds to the empirical frequency distribution, and with $\alpha=0$ to the uniform distribution.
-Intermediate values are intended to be continuous progressions to these two extremes, but in Appendix~\ref{sec:w2vproblem} we document that this is not necessarily the case.
+Intermediate values are intended to be continuous progressions to these two extremes.
 
 Our main contribution is introducing a new implicit sampling method that enables learning embedding for structured feature sets.
 We can learn the correlation of features within a dataset by imputing negative labels, simply by generating ``unobserved'' records as our negative sample.
@@ -221,10 +225,10 @@ We can learn the correlation of features within a dataset by imputing negative l
 Unlike $\Word2Vec$, we do not constraint features types to be words.
 Features types can be  individual numeric columns,  but they need not to be.
 By defining feature types as groups of subfeatures (using $\upkappa$ parameter in Equation \ref{eq:deepfm}), the model can reason on more complex entities.
-For example, in our experiments on a movie dataset, we use a ``genre'' feature type, where we  group non-mutually exclusive indicators for comedy, action, and drama films.
+For example, in our experiments on a movie dataset, we use a ``genre'' feature type, where we  group non-mutually exclusive indicators for comedy, action, and drama films under one umbrella.
 For more involved feature types (e.g., an image),  one would need to  define a function $\phi$ that builds intermediate layers  to map the entity to an embedding .
 
-We start with a dataset $S^+ $ of records with $n$ feature types.
+We start with a dataset $S^+ $ of records with $p$ feature types.
 We then mark all observed records in the training set as positive examples.
 For each positive record, we generate $k$ negative labels using the following 2-step algorithm:
 
@@ -234,7 +238,7 @@ For each positive record, we generate $k$ negative labels using the following 2-
 \Function{Feat2Vec\_Sample}{$S^+, k, \alpha_1, \alpha_2$}
 \State $S^-  \leftarrow \emptyset $
 \For {$s \in S^+ $}
-	\State Draw a random feature type $\upkappa_i  \sim q_1(\{d_i\}_{i=1}^n,\alpha_1) $
+	\State Draw a random feature type $\upkappa_i  \sim q_1(\{d_i\}_{i=1}^p,\alpha_1) $
 	\For {$j \in \{1,\ldots,k\}$}
 			\State $\vect{e}  \leftarrow \vect{x}^{(s)}$ \Comment  set initially to be equal to a positive sample
 			\State Draw a random (sub)feature  $\vect{r} \sim q_2(\mathrm{X}_{ \upkappa_i },\alpha_2)$
@@ -247,51 +251,25 @@ For each positive record, we generate $k$ negative labels using the following 2-
 \end{algorithmic}
 \end{algorithm}
 
-Here $q(\mathrm{X}_{\upkappa_i}, \alpha_2)$ is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $f_s$:
-\begin{equation}
-\text{\hl{write!}}
-\end{equation}
-
-\hl{we also need to write the first noise distribution}
-%%%%%%%%
-
-
-Often, due to the large \# of possible values for a given feature type (i.e. millions of users/movies), it is overwhelmingly costly to feed the model all negative labels, particularly if the model is fairly sparse.
-A shortcut around this is a concept known as \textit{implicit sampling}, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
-Typically one resamples the feature $f$ that define how the negative labels are constructed (i.e. movies a user didn't watch in the Netflix example) from a flattened multionomial distribution :
-\[x_{j}\sim q(\mathbf{X_f},\alpha),\text{ where } P_q(x_j=x|\mathbf{X_f},\alpha)  \propto \hat c_x^\alpha,\alpha \in [0,1] \]
-here \hl{$\hat c_x$}  is the empirical frequency of $x$ in the observed dataset $\mathbf{X_f}$, and $\alpha$ is a flattening hyperparameter. This distribution is actually quite general, with $\alpha=1$ corresponding to the empirical frequency distribution, and $\alpha=0$ to a uniform distribution across feature values.
-
-
-Our project extends this application by introducing a new implicit sampling method that allows researchers to learn unsupervised embeddings. We can learn the correlation structure within a dataset without any positive or negative labels, simply by generating ``unobserved'' records as our negatively labeled sample. We now discuss our method.
-
-We start with a dataset $S$ of records, each with $p$ features. Features need not be individual numeric columns, but instead can be multiple columns that are sensibly grouped together (say, grouping non-mutually exclusive indicators for comedy,action,drame film as a ``genre'' feature), or even images and text
-%I feel like we already re-explained this
-\footnote{\hl{this requires usage of \textit{deep-in} Factorization Machines, an extension created by Ralph and Jose previously. It would involve building intermediate layers (e.g. convolutional layers) to map a image/text to a vector}}.
-Often, they are categories, such as user ID, movie ID, book ID, etc. We then mark all observed records as positive, and for each positive record, we generate $k$ negative labels using the following 2-step algorithm:
-\\ \\
-\begin{figure}[h!]
-\begin{tcolorbox}
-\noindent$\texttt{for }  s \in S \{$
-\begin{enumerate}
-	\item randomly sample  one of the features	$ f_s \sim q_1(\{|\vec{\phi}|_i\}_{i=1}^p,\alpha_1) $ to alter for the negative samples, where $q_1(.)$ is a multinomial distribution over features groups in $\vect{\mathcal{F}}$ that selects each feature proportional to its complexity.
-  $|\vec{\phi}|_i$ denotes the number of parameters associated with feature group $i$, representing the feature's relative complexity.
-  $\alpha_1$ is a flattening hyperparameter.
-	\item $\texttt{for } (j \in 1,\ldots,k)$
-	\begin{itemize}
-		\item Assign the negative label an attribute from noise distribution $x_{s,j} \sim q_2(\mathbf{X_{f_s}},\alpha_2)$ , where $q_2(.)$ is also a  ``flattened'' empirical multionomial distribution over the frequency of the observed feature values of feature $f_s$, $\mathbf{X_{f_s}}$, and $\alpha_2$ is once again a flattening hyperparameter.
-	\end{itemize}
-	$\}$
-\end{enumerate}
-$\}$
-\end{tcolorbox}
-\caption{2-step algorithm for sampling negative label data}
-\end{figure}
+Here $q_2(\mathrm{X}_{\upkappa_i}, \alpha_2)$ is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $\upkappa_i$, as in the negative sampling procedure used in $\Word2Vec$ :
+\[x_{j}\sim q_2(\mathrm{X}_{\upkappa_i}, \alpha_2),\text{ where } P_{q_2}(x_j=x|\mathrm{X}_{\upkappa_i},\alpha_2)  \
+= \frac{c_X(x)^{\alpha_2}}{\sum_{x' \in X_{\upkappa_i}} c_X(x')^{\alpha_2}},\alpha \in [0,1]
+\]
+%LA: Jose, should we use a different symbol since this is technically a different feature
+Where $P_q(x)$ denotes the probability of $x$ under a distribution $q$.
+Analogously , $q_1(\{d_i\}_{i=1}^p,\alpha_1)$ draws a feature to negatively sample from a multinomial distribution with probabilitites proportional a feature's complexity, $d_i$. Here, by complexity, we mean the number of parameters the algorithm learns associated with a feature group:
+\[
+P_{q_1}(\upkappa_i|\{d_i\}_{i=1}^p,\alpha_1)  \
+= \frac{d_i^{\alpha_1}}{\sum_{k=1}^p d_k^{\alpha_1}}
+\]
+$d_i$ may be the dimensionality of a feature, but might also capture other parameters used for learning embeddings, where applicable. For example, if we have multiple intermediate layers to process a set of pixels embeddings into an ``image embedding'' (such as deep convolutional layers), these parameters would count towards $d_i$.
 
 %we should make note at some point of the impossible interpretability of ``intermediately'' populated features/values because of the wierd hyperbolic shape
 %of the probability over alpha (not a mix of alpha=0 to alpha=1). See plot I shared with Jose.
-Explained in words, our negative sampling method is to randomly select one of the features $f$ from the noise distribution $q_1(.)$, and, conditional on the feature to be resampled, choose another value $x_j$ for feature $f$ from a noise distribution $q_2(.)$.
-In our application, we use the same class of noise distributions (flattened multinomial) for both levels of sampling, but this need not be the case.
+Explained in words, our negative sampling method is to randomly select one of the features $\upkappa$ from the noise distribution $q_1(.)$, and, conditional on the feature to be resampled, choose another value $x_j$ for feature $\upkappa$ from a noise distribution $q_2(.)$.
+In our application, we use the same class of noise distributions (flattened multinomial) for both levels of sampling, but this need not necessarily be the case.
+
+%jose, resolve the differences here!
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
 For this reason, among others, we employ a technique known as noise contrastive estimation \cite{nce} which uses basic probability laws to adjust the structural statistical model $p(Y=1|\vec{\phi},\vec{x})$ to account for the possibility of random negative labels that appear identical to positively labeled data.
 An additional burden of this method, however, is we need to learn additional nuisance parameters $Z_{\vec{x}}$ for each unique record type $\vec{x}$ that transform the score function $s(.)$ into a well-behaved probability distribution that integrates to 1.
@@ -301,55 +279,34 @@ who show in the context of language models that setting the $Z_{\vec{x}}=1$ in a
 \footnote{\cite{fastnnlang} suggests one can set the normalizing constant to 1 because the neural net model has enough free parameters that it will effectively just learn the probabilities itself so that it does not over/under predict the probabilities on average (since that will result in penalties on the loss function). Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about astronomically low probabilities.}
 Written explicitly, the new structural probability model is:
 \[\tilde p(Y=1|\vec{\phi},\vec{x_i}) = \frac{\exp(s(\vec{x}_i,\vec{\phi}))}{\exp(s(\vec{x}_i,\vec{\phi})) + P_{q}(\vec{x}_i| \alpha_1,\alpha_2)}\]
-where $P_q(.)$ denotes the unconditional probability of a a record $\vec{x_i}$ being drawn from our negative sampling algorithm, and  $s(x,\vec{\phi})$ is the scoring function for Factorization Machines:
-\[
-s(x,\vec{\phi}) =
-\sum_{j =1}^p \sum_{k=j+1}^{p}   \bigl\langle \,  \phi_j( \vect{x}_{j}), \; \phi_k( \vect{x}_{k}) \, \bigr\rangle
-\]
+where $P_q(.)$ denotes the unconditional probability of a a record $\vec{x_i}$ being drawn from our negative sampling algorithm, and  $s(x,\vec{\phi})$ is the score function for Factorization Machines, in the syntax of \cite{nce}.
 We can show, with relatively little effort,that our 2-step sampler has some interesting theoretical properties. Namely, the embeddings learned under this model will be equivalent to a convex combination of the embeddings learned from $p$ individual Factorization Machines.
 
 
 \subsection{Learning From data}
 \label{sec:learning}
 
-We optimize Noise Contrastive Estimation\cite{nce} loss, which uses basic probability laws to adjust the structural statistical model $p(Y=1|\vec{\phi},\vec{x})$ to account for the possibility of random negative labels that appear identical to positively labeled data. An additional burden of this method, however, is we need to learn additional nuisance parameters $Z_{\vec{x}}$ \hl{What is this?} for each unique record type $\vec{x}$ that transform the score function $s(.)$ \hl{what is this?} into a well-behaved probability distribution that integrates to 1. This introduces an astronomical amount of new parameters and greatly increase the complexity of the model. Instead of estimating these, we appeal to the work of \cite{fastnnlang}, who show in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.\footnote{\cite{fastnnlang} suggests one can set the normalizing constant to 1 because the neural net model has enough free parameters that it will effectively just learn the probabilities itself so that it does not over/under predict the probabilities on average (since that will result in penalties on the loss function). Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about astronomically low probabilities.}  Written explicitly, the new structural probability model is just:
+We optimize Noise Contrastive Estimation\cite{nce} loss, which uses basic probability laws to adjust the structural statistical model $p(Y=1|\vec{\phi},\vec{x})$ to account for the possibility of randomly generated negative labels that appear identical to positively labeled data. Written explicitly, the new structural probability model is just:
+
 \begin{equation}
-p(Y=1|\vec{\phi},\vec{x}) = \frac{e^{s(\vec{x}_i,\vec{\phi}) })}{e^{s(\vec{x}_i,\vec{\phi}) } + q(\vec{x}_i) }
+\tilde p(Y=1|\vec{\phi},\vec{x_i}) = \frac{\exp(s(\vec{x}_i,\vec{\phi}))}{\exp(s(\vec{x}_i,\vec{\phi})) + P_{q}(\vec{x}_i| \alpha_1,\alpha_2)}\times Z_{\vec{x}}
 \end{equation}
-
-We can show, with relatively little effort,that our 2-step sampler has some interesting theoretical properties. Namely, the embeddings learned under this model will be equivalent to a convex combination of the embeddings learned from $p$ individual Factorization Machines.
-
-\begin{theorem}
-The embeddings learned with $\Feat2Vec$ are  a convex combination of the embeddings learned from $p$ individual Factorization Machines.
-\begin{proof}
-Let $S_f$ denote the records whose corresponding negative samples resample feature $f$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
-
-\hl{Need to use consistent notation in the paper.  This notation is really nice:}
-\begin{align*}
- L(\vec{\mathbf{x}} | \vec{\phi} )  =&   \frac{1}{|S|} \sum_{i \in S} \Big(\log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i  ) ) + \sum_{\vec{\mathbf{x}}_j \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j)) \Big) \\
-  =&  \frac{1}{|S|} \sum_{i \in S} \Big( \log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i, i \in S_f )p(i \in S_f) ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j,i \in S_f)p(i \in S_f)) \Big) \\
-  =&  \frac{1}{|S|}\sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_q(\vec{\mathbf{x}}_i |\vec{\mathbf{x}}_i, i \in S_f) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{ P_q(\vec{\mathbf{x}}_{j} |\vec{\mathbf{x}}_i, i \in S_f)p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_q(\vec{\mathbf{x}}_{j}|\vec{\mathbf{x}}_i, i \in S_f)}) \Big) \\
-  \intertext{Note now that $P_q(\vec{\mathbf{x}}_k|\vec{\mathbf{x}}_i,i\in S_f)$ is simply the probability of the record's feature value $\vec{\mathbf{x}}_{k,f}$ under the second step noise distribution $q_2(\mathbf{X_{f}},\alpha_2)$:
-   $P_q(\vec{\mathbf{x}}_k|\vec{\mathbf{x}}_i,i\in S_f) = P_{q_2}(\vec{\mathbf{x}}_{k,f})$,
-   where $k$ refers to record $i$ or a record $j$ negatively sampled from $i$.}\\
-=&  \frac{1}{|S|}\sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) } ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{  P_{q_2}(\vec{\mathbf{x}}_{j,f})p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})) } \Big) \\
-   = & \frac{1}{|S|}\sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \log(p(i \in S_f)^{k+1})\\
-  &   +  \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})})   \Big) \\
-\intertext{We now drop the term containing the probability of assignment to a feature type $p(i \in S_f)$ since it is outside of the learned model parameters $\vec{\phi}$ and fixed in advance:}\\
-    \propto & \frac{1}{|S|} \sum_{f=1}^p \sum_{i \in S_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})}) \Big) \\
-    \xrightarrow[|S|\rightarrow \infty]{ }  & \sum_{f=1}^p p(i \in S_f) E\Big[ \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})}) \Big] \\
-   & = \sum_{f=1}^p p(i \in S_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]
-\end{align*}
-
-Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient since:
-
-\[\frac{\partial }{\partial \phi}\sum_{f=1}^p p(i \in S_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big] =
- \sum_{f=1}^p p(i \in S_f) \frac{\partial }{\partial \phi}E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]\]
- Thus the algorithm will, at each step, learn a convex combination of the gradient for a targeted classifier on feature $f$, with weights proportional to the feature type sampling probabilities in step 1 of the sampling algorithm.
+where $P_q(.)$ denotes the unconditional probability of a a record $\vec{x_i}$ being drawn from our implicit sampling algorithm,  $s(x,\vec{\phi})$ is the score function for Factorization Machines, in the syntax of \cite{nce}, and $Z_{\vec{x}_i}$ is a positive learned parameter to guarantee that the probability distribution integrates to 1:
+\[
+\sum_{\vec{x}_i \in \mathrm{X}} Z_{\vec{x}_i}\times \frac{\exp(s(\vec{x}_i,\vec{\phi}))}{\exp(s(\vec{x}_i,\vec{\phi})) +  P_{q}(\vec{x}_i| \alpha_1,\alpha_2)} = 1
+\]
+This additional parameter for each unique record,$Z_{\vec{x}_i}$, introduces an astronomical amount of new parameters and greatly increase the complexity of the model. Instead of estimating these, we appeal to the work of \cite{fastnnlang}, who show in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.\footnote{\cite{fastnnlang} suggests one can set the normalizing constant to 1 because the neural net model has enough free parameters that it will effectively just learn the probabilities itself so that it does not over/under predict the probabilities on average (since that will result in penalties on the loss function). Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about astronomically low probabilities.}
 
 
-\end{proof}
-\end{theorem}
+We can show, with relatively little effort,that our 2-step sampler has some interesting theoretical properties. Namely, the embeddings learned under this model will be equivalent to a convex combination of the embeddings learned from $p$ individual Factorization Machines that also use an NCE loss:
+
+\begin{restatable}{theorem}{convexFM}
+\label{thm:thm}
+The embeddings learned with $\Feat2Vec$ are  a convex combination of the embeddings learned from $p$ targeted Factorization Machines for each feature in the data.
+\end{restatable}
+
+See the proof in the Appendix.
+
 
 \section{Limitations}
 
@@ -371,6 +328,34 @@ Feature engineering (grouping) is important.
 
 \appendix
 \section{Appendixes}
+\subsection{Proof to Theorem \ref{thm:thm}}
+\convexFM*
+\begin{proof}
+Let $S^+_f$ denote the positively labeled records whose corresponding negative samples resample feature $f$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
+
+\begin{align*}
+ L(\vec{\mathbf{x}} | \vec{\phi} )  =&   \frac{1}{|S^+|} \sum_{i \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i  ) ) + \sum_{\vec{\mathbf{x}}_j \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j)) \Big) \\
+  =&  \frac{1}{|S^+|} \sum_{i \in S^+} \Big( \log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i, i \in S_f )p(i \in S^+_f) ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j,i \in S_f)p(i \in S^+_f)) \Big) \\
+  =&  \frac{1}{|S^+|}\sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S^+_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_q(\vec{\mathbf{x}}_i |\vec{\mathbf{x}}_i, i \in S^+_f) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_q(\vec{\mathbf{x}}_{j} |\vec{\mathbf{x}}_i, i \in S_f)p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_q(\vec{\mathbf{x}}_{j}|\vec{\mathbf{x}}_i, i \in S^+_f)}) \Big) \\
+  \intertext{Note now that $P_q(\vec{\mathbf{x}}_k|\vec{\mathbf{x}}_i,i\in S^+_f)$ is simply the probability of the record's feature value $\vec{\mathbf{x}}_{k,f}$ under the second step noise distribution $q_2(\mathbf{X_{f}},\alpha_2)$:
+   $P_q(\vec{\mathbf{x}}_k|\vec{\mathbf{x}}_i,i\in S^+_f) = P_{q_2}(\vec{\mathbf{x}}_{k,f})$,
+   where $k$ refers to record $i$ or a record $j$ negatively sampled from $i$.}\\
+=&  \frac{1}{|S^+|}\sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S^+_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) } ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{  P_{q_2}(\vec{\mathbf{x}}_{j,f})p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})) } \Big) \\
+   = & \frac{1}{|S^+|}\sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \log(p(i \in S^+_f)^{k+1})\\
+  &   +  \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})})   \Big) \\
+\intertext{We now drop the term containing the probability of assignment to a feature type $p(i \in S^+_f)$ since it is outside of the learned model parameters $\vec{\phi}$ and fixed in advance:}\\
+    \propto & \frac{1}{|S^+|} \sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})}) \Big) \\
+    \xrightarrow[|S^+|\rightarrow \infty]{ }  & \sum_{f=1}^p p(i \in S^+_f) E\Big[ \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})}) \Big] \\
+   & = \sum_{f=1}^p p(i \in S^+_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]
+\end{align*}
+
+Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient since:
+
+\[\frac{\partial }{\partial \phi}\sum_{f=1}^p p(i \in S^+_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big] =
+ \sum_{f=1}^p p(i \in S^+_f) \frac{\partial }{\partial \phi}E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]\]
+ Thus the algorithm will, at each step, learn a convex combination of the gradient for a targeted classifier on feature $f$, with weights proportional to the feature type sampling probabilities in step 1 of the sampling algorithm.
+\end{proof}
+
 \subsection{Problems with Flattening Multinomial of $\Word2Vec$}
 \label{sec:w2vproblem}
 \hl{Write}
