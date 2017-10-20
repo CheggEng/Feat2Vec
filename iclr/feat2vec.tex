@@ -98,7 +98,7 @@ We call this approach  $\Feat2Vec$:}
 \end{align}
 Here, $\vect{\mathcal{F}}$ is a structured feature set---where each dimension represents a different feature type.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
-However,   $\Feat2Vec$  leverage the features' structure  to enforce  \textit{semantic modularity} across features.
+However,   $\Feat2Vec$  leverage the features' structure  to enforce what we call  \textit{semantic modularity} across features.
 This is, the embedding of an observation is additive in respect to the embeddings of its feature types; 
 thus, each feature type  $\mathcal{F}_i$ must be  projected into the same embedding space.
 Semantic modularity is useful because it enables making principled comparisons between different feature types.
