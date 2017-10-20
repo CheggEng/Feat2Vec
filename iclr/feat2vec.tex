@@ -3,8 +3,8 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{amssymb}
-
-
+\usepackage{caption}
+\usepackage{tikz}
 %%% custom packages by JPG and LA:
 \usepackage[most]{tcolorbox}
 \usepackage{amsmath}
@@ -318,13 +318,117 @@ Feature engineering (grouping) is important.
 
 
 \section{Empirical Results}
+In order to test the relative performance of our learned embeddings, we train our $\Feat2Vec$ algorithm on an unstructured dataset, and compare its performance in a targeted ranking task to $\Word2Vec$. We use a publicly available dataset. Ex ante, it is unclear how to evaluate the performance of an ``unsupervised'' embedding algorithm, but we felt that a reasonable task would be to assess the similarity of trained embeddings using unseen records in a left-out dataset. We discuss the evaluation procedure in further detail below.
 
+We use the publicly accessible IMDB database on movies\footnote{More information can be found here: \href{http://www.imdb.com/interfaces/}{http://www.imdb.com/interfaces/}}. It contains information on writers, directors, and principal cast members (actors) attached to each film, along with film metadata such as length, IMDB rating, and movie title. Each record corresponds to a single film. While the IMDB database contains information on TV series and other media types, we focus only on data on films. Table \ref{tab:features} displays the feature types we use from this dataset.
 
+\begin{table}
+\centering
+\caption{Features from IMDB database used in $\Feat2Vec$ Algorithm}
+\makebox[0pt]{
+\begin{tabular}{|l|lcr|}
+\hline
+Feature & Feature Type & \# of Categories & Example \\ \hline
+Movie Title & Text Sequence & 165,471 & ["Ocean's","Eleven"] \\
+Movie Release Year & Category & 217  & 2003 \\
+Is Adult Film? & Boolean & 2 & False \\
+Directors & Category Sequence & 174,382 & [Martin Scorsese]\\
+Writers & Category Sequence & 244,241 &  [Stephen King, Frank Darabont]\\
+Principal Cast Members & Category Sequence & 1,104,280 & [Samuel L Jackson, Uma Therman, John Travolta, \ldots] \\
+Genres &  Category Sequence & 28 & [Action, Comedy] \\
+Runtime (Minutes) & Real-Valued & - & 90 \\
+IMDB Rating (0-10) & Real-Valued & - & 5.5 \\
+\# of IMDB Rating Votes & Real-Valued & - & 150 \\ \hline
+Total \# of Films & \multicolumn{3}{c|}{465,136} \\
+\hline
+\end{tabular}
+}
+\label{tab:features}
+\end{table}
+We now discuss our modeling choices for this particular implementation of $\Feat2Vec$.
+For all of the category variables, we learn a unique $d$-dimensional embedding for each entity.
+When there are multiple categories per record, we sum the individual entity embeddings in a ``bag-of-words'' style representation to a single vector representing that feature's information content.
+For example, when there are multiple cast members, we aggregate the embeddings for each actor to a single ``actor'' embedding, that is then interacted with embeddings extracted from all other feature groups.
+To feed thsee sequence-type features into our $\Feat2Vec$ algorithm, we require a fixed length of categories for each feature type, and so truncate each to have no more than 10 categories per feature (and sometimes less if reasonable).
+This results in retaining the full set of information for well over 95\% of our observations.
+We pad the sequences with a ``null'' category whenever necessary to maintain a fixed length.
+For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $d$, which we treat as the feature's embedding.
+Each intermediate layer has $d$ units with \texttt{relu} activation functions.
+These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space.
+In contrast, $\Word2Vec$ would ex ante be unable to know ex-ante that an IMDB rating of 5.5 is anything like an IMDB rating of 5.6; it would tokenize both values and treat them as independent words in a document.
+For the single text feature we use (the Movie Title), we remove preprocess the text by removing non alpha-numeric characters, pruning stopwords, and stemming the remaining words in the title text.
+We then follow a simple bag-of-words approach that learns an embedding for each unique word in our universe of movie titles, and sums these up, as we did for our categorical sequence variables.
+We note, however, that it would be trivial in our framework to process the text further by passing these word embeddings through sequential convolutional layers, to further extract high-level features of movie titles that may be relevant for learning embeddings.
+
+For training $\Word2Vec$ embeddings on the IMDB database, we simply treat each movie record as a document, and tokenize all feature values by prepending each feature value in an observation with the name of the variable.
+So if a movie has a release year of 1986, we would input the word \texttt{releaseYear\_1986} into that movie's corresponding training document.
+We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
+Whenever possible, we set identical hyperparameters for $\Word2Vec$ that we use in $\Feat2Vec$.
+
+For our evaluation, we leave out a random 10\% sample of the IMDB dataset that contains a director\footnote{over 90\% of the movies in the database have exactly one director, but in cases where there are multiple directors to a film, we use the first director listed in the IMDB dataset.} that appears at least twice in the database.
+We do this to guarantee that the set of directors in the left-out dataset appear during training at least once, so that each respective algorithm can learn something about the characteristics of these directors.
+
+For training $\Feat2Vec$, we set $\alpha_1 = 1/4$ and $\alpha_2 = 3/4$.
+We perform cross-validation on the loss function to determine the number of epochs to train, and then train the full training dataset with this number of epochs.
+While regularization of the embeddings during training is possible, this did not dramatically change results, so we ignore this dimension of hyperparameters.
+%The $\Feat2Vec$ algorithm takes approximately 5 minutes per epoch on a home desktop computer.
+The $\Feat2Vec$ model is built on the python library Keras
+%Cite keras???
+After training, we take our left out set of movies, and using the cast members associated with a film, attempt to predict the actual director the film was directed by.
+We take the sum of the cast member embeddings, and rank the directors by cosine similarity of their embeddings to the summed cast member vector.
+If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
+The idea behind this evaluation is that if the embeddings learned in the training dataset are successful at extracting the underlying information about these entities from their movie projects, they should be able to predict future colloborations. We evaluate the rankings according to three metrics.
+The first is mean percentile rank (MPR), the average rank (standardized to be on a 0-100 percentile scale) of the actual directors in the test dataset:
+\[MPR = \frac{1}{N}\sum_{i=1}^N \frac{R_i}{\max R} \]
+where $R_i$ is the rank of the director under our evaluation procedure for movie $i$. This measures on average how well we rank actual director-cast collaborations. A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric. The next is mean reciprocal rank (MRR), which is similar to mean percentile rank, but weights rankings that are closer to rank 0 (the best rank possible) more:
+\begin{align*}
+MRR = \frac{1}{N}\sum_{i=1}^N \frac{1}{R_i+1}
+\end{align*}
+The idea behind this metric is that, under MPR, an improvement  in rankings under an algorithm from  10 to 1 will be equally weighted as an improvement from 49,103 to 49,92 in terms of calculating the $MPR$ statistic. Clearly, the former improvement is more useful in a real-world context of submitting reccomendations to users, and so MRR attempts to correct for this by weighting rankings closer to 1 much higher.
+A higher value, unlike MPR, indicates better performance. The final metric we consider is top 1 precision, or the percent of test examples we successfully rank the actual director as 1 out of the 174,382 directors possible.
+
+Table \ref{tab:eval} presents the results from our evaluation.
+As is evident, $\Feat2Vec$ sizably outperforms $\Word2Vec$ along all metrics considered.
+Figure \ref{fig:cdf} shows the full distribution of rankings, rather than summary statistics, in the form of a CDF of all rankings calculated in the test dataset.
+The graphic makes it apparent for the vast majority of the ranking space, the rank CDF of $\Feat2Vec$ is to the left of $\Word2Vec$, indicating a greater probability of a lower ranking under $\Feat2Vec$.
+This is not, however, the case at the upper tail of ranking space, where it appears $\Word2Vec$ is superior.
+One might argue that while, overall, $\Feat2Vec$ appears to perform better, it is exactly that upper tail that actually matters most in practice, and so it would seem $\Word2Vec$ is more useful.
+We would argue that actually, intermediate rankings are still strong signals that our $\Feat2Vec$ algorithm is doing a better job of extracting information into embeddings, particularly those entities that appear sparsely in the training data and so are especially difficuly.
+But additionally, if we zoom-in on the absolute upper region of rankings (1 to 25), which might be a sensible length of ranks one might give an actual reccomendee, it is the case that up until rank 8 or so, $\Feat2Vec$ outperforms $\Word2Vec$ still, and so even on this metric, is preferred if we only care about top rankings.
+\begin{table}[h]
+\centering
+\caption{Algorithm Performances on Evaluation Ranking Task}
+\begin{tabular}{|l|cc|}
+\hline
+Statistic & $\Feat2Vec$ & $\Word2Vec$ \\ \hline
+Mean Percentile Rank & 19.36\% & 24.15\% \\
+Mean Reciprocal Rank & 0.0362 & 0.0297 \\
+Precision (Top 1) & 2.43\% & 1.26\% \\
+\hline
+\end{tabular}
+\label{tab:eval}
+\end{table}
+
+\begin{figure}[h]
+\begin{center}
+\makebox[0pt]{
+\begin{tikzpicture}
+\node (img1) at (0,0) {\includegraphics[scale=1.]{rankcdf.pdf}};
+\node (img2) at (2.4,-1.3) {\includegraphics[scale=.5]{rankcdf_top25.pdf}};
+%\draw (-5.7,-3.8) -- (-1,0.8);
+%\draw (-5.7,-3.8) -- (-1,-3.2);
+\end{tikzpicture}
+}
+\end{center}
+\caption{CDF of Test Data Director Rankings \\ (With Zoom-in to Top 25 Ranks)}
+\label{fig:cdf}
+\end{figure}
 \section{Relation to Prior Work}
 
 
 \section{Conclusion}
 
+\pagebreak
 
 \appendix
 \section{Appendixes}

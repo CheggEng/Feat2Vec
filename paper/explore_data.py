@@ -9,11 +9,21 @@ import matplotlib.pyplot as plt
 datadir = '/home/luis/Downloads/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 outputdir = '/home/luis/feat2vec/paper/output/'
-#load titles data
 
 with open(os.path.join(datadir,'imdb_movie_data.p'),'r') as f:
     df= cPickle.load(f)
 
+print df.head()
+#list number of unique categories per feature
+for v in ['genres','titleSeq','directors','writers','principalCast']:
+    uniquevals = set([i for r in df[v].values.tolist() for i in r])
+    print v,len(uniquevals)-1
+
+print len(pd.unique(df['startYear'])) - 1
+print len(df)
+
+
+#load titles data
 print df['directors'].map(len).value_counts()/np.sum(df['directors'].map(len).value_counts())
 
 with gzip.open(datadir + 'title.basics.tsv.gz') as f:
@@ -38,8 +48,9 @@ print princ.head()
 with gzip.open(datadir + 'name.basics.tsv.gz') as f:
     names = pd.read_csv(f,sep='\t')
 
-print names.head()
 
+names=names.set_index('nconst',drop=True)
+print names.head()
 
 with gzip.open(datadir + 'title.ratings.tsv.gz') as f:
     ratings = pd.read_csv(f,sep='\t')
@@ -98,3 +109,15 @@ for c in ['writers','directors','principalCast']:
     plt.xlim([0,10])
     plt.show()
     print ( lencounts <= 5 ).astype(int).mean()
+
+
+
+#print example text of top title
+df = df.sort_values(['numVotes'])
+print df.tail()
+r = df.iloc[len(df)-5,:]
+print r
+for c in ['writers','directors','principalCast']:
+    print c
+    for h in r[c]:
+        print "     " + names.loc[h,'primaryName']
