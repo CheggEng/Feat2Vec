@@ -15,8 +15,8 @@ from feat2vec.feat2vec import Feat2Vec
 #datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 batch_size=1000
-feature_alpha=.25
-sampling_alpha=.5
+feature_alpha=1.
+sampling_alpha=.75
 negative_samples=5
 dim = 50
 np.random.seed(9)
