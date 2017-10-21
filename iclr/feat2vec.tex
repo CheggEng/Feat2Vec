@@ -186,9 +186,9 @@ A simple   implementation for $\phi_i$ is a linear fully-connected layer, where 
 \end{equation}
 
 
-In $\Word2Vec$, the embeddings for individual words of a document need to be similar.
-On the other hand,  $\Feat2Vec$ does not have this constraint. 
-Individual subfeatures could even be dropped; as long as feature types from within an observation are similar to each other.
+In $\Word2Vec$, the embeddings for individual words of a document need to be similar;
+while  $\Feat2Vec$ has no such constraint. 
+Individual subfeatures are not important; what matters is that feature types from within an observation are similar to each other.
 
 
 
@@ -305,12 +305,12 @@ L(S)  = \arg\min_\upbeta   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\l
 
 
 $\Feat2Vec$ has interesting theoretical properties.
-For example, Factorization Machines can be used as a multi-label classifier.
-In this case we would have at least two feature groups---one of the feature groups is the label that we want to predict, and the other group(s) is the input from which we want to make the prediction.
-The output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$).
-$\Feat2Vec$ is equivalent to optimizing a convex combination of the embeddings learned from $n$ individual Factorization Machines.
-In other words, it optimizes $n$ multi-label classifiers, by selecting that each feature group is a label for a multi-label classification problem.
-See the proof in the Appendix~\ref{thm:proof}.
+For example, it is well known that Factorization Machines can be used as a multi-label classifier:
+with at least two feature groups, one can use one of the feature groups as the target label, and the other group(s) as the input features to make a prediction.
+In such setting, the output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$), and therefore the input can be associated with more than one label.
+With $n$ feature types, $\Feat2Vec$ is equivalent to optimizing a convex combination of the embeddings learned from $n$ individual Factorization Machines.
+In other words, it optimizes $n$ multi-label classifiers, where each classifier  is optimized for a different target (i.e., feature type).
+We show the proof of this in the Appendix~\ref{thm:proof}.
 
 
 
