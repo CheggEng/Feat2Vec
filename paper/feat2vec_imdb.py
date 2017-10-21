@@ -5,6 +5,9 @@ import numpy as np
 import gzip
 import cPickle
 import os
+import sys
+sys.path.append('/home/luis/feat2vec/')
+
 import matplotlib.pyplot as plt
 import feat2vec
 import keras
@@ -15,10 +18,11 @@ from feat2vec.feat2vec import Feat2Vec
 #datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 batch_size=1000
-feature_alpha=1.
+feature_alpha=.25
 sampling_alpha=.75
 negative_samples=5
 dim = 50
+plot_alpha=False
 np.random.seed(9)
 deepin_features = [ ['runtimeMinutes'], ['averageRating','mi_rating'],['numVotes','mi_rating']]
 
@@ -109,20 +113,20 @@ sampling_features =  [titlecols,['startYear'],['isAdult'],['runtimeMinutes'],['a
                       genrecols,castcols,directorcols,writercols]
 
 #Calculate the step1 probs manually due to deepin
-param_counts=np.zeros(len(sampling_features))
-param_counts[sampling_features.index(titlecols)] = len(vocab_maps['titleSeq'])*dim
-param_counts[sampling_features.index(genrecols)] = len(vocab_maps['genres'])*dim
-param_counts[sampling_features.index(castcols)] = len(vocab_maps['principalCast'])*dim
-param_counts[sampling_features.index(directorcols)] = len(vocab_maps['directors'])*dim
-param_counts[sampling_features.index(writercols)] = len(vocab_maps['writers'])*dim
-param_counts[sampling_features.index(['startYear'])] = len(vocab_maps['startYear'])*dim
-param_counts[sampling_features.index(['isAdult'])] = dim
-param_counts[sampling_features.index(['runtimeMinutes'])] = 1*dim + dim*dim + dim*dim
-param_counts[sampling_features.index(['averageRating','numVotes','mi_rating'])] = 2*(2*dim + dim*dim + dim*dim)
-print param_counts
-init_probs = np.power(param_counts,sampling_alpha)
-init_probs /= np.sum(init_probs)
-print init_probs
+# param_counts=np.zeros(len(sampling_features))
+# param_counts[sampling_features.index(titlecols)] = len(vocab_maps['titleSeq'])*dim
+# param_counts[sampling_features.index(genrecols)] = len(vocab_maps['genres'])*dim
+# param_counts[sampling_features.index(castcols)] = len(vocab_maps['principalCast'])*dim
+# param_counts[sampling_features.index(directorcols)] = len(vocab_maps['directors'])*dim
+# param_counts[sampling_features.index(writercols)] = len(vocab_maps['writers'])*dim
+# param_counts[sampling_features.index(['startYear'])] = len(vocab_maps['startYear'])*dim
+# param_counts[sampling_features.index(['isAdult'])] = dim
+# param_counts[sampling_features.index(['runtimeMinutes'])] = 1*dim + dim*dim + dim*dim
+# param_counts[sampling_features.index(['averageRating','numVotes','mi_rating'])] = 2*(2*dim + dim*dim + dim*dim)
+# print param_counts
+# init_probs = np.power(param_counts,feature_alpha)
+# init_probs /= np.sum(init_probs)
+# print init_probs
 
 #CV over epoch count
 earlyend = EarlyStopping(patience=0,monitor='val_loss')
@@ -140,12 +144,33 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     mask_zero=False,
     deepin_feature = is_deepin_feature,
     deepin_inputs=deep_input_layers,deepin_layers=deep_embed_layers,
-    step1_probs = init_probs,
     feature_alpha=feature_alpha,sampling_alpha=sampling_alpha,
     negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
 
 
 print f2v.model.summary()
+
+#quick aside: get a printout of important layers to demonstrate importance
+if plot_alpha:
+    p_title=[]
+    p_cast = []
+    p_runtime = []
+    alphas = np.arange(0.,1.01,.01)
+    for a in alphas:
+        f2v.feature_alpha=a
+        temp_probs = f2v.gen_step1_probs()
+        p_title.append(temp_probs[0])
+        p_cast.append(temp_probs[6])
+        p_runtime.append(temp_probs[3])
+
+    plt.plot(alphas,p_cast,label='Cast Members')
+    plt.plot(alphas,p_title,label='Movie Title')
+    plt.plot(alphas,p_runtime,label='Movie Runtime')
+    plt.legend(loc=2)
+    plt.ylabel('Pr(choose feature)')
+    plt.xlabel(r'$\alpha_1$')
+    plt.savefig('paper/output/samplingprobs.pdf')
+    plt.show()
 f2v.fit_model(epochs=25,validation_split=.1,
     callbacks = callbacks)
 print f2v.model.get_layer('embedding_titleSeq').get_weights()[0]
@@ -162,7 +187,6 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     mask_zero=False,
     deepin_feature = is_deepin_feature,
     deepin_inputs=deep_input_layers,deepin_layers=deep_embed_layers,
-    step1_probs = init_probs,
     feature_alpha=feature_alpha,sampling_alpha=sampling_alpha,
     negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
 

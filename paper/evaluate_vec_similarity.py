@@ -6,6 +6,7 @@
 import numpy  as np
 import pandas as pd
 import sys,os
+sys.path.append('/home/luis/feat2vec/')
 import cPickle
 import matplotlib.pyplot as plt
 from gensim.models.word2vec import Word2Vec
@@ -15,9 +16,11 @@ import feat2vec
 datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
-outputdir= 'paper/output/alpha_75_100/'
+outputdir= 'paper/output/alpha_75_25/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
+import sys
+sys.path.append('/home/luis/feat2vec/')
 w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
 
 f2v = pd.read_csv(os.path.join(datadir,'imdb_movie_embeddings.tsv'),sep='\t')
