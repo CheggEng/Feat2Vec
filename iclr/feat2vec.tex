@@ -375,10 +375,12 @@ For every movie in the database, we create a document that contains the same inf
 We prepend each feature by its feature group name, and we remove spaces from within features.
 In Figure~\ref{fig:ocean11} we show an example document.
 Some features may  allow multiple values (e.g., multiple writers, directors).  
-To feed these  features into the models, for convenience, we constraint the length by  truncating each feature to no more than10 categories (and sometimes less if reasonable).
+To feed these  features into the models, for convenience, we constraint the number of values,  by  truncating each feature to no more than 10 levels (and sometimes less if reasonable).
+This results in retaining the full set of information for well over 95\% of our observations. \hl{check please}
 We pad the sequences with a ``null'' category whenever necessary to maintain a fixed length.
 We do this consistently for both $\Word2Vec$ and $\Feat2Vec$ \hl{Luis: confirm that we pad and truncate both models}.
-This results in retaining the full set of information for well over 95\% of our observations. \hl{huh?}
+We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
+
 
 \begin{figure}[ht]
 \begin{center}
@@ -391,23 +393,23 @@ This results in retaining the full set of information for well over 95\% of our 
 
 
 \paragraph{Feat2Vec} 
-Feature representation in $\Feat2Vec$ implies defining feature extraction function for each feature group.
+Feature representation in $\Feat2Vec$ implies requires feature extraction function for each feature group.
 Here, we explain how we build these functions:
 
 \begin{itemize}
 \item  \textbf{Bag of categories,  categorical, and boolean:} 
 For all of the categorical variables, we learn a unique $r$-dimensional embedding for each entity using a linear fully-connected layer (Equation~\ref{eq:fully_connected}).
-This allows  the embeddings of multiple categories per record to be summed.
-Thus,  the embedding of ``Brad Pitt`` would be the same when he appears in a movie as a principal cast member, regardless whether he was first  or second star. 
-Though, he may have a different embedding when he is listed as a director.
+We do not require one-hot encodings, and thus we allow multiple categories to be active; resulting in a single embedding for the group  that is the sum of  the embeddings of the subfeatures.
+This is ordering-invariant:  the embedding of ``Brad Pitt'' would be the same when he appears in a movie as a principal cast member, regardless whether he was 1st  or 2nd star.
+Though,  if he were listed as a director it may result in a different embedding.
 \item \textbf{Text:} 
-For the single text feature we use, we  preprocess the text by removing non alpha-numeric characters, pruning stopwords, and stemming the remaining words in the title text.
-We then follow the same approach that we did for categorical sequence variables.
-It would be straightforward to enable more sophisticated approaches (e.g,  convolutional layers).
+We  preprocess the text by removing non alpha-numeric characters,  stopwords, and stemming the remaining words.
+We then follow the same approach that we did for categorical  variables.
+It would be easy to use more sophisticated methods (e.g,  convolutions).
 \item \textbf{Real-valued:} 
 For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $r$, which we treat as the feature's embedding.
 Each intermediate layer has $r$ units with \texttt{relu} activation functions.
-These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space. In contrast, $\Word2Vec$ would be unable to know ex-ante that an IMDB rating of 5.5 is anything like an IMDB rating of 5.6; it would tokenize both values and treat them as independent words in a document.
+These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space. In contrast, $\Word2Vec$ would be unable to know that an IMDB rating of 5.5 is similar to  5.6.%; it would tokenize both values and treat them as independent words in a document.
 \end{itemize}
 
 
@@ -418,28 +420,26 @@ For our evaluation, we define a testing set that was not used to tune the parame
 To generate this set, we  select randomly 10\% sample of the observations that contain a director that appears at least twice in the database.
 We do this to guarantee that the set of directors in the left-out dataset appear during training at least once, so that each respective algorithm can learn something about the characteristics of these directors.
 Over 90\% of the movies in the database have exactly one director, if there are multiple, we select the first director in the held-out.
-\hl{No dev set?}
-
  
-
 
 
 \paragraph{Hyper-parameters}
 For training $\Feat2Vec$, we set $\alpha_1 = 1/4$ and $\alpha_2 = 3/4$.
+
 We perform cross-validation on the loss function to determine the number of epochs to train, and then train the full training dataset with this number of epochs.
 While regularization of the embeddings during training is possible, this did not dramatically change results, so we ignore this dimension of hyperparameters.
+\hl{how do you do c.v. with no dev set? do you tune only f2v, or also w2v?}
 %The $\Feat2Vec$ algorithm takes approximately 5 minutes per epoch on a home desktop computer.
 The $\Feat2Vec$ model is built on the python library Keras
 %Cite keras???
-After training, we take our left out set of movies, and using the cast members associated with a film, attempt to predict the actual director the film was directed by.
+
+\paragraph{Results}
+
+
+After training, we use the cast members associated with the movies of the test set and  attempt to predict the actual director the film was directed.
 We take the sum of the cast member embeddings, and rank the directors by cosine similarity of their embeddings to the summed cast member vector.
 If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
 
-\paragraph{Results}
-For training $\Word2Vec$ embeddings on the IMDB database, we simply treat each movie record as a document, and tokenize all feature values by prepending each feature value in an observation with the name of the variable.
-So if a movie has a release year of 1986, we would input the word \texttt{releaseYear\_1986} into that movie's corresponding training document.
-We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
-Whenever possible, we set identical hyperparameters for $\Word2Vec$ that we use in $\Feat2Vec$.
 
 
 
