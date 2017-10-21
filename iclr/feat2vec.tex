@@ -410,13 +410,8 @@ If there is a cast member in the test dataset who did not appear in the training
 \paragraph{Results}
 Table \ref{tab:eval} presents the results from our evaluation.
 As is evident, $\Feat2Vec$ sizably outperforms $\Word2Vec$ along all metrics considered.
-Figure \ref{fig:cdf} shows the full distribution of rankings, rather than summary statistics, in the form of a CDF of all rankings calculated in the test dataset.
-The graphic makes it apparent for the vast majority of the ranking space, the rank CDF of $\Feat2Vec$ is to the left of $\Word2Vec$, indicating a greater probability of a lower ranking under $\Feat2Vec$.
-This is not, however, the case at the upper tail of ranking space, where it appears $\Word2Vec$ is superior.
-One might argue that while, overall, $\Feat2Vec$ appears to perform better, it is exactly that upper tail that actually matters most in practice, and so it would seem $\Word2Vec$ is more useful.
-We would argue that actually, intermediate rankings are still strong signals that our $\Feat2Vec$ algorithm is doing a better job of extracting information into embeddings, particularly those entities that appear sparsely in the training data and so are especially difficuly.
-But additionally, if we zoom-in on the absolute upper region of rankings (1 to 25), which might be a sensible length of ranks one might give an actual reccomendee, it is the case that up until rank 8 or so, $\Feat2Vec$ outperforms $\Word2Vec$ still, and so even on this metric, is preferred if we only care about top rankings.
-\begin{table}[h]
+
+\begin{table}[htb]
 \centering
 \caption{Algorithm Performances on Evaluation Ranking Task \hl{I thought you were also going to include NS?}}
 \begin{tabular}{|l|cc|}
@@ -430,19 +425,24 @@ Precision (Top 1) & 2.43\% & 1.26\% \\
 \label{tab:eval}
 \end{table}
 
+Figure \ref{fig:cdf} shows the full distribution of rankings, rather than summary statistics, in the form of a CDF of all rankings calculated in the test dataset.
+The graphic makes it apparent for the vast majority of the ranking space, the rank CDF of $\Feat2Vec$ is to the left of $\Word2Vec$, indicating a greater probability of a lower ranking under $\Feat2Vec$.
+This is not, however, the case at the upper tail of ranking space, where it appears $\Word2Vec$ is superior.
+One might argue that while, overall, $\Feat2Vec$ appears to perform better, it is exactly that upper tail that actually matters most in practice, and so it would seem $\Word2Vec$ is more useful.
+We would argue that actually, intermediate rankings are still strong signals that our $\Feat2Vec$ algorithm is doing a better job of extracting information into embeddings, particularly those entities that appear sparsely in the training data and so are especially difficuly.
+But additionally, if we zoom-in on the absolute upper region of rankings (1 to 25), which might be a sensible length of ranks one might give an actual reccomendee, it is the case that up until rank 8 or so, $\Feat2Vec$ outperforms $\Word2Vec$ still, and so even on this metric, is preferred if we only care about top rankings.
 
-\begin{figure}[h]
+
+\begin{figure}[htb]
 \begin{center}
 \makebox[0pt]{
 \begin{tikzpicture}
-\node (img1) at (0,0) {\includegraphics[scale=1.]{rankcdf.pdf}};
-\node (img2) at (2.4,-1.3) {\includegraphics[scale=.5]{rankcdf_top25.pdf}};
-%\draw (-5.7,-3.8) -- (-1,0.8);
-%\draw (-5.7,-3.8) -- (-1,-3.2);
+\node (img1) at (0,0) {\includegraphics[scale=0.6]{rankcdf.pdf}};
+\node (img2) at (1.5,-0.75) {\includegraphics[scale=.3]{rankcdf_top25.pdf}};
 \end{tikzpicture}
 }
 \end{center}
-\caption{CDF of Test Data Director Rankings \\ (With Zoom-in to Top 25 Ranks)}
+\caption{Cumulative Distribution Function of Director Rankings \\ (With Zoom-in to Top 25 Ranks)}
 \label{fig:cdf}
 \end{figure}
 
@@ -461,9 +461,11 @@ Feature engineering (grouping) is important.
 
 
 \section{Relation to Prior Work}
-
+\hl{Jose to write this}
 
 \section{Conclusion}
+\hl{Jose to write this}
+
 
 \pagebreak
 
