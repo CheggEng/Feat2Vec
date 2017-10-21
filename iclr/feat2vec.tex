@@ -180,9 +180,10 @@ For notational convenience, we refer to this model as a scoring function  $s(\cd
 and $\vect{x}_{\vect{\upkappa}_i}$ as the vector that contains all of the subfeatures that belong to the group $\upkappa_i$.
 %Thus, $\vect{x}_{\vect{\upkappa}_i} =  \bigl[ \, x_{i_a} | a \in \{1, 2, \dots, {|\upkappa_i|} \} \, \bigr]$.
 A simple   implementation for $\phi_i$ is a linear fully-connected layer, where the output of the $r$-th entry is:
-\[
+\begin{equation}
+\label{eq:fully_connected}
 \phi_i\bigl(\vect{x\vphantom{\beta_i}}_i, \vect{\beta}_i\bigr)_r = \sum_{a=1}^{d_i}  \beta_{r_a} x_{i_a}
-\]
+\end{equation}
 
 
 In $\Word2Vec$, the embeddings for individual words of a document need to be similar.
@@ -289,16 +290,16 @@ Thus, it does not over/under predict the probabilities on average (since that wi
  
 Written explicitly, the new structural probability model is:
 \begin{equation}
-\tilde p(Y=1|\vec{\phi},\vec{x\vphantom{phi}}) = \frac{\exp\bigl(s(\vec{x\vphantom{phi}},\vec{\phi}) \bigr)}{\exp( s\bigl(\vec{x\vphantom{phi}},\vec{\phi}) \, \bigr) + p_{q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)}
+\tilde p(Y=1|\vec{\phi},\vec{x\vphantom{phi}}) = \frac{\exp\bigl(s(\vec{x\vphantom{phi}},\vec{\phi}) \bigr)}{\exp( s\bigl(\vec{x\vphantom{phi}},\vec{\phi}) \, \bigr) + p_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)}
 \end{equation}
-where $P_q(.)$ denotes the unconditional probability of a a record $\vec{x_i}$ being drawn from our negative sampling algorithm:
+where $P_{\q}(.)$ denotes the unconditional probability of a a record $\vec{x_i}$ being drawn from our negative sampling algorithm:
 \begin{equation}
 \text{\hl{Write equation!! This is only defined in the middle of the appendix}}
 \end{equation}
 
 Thus, our loss function $L$ optimizes $\vect{\upbeta}$, the parameters of the function extraction functions $\vect\phi$.
 \begin{equation}
-L(S)  = \arg\min_\upbeta   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vect{x}^{\,+}   ) ) \; + \sum_{\vect{x}^{\,-}  \sim q(\cdot|\vect{x}^+)}^k \log(\tilde p(Y=0|\vec{\phi},\vect{x}^{\,-}  )) \Big) 
+L(S)  = \arg\min_\upbeta   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vect{x}^{\,+}   ) ) \; + \sum_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\tilde p(Y=0|\vec{\phi},\vect{x}^{\,-}  )) \Big) 
 \end{equation}
 
 
@@ -346,7 +347,7 @@ Table~\ref{tab:features} summarizes the feature types we use.
 
 \begin{table}[htb]
 \centering
-\caption{IMDB dataset \hl{Is bag of categories accurate? or it's a bag of bag of words??}}
+\caption{IMDB dataset}
 \label{tab:features}
 \begin{tabular}{@{}lllp{5cm}@{}}
 \toprule
@@ -365,36 +366,41 @@ Principal cast members  & Bag of categories & 1,104,280         &``Samuel L. Jac
 \end{table}
 
 
-
-
-
-\subsection{Experimental Setup}
-\paragraph{Held-out set} For our evaluation, we define a testing set that was not queried to tune the parameters of the model. 
-We do this by selecting randomly a 10\% sample that contains a director\footnote{over 90\% of the movies in the database have exactly one director, but in cases where there are multiple directors to a film, we use the first director listed in the IMDB dataset.} that appears at least twice in the database.
-We do this to guarantee that the set of directors in the left-out dataset appear during training at least once, so that each respective algorithm can learn something about the characteristics of these directors.
-
- 
-
-\paragraph{Features} 
-We now discuss our modeling choices for this particular implementation of $\Feat2Vec$.
-For all of the category variables, we learn a unique $d$-dimensional embedding for each entity.
-When there are multiple categories per record, we sum the individual entity embeddings in a ``bag-of-words'' style representation to a single vector representing that feature's information content.
+\paragraph{Features extraction functions} 
+\hl{Jose is working on this section, but has questions}
+\begin{itemize}
+\item For all of the categorical variables, we learn a unique $r$-dimensional embedding for each entity.
+When there are multiple categories per record, we sum the individual entity embeddings.
 For example, when there are multiple cast members, we aggregate the embeddings for each actor to a single ``actor'' embedding, that is then interacted with embeddings extracted from all other feature groups.
 To feed thsee sequence-type features into our $\Feat2Vec$ algorithm, we require a fixed length of categories for each feature type, and so truncate each to have no more than 10 categories per feature (and sometimes less if reasonable).
 This results in retaining the full set of information for well over 95\% of our observations.
 We pad the sequences with a ``null'' category whenever necessary to maintain a fixed length.
-For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $d$, which we treat as the feature's embedding.
-Each intermediate layer has $d$ units with \texttt{relu} activation functions.
-These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space.
-In contrast, $\Word2Vec$ would ex ante be unable to know ex-ante that an IMDB rating of 5.5 is anything like an IMDB rating of 5.6; it would tokenize both values and treat them as independent words in a document.
-For the single text feature we use (the Movie Title), we remove preprocess the text by removing non alpha-numeric characters, pruning stopwords, and stemming the remaining words in the title text.
+
+\item For the single text feature we use (the Movie Title), we remove preprocess the text by removing non alpha-numeric characters, pruning stopwords, and stemming the remaining words in the title text.
 We then follow a simple bag-of-words approach that learns an embedding for each unique word in our universe of movie titles, and sums these up, as we did for our categorical sequence variables.
 We note, however, that it would be trivial in our framework to process the text further by passing these word embeddings through sequential convolutional layers, to further extract high-level features of movie titles that may be relevant for learning embeddings.
 
-For training $\Word2Vec$ embeddings on the IMDB database, we simply treat each movie record as a document, and tokenize all feature values by prepending each feature value in an observation with the name of the variable.
-So if a movie has a release year of 1986, we would input the word \texttt{releaseYear\_1986} into that movie's corresponding training document.
-We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
-Whenever possible, we set identical hyperparameters for $\Word2Vec$ that we use in $\Feat2Vec$.
+
+\item For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $r$, which we treat as the feature's embedding.
+Each intermediate layer has $r$ units with \texttt{relu} activation functions.
+These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space.
+
+In contrast, $\Word2Vec$ would be unable to know ex-ante that an IMDB rating of 5.5 is anything like an IMDB rating of 5.6; it would tokenize both values and treat them as independent words in a document.
+
+\end{itemize}
+
+
+\subsection{Experimental Setup}
+\paragraph{Held-out set} 
+For our evaluation, we define a testing set that was not used to tune the parameters of the model. 
+To generate this set, we  select randomly 10\% sample of the observations that contain a director that appears at least twice in the database.
+We do this to guarantee that the set of directors in the left-out dataset appear during training at least once, so that each respective algorithm can learn something about the characteristics of these directors.
+Over 90\% of the movies in the database have exactly one director, if there are multiple, we select the first director in the held-out.
+\hl{No dev set?}
+
+ 
+
+
 
 \paragraph{Hyper-parameters}
 For training $\Feat2Vec$, we set $\alpha_1 = 1/4$ and $\alpha_2 = 3/4$.
@@ -408,6 +414,13 @@ We take the sum of the cast member embeddings, and rank the directors by cosine 
 If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
 
 \paragraph{Results}
+For training $\Word2Vec$ embeddings on the IMDB database, we simply treat each movie record as a document, and tokenize all feature values by prepending each feature value in an observation with the name of the variable.
+So if a movie has a release year of 1986, we would input the word \texttt{releaseYear\_1986} into that movie's corresponding training document.
+We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
+Whenever possible, we set identical hyperparameters for $\Word2Vec$ that we use in $\Feat2Vec$.
+
+
+
 Table \ref{tab:eval} presents the results from our evaluation.
 As is evident, $\Feat2Vec$ sizably outperforms $\Word2Vec$ along all metrics considered.
 
@@ -448,7 +461,7 @@ But additionally, if we zoom-in on the absolute upper region of rankings (1 to 2
 
 \subsection{ Educational Dataset}
 
-\hl{write 2-3 paragraphs only}
+\hl{Jose to write 2-3 paragraphs only}
 
 \section{Limitations}
 
