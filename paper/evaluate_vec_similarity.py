@@ -16,12 +16,14 @@ import feat2vec
 datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
-outputdir= 'paper/output/alpha_75_25/'
+outputdir= 'paper/output/alpha_75_100/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
 import sys
+redo_w2v = False
 sys.path.append('/home/luis/feat2vec/')
-w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
+if redo_w2v:
+    w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
 
 f2v = pd.read_csv(os.path.join(datadir,'imdb_movie_embeddings.tsv'),sep='\t')
 f2v = f2v.set_index(['feature','values'])
@@ -49,27 +51,29 @@ print testdf.head()
 
 #create document list vsn of test dataframe
 print "cleaning df..."
-tempdf = testdf.copy()
-exclude_tokens = set(['isAdult_0','mi_rating_0'])
-sentence_fcn = lambda x: ' '.join([w for w in x if w not in exclude_tokens])
 seqlengths = {'genres':3,'writers':5,'directors':5,'principalCast':10,'titleSeq':5}
-for c in testdf.columns:
-    #print c
-    if c in seqlengths.keys():
-        null_key = r' {}_\N'.format(c)
-        tag_fcn = lambda x: ' '.join([c  + "_" + str(w) for w in x]) + null_key*(seqlengths[c]-len(x))
-        trunc_tag_fcn = lambda x: ' '.join([c  + "_" + str(w) for w in x[0:seqlengths[c]] ])
-        def seq_tag(x):
-            if len(x) <= seqlengths[c]:
-                return tag_fcn(x)
-            else:
-                return trunc_tag_fcn(x)
-        tempdf[c] = tempdf[c].map(seq_tag)
-    else:
-        tag_fcn = lambda x: c  + "_" + str(x)
-        tempdf[c] = tempdf[c].map(tag_fcn)
-test_docs = [sentence_fcn(r) for r in tempdf.values.tolist()]
-test_docs = [s.split(' ') for s in test_docs]
+if redo_w2v:
+    tempdf = testdf.copy()
+    exclude_tokens = set(['isAdult_0','mi_rating_0'])
+    sentence_fcn = lambda x: ' '.join([w for w in x if w not in exclude_tokens])
+
+    for c in testdf.columns:
+        #print c
+        if c in seqlengths.keys():
+            null_key = r' {}_\N'.format(c)
+            tag_fcn = lambda x: ' '.join([c  + "_" + str(w) for w in x]) + null_key*(seqlengths[c]-len(x))
+            trunc_tag_fcn = lambda x: ' '.join([c  + "_" + str(w) for w in x[0:seqlengths[c]] ])
+            def seq_tag(x):
+                if len(x) <= seqlengths[c]:
+                    return tag_fcn(x)
+                else:
+                    return trunc_tag_fcn(x)
+            tempdf[c] = tempdf[c].map(seq_tag)
+        else:
+            tag_fcn = lambda x: c  + "_" + str(x)
+            tempdf[c] = tempdf[c].map(tag_fcn)
+    test_docs = [sentence_fcn(r) for r in tempdf.values.tolist()]
+    test_docs = [s.split(' ') for s in test_docs]
 
 
 #edit the testdf to be correct seq lengths
@@ -150,8 +154,12 @@ def rank_byfeature_w2v2(doc_list,target_feature,source_feature):
         rankings.append(rank)
     return rankings
 
+if redo_w2v:
+    w2v_ranks = rank_byfeature_w2v(test_docs,target_feature = 'directors',source_feature='principalCast')
+else:
+    with open(os.path.join(datadir,'w2v_test_ranks.p'),'r') as f:
+        w2v_ranks=cPickle.load(f)
 
-w2v_ranks = rank_byfeature_w2v(test_docs,target_feature = 'directors',source_feature='principalCast')
 #w2v_ranks_old = rank_byfeature_w2v(test_docs[0:10],target_feature = 'directors',source_feature='principalCast')
 #print w2v_ranks[0:10]
 #print w2v_ranks_old
@@ -188,39 +196,42 @@ def rank_byfeature_f2v(df,target_feature,source_feature):
     return rankings
 
 
-def rank_byfeature_f2v2(df,target_feature,source_feature):
+def rank_byfeature_f2v2(df,target_feature,source_feature,batch_size=100):
     '''
     Rank a set of features associated with a given vetor.
     feature is the var name
     feature_weight_name is the name of the embedding layer the embeddings come from.
     '''
-    target_tokens = f2v.loc[target_feature].index
+    target_tokens = f2v.loc[target_feature].index.tolist()
     target_vecs = np.array(f2v.loc[target_feature])
+    source_vecs = f2v.loc[source_feature]
     #target_vecs = np.array(f2v[f2v['feature']==target_feature,embedding_cols])
     print target_vecs.shape
     rankings=[]
-    def sum_vec(x):
-        return  np.sum([f2v.loc[source_feature].loc[w] for w in x],axis=0)
-    source_vecs =df[source_feature].map(sum_vec)
+    def sum_vec(row):
+        return  np.sum([source_vecs.loc[w] for w in row[source_feature] if w in source_vecs.index ],axis=0)[:,np.newaxis]
+    index=0
+    for batch in [df.iloc[pos:pos + batch_size] for pos in xrange(0, len(df), batch_size)]:
+        batch_vecs = np.concatenate([sum_vec(row) for i,row in batch.iterrows()],axis=1)
+        #print batch_vecs.shape
+        scores = cosine_similarity(batch_vecs.T,target_vecs)
+        #print scores.shape
+        tempranks = np.argsort(-scores,axis=1)
+        #print tempranks.shape
+        for i in range(len(batch)):
+            row  = batch.iloc[i]
+            targetid = row[target_feature][0]
+            ranks = np.empty(len(target_tokens), int)
+            ranks[tempranks[i,:]] = np.arange(len(target_tokens))
+            rank=ranks[target_tokens.index(targetid)]
+            rankings.append(rank)
+        index+=batch_size
+        sys.stdout.write("\r Ranking: {s}/{l}".format(s=index,l=len(df)))
+        sys.stdout.flush()
+    return rankings
 
-    #source_vecs = source_vecs.T
-    #print source_vecs.shape
-    print "Scoring data..."
-    scores = cosine_similarity(source_vecs,target_vecs)
-    print scores.shape
-    print "Creating Ranks..."
-    tempranks = np.argsort(-scores,axis=1)
-    # for i,doc in enumerate(doc_list):
-    #     targetid = ( w for w in doc if w.startswith(target_feature + '_') ).next()
-    #     ranks = np.empty(len(target_tokens), int)
-    #     ranks[tempranks[i,:]] = np.arange(len(target_tokens))
-    #     rank=ranks[target_tokens.index(targetid)]
-    #     sys.stdout.write("\r Ranking: {s}/{l}".format(s=i,l=len(doc_list)))
-    #     sys.stdout.flush()
-    #     rankings.append(rank)
-    # return rankings
+f2v_ranks = rank_byfeature_f2v2(testdf,target_feature='directors',source_feature='principalCast',batch_size=1000)
 
-f2v_ranks = rank_byfeature_f2v(testdf,target_feature='directors',source_feature='principalCast')
 
 
 
@@ -300,8 +311,3 @@ with open(os.path.join(datadir,'f2v_test_ranks.p'),'w') as f:
 
 with open(os.path.join(datadir,'w2v_test_ranks.p'),'w') as f:
     cPickle.dump(w2v_ranks,f)
-
-
-
-with open(os.path.join(datadir,'w2v_test_ranks.p'),'r') as f:
-    w2v_ranks=cPickle.load(f)

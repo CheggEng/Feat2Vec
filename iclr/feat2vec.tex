@@ -168,12 +168,12 @@ Additionally, for each group of features, the model allows applying a $d_i  \tim
 More formally, this is:
 \begin{align}
 %\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})=
-p \bigl(Y=1| \vect{\vphantom{\phi}x};  \vect{\phi}, \vect{\upbeta}, \vect{\vphantom{\phi}\upkappa} \bigr ) 
+p \bigl(Y=1| \vect{\vphantom{\phi}x};  \vect{\phi}, \vect{\upbeta}, \vect{\vphantom{\phi}\upkappa} \bigr )
 &= \sigma \biggl(
                        \sum_{i =1}^{|{\vect{\upkappa}}|} \sum_{j=i}^{|{\vect{\upkappa}}|}   \bigl\langle \,  \phi_i( \vect{x\vphantom{\beta_i}}_{\vect{\upkappa}_i}, \vect{\beta}_i), \; \phi_j( \vect{x\vphantom{\beta_i}}_{\vect{\upkappa}_j}, \vect{\beta}_j) \, \bigr\rangle
   \biggr) \\
 &\triangleq
- \sigma \bigl(s(\vect{x\vphantom{\phi}},\vect{\phi})\bigl) 
+ \sigma \bigl(s(\vect{x\vphantom{\phi}},\vect{\phi})\bigl)
 \label{eq:deepfm}
 \end{align}
 For notational convenience, we refer to this model as a scoring function  $s(\cdot)$,
@@ -187,7 +187,7 @@ A simple   implementation for $\phi_i$ is a linear fully-connected layer, where 
 
 
 In $\Word2Vec$, the embeddings for individual words of a document need to be similar;
-while  $\Feat2Vec$ has no such constraint. 
+while  $\Feat2Vec$ has no such constraint.
 Individual subfeatures are not important; what matters is that feature types from within an observation are similar to each other.
 
 
@@ -230,7 +230,7 @@ For each positive record, we generate $k$ negative labels using the following 2-
 			\State $\vect{x}^{\,-}  \leftarrow \vect{x}^{\,+} $ \Comment  set initially to be equal to a positive sample
 			\State Draw a random subfeature  $\vect{r} \sim \q_2(\mathrm{X}_{ \upkappa_i },\alpha_2)$
 			\State $\vect{x}^{\,-}_{\upkappa_i}  \leftarrow \vect{r}$ \Comment{substitute the $i$-th feature type with the sampled one}
-			\State  $S^-  \leftarrow S^-  + \{  \vect{x}^- \}$
+			\State  $S^-  \leftarrow S^-  + \{  \vect{x}^{\,-} \}$
 	\EndFor
 \EndFor
 \State \Return $S^-$
@@ -249,21 +249,20 @@ We use  $p_{\q}(x)$ to denote the probability of $x$ under a distribution $\q$.
 
 \textbf{Sampling Feature Types.} The function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\psi_i$.
 To sample a feature type, we choose a feature group  from a multinomial distribution with probabilities proportional a feature's complexity.
-\hl{Luis: please write a few sentences justifying why we do this? i.e., what's the advantage? Right now we don't have experiments supporting this.}
-For categorical variables using a linear fully-connected layer, the complexity is simply the number of categories in the feature type: 
+\hl{The idea behind this choice is to weigh more heavily features that have more parameters/features and thus are going to require more training iterations to properly learn. If we were to naively sample each feature with equal probability in the first step of Algorithm 1, the algorithm would spend too little time resampling features with sparse elements.}
+For categorical variables using a linear fully-connected layer, the complexity is simply \hl{proportional to }the number of categories in the feature type:
 \begin{equation}
-P_{\q_1}(\upkappa_i|\{d_i\}_{i=1}^m,\alpha_1)  \
-= \frac{d_i^{\alpha_1}}{\sum_{k=1}^n d_k^{\alpha_1}},  \quad \alpha_1 \in [0,1]
-\end{equation} 
-However, if we have multiple intermediate layers for complex feature types (e.g., convolutional layers), these parameters should also be counted. 
-\hl{do we need to say why?}
-The hyper-parameter $\alpha_1$ just helps flatten the distribution. 
- When  $\alpha_1=0$, the feature types are sampled uniformly, 
+P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n)  \
+= \frac{(r\times d_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}},  \quad \alpha_1 \in [0,1]
+\end{equation}
+However, if we have multiple intermediate layers for complex feature types (e.g., convolutional layers), these parameters should also be counted.
+The hyper-parameter $\alpha_1$ just helps flatten the distribution.
+ When  $\alpha_1=0$, the feature types are sampled uniformly,
  and when  $\alpha_1=1$, they are sampled according to their complexity.
 Intermediate values are progressions.
 
 
-\textbf{Sampling Subfeatures.} 
+\textbf{Sampling Subfeatures.}
 To sample a subfeature  from within a group, we use a similar strategy to $\Word2Vec$ and use the subfeature empirical distribution:
 %For  $\q_2(\mathrm{X}_{\upkappa_i}, \alpha_2)$, is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $\upkappa_i$, as in the negative sampling procedure used in $\Word2Vec$ :
 \begin{equation}
@@ -273,7 +272,7 @@ P_{\q_2}(x_j=x|\mathrm{X}_{\upkappa_i},\alpha_2)  \
 Here, $\operatorname{count}(x)$ is the number of times a subfeature $x$ appeared in the training dataset $S^+$ .
 
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
-The literature offers two possibilities: 
+The literature offers two possibilities:
 in the Negative Sampling that $\Word2Vec$  follows, the collusions are simply ignored~\cite{samplingnotes}.
 Alternatively, we it is possible to account for o account for the possibility of random negative labels that appear identical to positively labeled data using Noise Contrastive Estimation (NCE)~\cite{nce}.
 
@@ -283,24 +282,25 @@ Alternatively, we it is possible to account for o account for the possibility of
 We optimize a NCE loss function, to adjust the structural statistical model $p(Y=1|\vect{\phi},\vect{x\vphantom{phi}})$ to account for the possibility of random negative labels that appear identical to positively labeled data.
 However, an additional burden of NCE is that we need to calculate a partition function $Z_{\vec{x}}$ for each unique record type $\vec{x}$ that transform the score function $s(\cdot)$ into a well-behaved probability distribution that integrates to 1.
 Normally, this would introduce an astronomical amount of computation and greatly increase the complexity of the model.
-As a work-around, we appeal to the work of \citet{fastnnlang}, 
+As a work-around, we appeal to the work of \citet{fastnnlang},
 who showed that in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.
 The intuition is that the underlying model has enough free parameters that it will effectively just learn the probabilities itself.
 Thus, it does not over/under predict the probabilities on average (since that will result in penalties on the loss function).
  Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about numerical issues with low probabilities.
- 
+
 Written explicitly, the new structural probability model is:
 \begin{equation}
-\tilde p(Y=1|\vec{\phi},\vec{x\vphantom{phi}}) = \frac{\exp\bigl(s(\vec{x\vphantom{phi}},\vec{\phi}) \bigr)}{\exp( s\bigl(\vec{x\vphantom{phi}},\vec{\phi}) \, \bigr) + p_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)}
+\tilde p(Y=1|\vec{\phi},\vec{x\vphantom{phi}}) = \frac{\exp\bigl(s(\vec{x\vphantom{phi}},\vec{\phi}) \bigr)}{\exp( s\bigl(\vec{x\vphantom{phi}},\vec{\phi}) \, \bigr) + P_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)}
 \end{equation}
-where $P_{\q}(.)$ denotes the unconditional probability of a a record $\vec{x_i}$ being drawn from our negative sampling algorithm:
+where $P_{\q}(.)$ denotes the total probability of a record $\vec{x_i}$ being drawn from our negative sampling algorithm, conditional on the positively labeled record $\vect{x}^+$ the negative sample is drawn for:
 \begin{equation}
-\text{\hl{Write equation!! This is only defined in the middle of the appendix}}
+P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathrm{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upkappa_i}|\mathrm{X}_{\upkappa_i},\alpha_2) P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1)
+%\text{\hl{Write equation!! This is only defined in the middle of the appendix}}
 \end{equation}
 
-Thus, our loss function $L$ optimizes $\vect{\upbeta}$, the parameters of the function extraction functions $\vect\phi$.
+Thus, our loss function $L$ optimizes $\vect{\upbeta}$, the parameters of the feature extraction functions $\vect\phi$.
 \begin{equation}
-L(S)  = \arg\min_\upbeta   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vect{x}^{\,+}   ) ) \; + \sum_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\tilde p(Y=0|\vec{\phi},\vect{x}^{\,-}  )) \Big) 
+L(S)  = \arg\min_\upbeta   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vect{x}^{\,+}   ) ) \; + \sum_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\tilde p(Y=0|\vec{\phi},\vect{x}^{\,-}  )) \Big)
 \end{equation}
 
 
@@ -318,27 +318,27 @@ We show the proof of this in the Appendix~\ref{thm:proof}.
 
 
 \subsection{Does $\Feat2Vec$ enable better embeddings?}
- Ex ante, it is unclear how to evaluate the performance of an unsupervised embedding algorithm, but we felt that a reasonable task would be to assess the similarity of trained embeddings using unseen records in a left-out dataset. 
+ Ex ante, it is unclear how to evaluate the performance of an unsupervised embedding algorithm, but we felt that a reasonable task would be to assess the similarity of trained embeddings using unseen records in a left-out dataset.
 In order to test the relative performance of our learned embeddings, we train our $\Feat2Vec$ algorithm and compare its performance in a targeted ranking task to $\Word2Vec$.
 Thus, our evaluation approach we use the embeddings of one entity, and evaluate its nearest-neighbors from a different entity from which we know the ground-truth.
 In particular, in the movie dataset we  retrieve movie directors from actors embeddings;
 and from an educational dataset, we retrieve textbooks from user embeddings.
 We evaluate the rankings according to  their  mean percentile rank (MPR):
 %\begin{itemize}
-%%\item 
+%%\item
 %The first is mean percentile rank (MPR), the average rank (standardized to be on a 0-100 percentile scale):
 \[MPR = \frac{1}{N}\sum_{i=1}^N \frac{R_i}{\max R} \]
 where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
- This measures on average how well we rank actual entities. 
- A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric. 
+ This measures on average how well we rank actual entities.
+ A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric.
 
 %\item The next is mean reciprocal rank (MRR), which is similar to mean percentile rank, but weights rankings that are closer to rank 0 (the best rank possible) more:
 %\begin{align*}
 %MRR = \frac{1}{N}\sum_{i=1}^N \frac{1}{R_i+1}
 %\end{align*}
-%The idea behind this metric is that, under MPR, an improvement  in rankings under an algorithm from  10 to 1 will be equally weighted as an improvement from 49,103 to 49,92 in terms of calculating the $MPR$ statistic. 
+%The idea behind this metric is that, under MPR, an improvement  in rankings under an algorithm from  10 to 1 will be equally weighted as an improvement from 49,103 to 49,92 in terms of calculating the $MPR$ statistic.
 %Clearly, the former improvement is more useful in a real-world context of submitting reccomendations to users, and so MRR attempts to correct for this by weighting rankings closer to 1 much higher.
-%A higher value, unlike MPR, indicates better performance. 
+%A higher value, unlike MPR, indicates better performance.
 %\item The final metric we consider is top 1 precision, or the percent of test examples we successfully rank the entity as the top prediction.
 %\end{itemize}
 
@@ -362,7 +362,7 @@ It contains information on writers, directors, and principal cast members attach
 Feature Group Name      & Type              & \# of feats. & Example for an instance                                      \\ \midrule
 Runtime (minutes)       & Real-valued       & 1                 & 116                                                           \\
 IMDB rating (0-10)      & Real-valued       & 1                 & 7.8                                                          \\
-\# of IMDB rating votes & Real-valued       & 1                 & 435,368                                                          \\ 
+\# of IMDB rating votes & Real-valued       & 1                 & 4,368                                                          \\
 Is adult film?          & Boolean           & 2                 & False                                                        \\
 Movie releaes year      & Categorical          & 271               & 2001                                                         \\
 Movie title             & Text      & 165,471           & ``Ocean's", ``Eleven"                                  \\
@@ -381,14 +381,14 @@ Here, each observation contains an ``operation" a user acted on a textbook.
 
 \subsubsection{Feature Representation}
 \paragraph{Word2Vec}
-For every observation in each of the datasets, we create a document that contains the same information that we feed into $\Feat2Vec$. 
+For every observation in each of the datasets, we create a document that contains the same information that we feed into $\Feat2Vec$.
 We prepend each feature by its feature group name, and we remove spaces from within features.
 In Figure~\ref{fig:ocean11} we show an example document.
-Some features may  allow multiple values (e.g., multiple writers, directors).  
+Some features may  allow multiple values (e.g., multiple writers, directors).
 To feed these  features into the models, for convenience, we constraint the number of values,  by  truncating each feature to no more than 10 levels (and sometimes less if reasonable).
 This results in retaining the full set of information for well over 95\% of the values.
 We pad the sequences with a ``null'' category whenever necessary to maintain a fixed length.
-We do this consistently for both $\Word2Vec$ and $\Feat2Vec$ \hl{Luis: confirm that we pad and truncate both models}.
+We do this consistently for both $\Word2Vec$ and $\Feat2Vec$.
 We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
 
 
@@ -402,20 +402,20 @@ We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to enc
 
 
 
-\paragraph{Feat2Vec} 
+\paragraph{Feat2Vec}
 Feature representation in $\Feat2Vec$ may require a feature extraction function for each feature group.
 Here, we explain how we build these functions:
 \begin{itemize}
-\item  \textbf{Bag of categories,  categorical, and boolean:} 
+\item  \textbf{Bag of categories,  categorical, and boolean:}
 For all of the categorical variables, we learn a unique $r$-dimensional embedding for each entity using a linear fully-connected layer (Equation~\ref{eq:fully_connected}).
 We do not require one-hot encodings, and thus we allow multiple categories to be active; resulting in a single embedding for the group  that is the sum of  the embeddings of the subfeatures.
 This is ordering-invariant:  the embedding of ``Brad Pitt'' would be the same when he appears in a movie as a principal cast member, regardless whether he was 1st  or 2nd star.
 Though,  if he were listed as a director it may result in a different embedding.
-\item \textbf{Text:} 
+\item \textbf{Text:}
 We  preprocess the text by removing non alpha-numeric characters,  stopwords, and stemming the remaining words.
 We then follow the same approach that we did for categorical  variables.
 It would be easy to use more sophisticated methods (e.g,  convolutions).
-\item \textbf{Real-valued:} 
+\item \textbf{Real-valued:}
 For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $r$, which we treat as the feature's embedding.
 Each intermediate layer has $r$ units with \texttt{relu} activation functions.
 These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space. In contrast, $\Word2Vec$ would be unable to know that an IMDB rating of 5.5 is similar to  5.6.%; it would tokenize both values and treat them as independent words in a document.
@@ -424,24 +424,28 @@ These real-valued features highlight one of the advantages of the $\Feat2Vec$ al
 
 
 \subsection{Experimental Setup}
-\paragraph{Held-out set} 
-For our evaluation, we define a testing set that was not used to tune the parameters of the model. 
+\paragraph{Held-out set}
+For our evaluation, we define a testing set that was not used to tune the parameters of the model.
 For the IMDB dataset,  we  select randomly a 10\% sample of the observations that contain a director that appears at least twice in the database
 \footnote{Over 90\% of the movies in the database have exactly one director, but in cases where there are multiple directors to a film, we use the first director listed in the IMDB dataset.}.
 We do this to guarantee that the set of directors in the left-out dataset appear during training at least once, so that each respective algorithm can learn something about the characteristics of these directors.
 For the educational dataset, our testing set only has observations for textbooks and users that appear at least 10 times in training.
- 
+
 
 \paragraph{Hyper-parameters}
-We perform cross-validation on the loss function to determine the number of epochs to train, and then train the full training dataset with this number of epochs.
+For both $\Feat2Vec$ and $\Word2Vec$, we perform cross-validation on the loss function,
+ by splitting the 10\% of the training data randomly into a validation set,
+ to determine the number of epochs to train, and then train the full training dataset with this number of epochs.
+ \hl{\footnote{because we train $\Word2Vec$ with the \texttt{gensim} python library, it is impossible to recover the output weight matrix, and so the loss function is inaccessible for an outside document set. So, we created our own loss function that measures average within-document cosine similarity of all possible token pairs. The result was that both algorithms are trained for a similar number of epochs. }}
 While regularization of the embeddings during training is possible, this did not dramatically change results, so we ignore this dimension of hyperparameters.
-\hl{how do you do c.v. with no dev set? do you tune only f2v, or also w2v?}
+
 %The $\Feat2Vec$ algorithm takes approximately 5 minutes per epoch on a home desktop computer.
 %The $\Feat2Vec$ model is built on the python library Keras
 %Cite keras???
- For training $\Feat2Vec$  we set $\alpha_1 = 1/4$ and $\alpha_2 = 3/4$ in the IMDB dataset;
- and $\alpha_1 = 0$ and $\alpha_2 = 0.5$  for the educational \hl{confirm?}.
- 
+ For training $\Feat2Vec$  we set $\alpha_1=\alpha_2 = 3/4$ in the IMDB dataset;
+ and $\alpha_1 = 0.25$ and $\alpha_2 = 0.5$  for the educational.
+\hl{In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document.}
+
 
 \subsection{Results}
 
@@ -459,7 +463,7 @@ This is not, however, the case at the upper tail of ranking space, where it appe
 %We would argue that actually,
 However, when we zoom-in on the absolute upper region of rankings (1 to 25), which might be a sensible length of ranks one might give an actual recommendation, it is the case that up until rank 8 or so, $\Feat2Vec$ outperforms $\Word2Vec$ still.
 Intermediate rankings are still strong signals that our $\Feat2Vec$ algorithm is doing a better job of extracting information into embeddings, particularly those entities that appear sparsely in the training data and so are especially difficult.
-In fact,  $\Feat2Vec$ predicts the actual director 2.43\% of the times, while $\Word2Vec$ only does so 1.26\% of the time, being our approach almost twice better in terms of Top-1 Precision metric.
+In fact,  $\Feat2Vec$ predicts the actual director 2.43\% of the times, while $\Word2Vec$ only does so 1.26\% of the time, making our approach almost twice better in terms of Top-1 Precision metric.
 
 
 
@@ -496,13 +500,13 @@ Algorithms that calculate continuous representations of entities other than word
 or in machine translation for embeddings of complete sentences~\cite{kiros2015skip}.
 While finishing this paper, we recently discovered a promising direction for an algorithm still in development called StarSpace~\cite{wu2017starspace} with similar goals from ours.
 However, eventhough they intend to be able to embed ``all things'', at the time of writing this paper, their pre-print method was constrained to only work for bag of words.
-While $\Feat2Vec$ is a convex combination of all possible prediction tasks given the featureset,  StarSpace samples a single arbitrary feature. 
+While $\Feat2Vec$ is a convex combination of all possible prediction tasks given the featureset,  StarSpace samples a single arbitrary feature.
 Our preliminary experiments suggest that sampling a single feature does not produce embeddings that generalize well.
 Nonetheless, a limitation of our work is that we do not compare with StarSpace, which future work may decide to do.
 
 \section{Discussion}
 %Embeddings are useful tools in in Artificial Intelligence.
-Motivated by the success of $\Word2Vec$, this paper proposes a novel algorithm that relies on Structured Deep Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features. 
+Motivated by the success of $\Word2Vec$, this paper proposes a novel algorithm that relies on Structured Deep Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features.
 Future work could study how to reduce the amount of  human knowledge our approach requires;
 for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
 These ideas can extend to our codebase that we make available\footnote{\hl{dropbox link here?}}.
@@ -532,33 +536,38 @@ To the extent of our knowledge, $\Feat2Vec$  is the first method able to calcula
 \appendix
 \section{Appendixes}
 \subsection{Proof to Theorem \label{thm:proof}}
-The embeddings learned with $\Feat2Vec$ are  a convex combination of the embeddings learned from $p$ targeted Factorization Machines for each feature in the data.
+The gradient for learning embeddings with $\Feat2Vec$ is a convex combination of the gradient from $p$ targeted Factorization Machines for each feature in the data.
 
 \begin{proof}
-Let $S^+_f$ denote the positively labeled records whose corresponding negative samples resample feature $f$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
+Let $S^+_{\upkappa_i}$ denote the positively labeled records whose corresponding negative samples resample feature $\upkappa_i$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
 
 \begin{align*}
- L(\vec{\mathbf{x}} | \vec{\phi} )  =&   \frac{1}{|S^+|} \sum_{i \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i  ) ) + \sum_{\vec{\mathbf{x}}_j \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j)) \Big) \\
-  =&  \frac{1}{|S^+|} \sum_{i \in S^+} \Big( \log(\tilde p(Y=1|\vec{\phi},\vec{\mathbf{x}}_i, i \in S_f )p(i \in S^+_f) ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i)}^k \log(\tilde p(Y=0|\vec{\phi},\vec{\mathbf{x}}_j,i \in S_f)p(i \in S^+_f)) \Big) \\
-  =&  \frac{1}{|S^+|}\sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S^+_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_q(\vec{\mathbf{x}}_i |\vec{\mathbf{x}}_i, i \in S^+_f) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_q(\vec{\mathbf{x}}_{j} |\vec{\mathbf{x}}_i, i \in S_f)p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_q(\vec{\mathbf{x}}_{j}|\vec{\mathbf{x}}_i, i \in S^+_f)}) \Big) \\
-  \intertext{Note now that $P_q(\vec{\mathbf{x}}_k|\vec{\mathbf{x}}_i,i\in S^+_f)$ is simply the probability of the record's feature value $\vec{\mathbf{x}}_{k,f}$ under the second step noise distribution $q_2(\mathbf{X_{f}},\alpha_2)$:
-   $P_q(\vec{\mathbf{x}}_k|\vec{\mathbf{x}}_i,i\in S^+_f) = P_{q_2}(\vec{\mathbf{x}}_{k,f})$,
-   where $k$ refers to record $i$ or a record $j$ negatively sampled from $i$.}\\
-=&  \frac{1}{|S^+|}\sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } p(i \in S^+_f)}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) } ) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S_f)}^k \log(\frac{  P_{q_2}(\vec{\mathbf{x}}_{j,f})p(i \in S_f)}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})) } \Big) \\
-   = & \frac{1}{|S^+|}\sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \log(p(i \in S^+_f)^{k+1})\\
-  &   +  \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})})   \Big) \\
-\intertext{We now drop the term containing the probability of assignment to a feature type $p(i \in S^+_f)$ since it is outside of the learned model parameters $\vec{\phi}$ and fixed in advance:}\\
-    \propto & \frac{1}{|S^+|} \sum_{f=1}^p \sum_{i \in S^+_f} \Big( \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})}) \Big) \\
-    \xrightarrow[|S^+|\rightarrow \infty]{ }  & \sum_{f=1}^p p(i \in S^+_f) E\Big[ \log(\frac{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) }}{e^{s(\vec{\mathbf{x}}_i,\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{i,f}) }) + \sum_{\vec{\mathbf{x}}_{j} \sim q(.|\vec{\mathbf{x}}_i,i\in S^+_f)}^k \log(\frac{ P_{q_2}(\vec{\mathbf{x}}_{j,f})}{e^{s(\vec{\mathbf{x}}_{j},\vec{\phi}) } + P_{q_2}(\vec{\mathbf{x}}_{j,f})}) \Big] \\
-   & = \sum_{f=1}^p p(i \in S^+_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]
+ L(S^+ | \vec{\phi} )  =&   \frac{1}{|S^+|} \sum_{\vect{x}^+ \in S^+} \Big(\log(\tilde p(Y=1|\vec{\phi},\vect{x}^+  ) ) + \sum_{\vect{x}^{\,-}\sim \q(.|\vect{x}^+)}^k \log(\tilde p(Y=0|\vec{\phi},\vect{x}^{\,-})) \Big) \\
+  =&  \frac{1}{|S^+|} \sum_{\vect{x}^+ \in S^+} \Big( \log(\tilde p(Y=1|\vec{\phi},\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i} )p(\vect{x}^+ \in S^+_{\upkappa_i}) ) \\ &
+   + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+)}^k \log(\tilde p(Y=0|\vec{\phi},\vect{x}^{\,-},\vect{x}^+ \in S^+_{\upkappa_i})p(\vect{x}^+ \in S^+_{\upkappa_i})) \Big) \\
+  =&  \frac{1}{|S^+|}\sum_{i=1}^p \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) } p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q}(\vect{x}^+ |\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i}) }) \\ &
+  +  \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q}(\vect{x}^{\,-} |\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i})p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q}(\vect{x}^{\,-}|\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i})}) \Big) \\
+  \intertext{Note now that $P_{\q}(\vect{x}|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})$ is simply the probability of the record's feature value $\vect{x}_{f}$ under the second step noise distribution $\q_2(\mathrm{X_{f}},\alpha_2)$:
+   $P_{\q}(\vect{x}|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i}) = P_{\q_2}(\vect{x}_{f})$}\\
+=&  \frac{1}{|S^+|}\sum_{i=1}^p \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) } p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) } ) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,i\in S^+_{\upkappa_i})}^k \log(\frac{  P_{\q_2}(\vect{x}^{\,-}_{f})p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})) } \Big) \\
+   = & \frac{1}{|S^+|}\sum_{i=1}^p \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \log(p(\vect{x}^+ \in S^+_{\upkappa_i})^{k+1})\\
+  &   +  \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})})   \Big) \\
+\intertext{We now drop the term containing the probability of assignment to a feature type $p(\vect{x}^+ \in S^+_{\upkappa_i})$ since it is outside of the learned model parameters $\vec{\phi}$ and fixed in advance:}\\
+    \propto & \frac{1}{|S^+|} \sum_{i=1}^p \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})}) \Big) \\
+    \xrightarrow[|S^+|\rightarrow \infty]{ }  & \sum_{i=1}^p p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})}) \Big] \\
+   & = \sum_{i=1}^p p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $f$}) \Big]
 \end{align*}
 
 Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient since:
 
-\[\frac{\partial }{\partial \phi}\sum_{f=1}^p p(i \in S^+_f) E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big] =
- \sum_{f=1}^p p(i \in S^+_f) \frac{\partial }{\partial \phi}E\Big[ L(\vec{\mathbf{x}} |\vec{\phi}, \text{target = $f$}) \Big]\]
+\[\frac{\partial }{\partial \phi}\sum_{i=1}^p p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $f$}) \Big] =
+ \sum_{i=1}^p p(\vect{x}^+ \in S^+_{\upkappa_i}) \frac{\partial }{\partial \phi}E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $f$}) \Big]\]
  Thus the algorithm will, at each step, learn a convex combination of the gradient for a targeted classifier on feature $f$, with weights proportional to the feature type sampling probabilities in step 1 of the sampling algorithm.
 \end{proof}
 
-
+\begin{figure}[h!]
+\centering
+\includegraphics{../paper/output/samplingprobs.pdf}
+\caption{Feature Sampling Probabilities as a Function of $\alpha_1$}
+\end{figure}
 \end{document}
