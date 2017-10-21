@@ -503,10 +503,9 @@ Nonetheless, a limitation of our work is that we do not compare with StarSpace, 
 \section{Discussion}
 %Embeddings are useful tools in in Artificial Intelligence.
 Motivated by the success of $\Word2Vec$, this paper proposes a novel algorithm that relies on Structured Deep Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features. 
-Future work could study how to reduce the amount of  human knowledge our approach requires.
-$\Feat2Vec$ needs domain knowledge about how to group features into entities;
-and  requires  an expert to choose or  design a feature extraction function.
-We  intend to facilitate progress on this by making our code and  most of our experiments  available\footnote{\hl{dropbox link here?}}.
+Future work could study how to reduce the amount of  human knowledge our approach requires;
+for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
+These ideas can extend to our codebase that we make available\footnote{\hl{dropbox link here?}}.
 
 Our evaluation is limited to two datasets---a public dataset that is freely available,  and a proprietary one that we are unable to distribute.
 Though further experimentation is definitely necessary, we believe that our results are extremely encouraging.
@@ -514,7 +513,7 @@ $\Feat2Vec$'s embeddings are able to capture relationships across features that 
 
 $\Feat2Vec$ exploits the structure of a datasets to learn embeddings in a way that is structurally more sensible than existing methods.
 The sampling method, and loss function that we use have interesting theoretical properties.
-To the extent of our knowledge, we propose the first algorithm that is able to calculate continuous representations of data with arbitrary feature sets.
+To the extent of our knowledge, $\Feat2Vec$  is the first method able to calculate continuous representations of data with arbitrary feature sets.
 
 
 
