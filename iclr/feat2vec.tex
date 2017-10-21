@@ -101,8 +101,8 @@ We call this approach  $\Feat2Vec$:}
 \end{align}
 Here, $\vect{\mathcal{F}}$ is a structured feature set---where each dimension represents a different feature type.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
-However,   $\Feat2Vec$  leverage the features' structure  to enforce what we call  \textit{semantic modularity}.
-We do not optimize the embeddings of individual subfeatures, but we reason at more abstract levels of complexity.
+However,   $\Feat2Vec$  leverage the features' structure  to enforce what we call  \textit{semantic modularity}:
+it does not optimize the embeddings of individual subfeatures, instead it reasons at a more abstract level of complexity.
 %That is, the embedding of an observation is additive in respect to the embeddings of its feature types;
 %thus, each feature type  $\mathcal{F}_i$ must be  projected into the same embedding space.
 Semantic modularity is useful because it enables making principled comparisons between different feature types.
@@ -316,9 +316,10 @@ See the proof in the Appendix~\ref{thm:proof}.
 \section{Empirical Evaluation}
 
 
-\subsection{Does semantic modularity enables better embeddings?}
+\subsection{Does $\Feat2Vec$ enable better embeddings?}
  Ex ante, it is unclear how to evaluate the performance of an ``unsupervised'' embedding algorithm, but we felt that a reasonable task would be to assess the similarity of trained embeddings using unseen records in a left-out dataset. 
-In order to test the relative performance of our learned embeddings, we train our $\Feat2Vec$ algorithm on an unstructured dataset, and compare its performance in a targeted ranking task to $\Word2Vec$. 
+In order to test the relative performance of our learned embeddings, we train our $\Feat2Vec$ algorithm and compare its performance in a targeted ranking task to $\Word2Vec$.
+In particular, we evaluate the nearest-neighbors of embeddings of two different entities from which we know the ground-truth.
 We evaluate the rankings according to  common  metrics.
 \begin{itemize}
 \item The first is mean percentile rank (MPR), the average rank (standardized to be on a 0-100 percentile scale):
@@ -340,10 +341,9 @@ A higher value, unlike MPR, indicates better performance.
 \subsubsection{IMDB dataset: predicting the director of a film}
 
 The Internet Movie Database (IMDB) is a publicly available dataset\footnote{\href{http://www.imdb.com/interfaces/}{http://www.imdb.com/interfaces/}} of information related to films, television programs and video games.
-It contains information on writers, directors, and principal cast members (actors) attached to each film, along with film metadata such as length, IMDB rating, and movie title. 
-Each observation corresponds to a single film. 
-For this paper, we focus only on data on films. 
+Though in this paper, we focus only on data on its 465,136 movies.
 Table~\ref{tab:features} summarizes the feature types we use.
+It contains information on writers, directors, and principal cast members attached to each film, along with  metadata such as length and rating.
 
 \begin{table}[htb]
 \centering
@@ -352,42 +352,64 @@ Table~\ref{tab:features} summarizes the feature types we use.
 \begin{tabular}{@{}lllp{5cm}@{}}
 \toprule
 Feature Group Name      & Type              & \# of subfeatures & Example for an instance                                      \\ \midrule
-Runtime (minutes)       & Real-valued       & 1                 & 90                                                           \\
-IMDB rating (0-10)      & Real-valued       & 1                 & 5.5                                                          \\
-\# of IMDB rating votes & Real-valued       & 1                 & 150                                                          \\ 
+Runtime (minutes)       & Real-valued       & 1                 & 116                                                           \\
+IMDB rating (0-10)      & Real-valued       & 1                 & 7.8                                                          \\
+\# of IMDB rating votes & Real-valued       & 1                 & 435,368                                                          \\ 
 Is adult film?          & Boolean           & 2                 & False                                                        \\
-Movie releaes year      & Category          & 271               & 2003                                                         \\
-Movie title             & Bag of words      & 165,471           & ``Ocean's", ``Eleven"                                  \\
-Directors               & Bag of categories & 174,382           & `Martin Scorsese"                                     \\
-Genres                  & Bag of categories & 28                &``Action", "Comedy"                                 \\
-Writers                 & Bag of categories & 244,241           &``Stephen King", ``Frank Darabont"                      \\
-Principal cast members  & Bag of categories & 1,104,280         &``Samuel L. Jackson",``Uma Thurman", ``John Travolta" \\\bottomrule
+Movie releaes year      & Categorical          & 271               & 2001                                                         \\
+Movie title             & Text      & 165,471           & ``Ocean's", ``Eleven"                                  \\
+Directors               & Bag of categories & 174,382           & `Steven Soderbergh"                                     \\
+Genres                  & Bag of categories & 28                &``Crime", ``Thriller"                                 \\
+Writers                 & Bag of categories & 244,241           &``George Johnson'', ``Jack Russell"                      \\
+Principal cast members (actors) & Bag of categories & 1,104,280         & ``George Clooney", ``Brad Pitt", ``Julia Roberts" \\\bottomrule
 \end{tabular}
 \end{table}
 
+We try to replicate the same testing conditions in both algorithms.
+Thus each movie in IMDB is encoded as an observation in $\Feat2Vec$, and as a document in $\Word2Vec$ in the most similar possible way.
 
-\paragraph{Features extraction functions} 
-\hl{Jose is working on this section, but has questions}
-\begin{itemize}
-\item For all of the categorical variables, we learn a unique $r$-dimensional embedding for each entity.
-When there are multiple categories per record, we sum the individual entity embeddings.
-For example, when there are multiple cast members, we aggregate the embeddings for each actor to a single ``actor'' embedding, that is then interacted with embeddings extracted from all other feature groups.
-To feed thsee sequence-type features into our $\Feat2Vec$ algorithm, we require a fixed length of categories for each feature type, and so truncate each to have no more than 10 categories per feature (and sometimes less if reasonable).
-This results in retaining the full set of information for well over 95\% of our observations.
+
+\subsubsection{Feature Representation}
+\paragraph{Word2Vec}
+For every movie in the database, we create a document that contains the same information that we feed into $\Feat2Vec$. 
+We prepend each feature by its feature group name, and we remove spaces from within features.
+In Figure~\ref{fig:ocean11} we show an example document.
+Some features may  allow multiple values (e.g., multiple writers, directors).  
+To feed these  features into the models, for convenience, we constraint the length by  truncating each feature to no more than10 categories (and sometimes less if reasonable).
 We pad the sequences with a ``null'' category whenever necessary to maintain a fixed length.
+We do this consistently for both $\Word2Vec$ and $\Feat2Vec$ \hl{Luis: confirm that we pad and truncate both models}.
+This results in retaining the full set of information for well over 95\% of our observations. \hl{huh?}
 
-\item For the single text feature we use (the Movie Title), we remove preprocess the text by removing non alpha-numeric characters, pruning stopwords, and stemming the remaining words in the title text.
-We then follow a simple bag-of-words approach that learns an embedding for each unique word in our universe of movie titles, and sums these up, as we did for our categorical sequence variables.
-We note, however, that it would be trivial in our framework to process the text further by passing these word embeddings through sequential convolutional layers, to further extract high-level features of movie titles that may be relevant for learning embeddings.
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=3.5in]{imgs/w2v_example.pdf}
+\caption{Sample document for $\Word2Vec$ for for Ocean 11 movie}
+\label{fig:ocean11}
+\end{center}
+\end{figure}
 
 
-\item For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $r$, which we treat as the feature's embedding.
+
+\paragraph{Feat2Vec} 
+Feature representation in $\Feat2Vec$ implies defining feature extraction function for each feature group.
+Here, we explain how we build these functions:
+
+\begin{itemize}
+\item  \textbf{Bag of categories,  categorical, and boolean:} 
+For all of the categorical variables, we learn a unique $r$-dimensional embedding for each entity using a linear fully-connected layer (Equation~\ref{eq:fully_connected}).
+This allows  the embeddings of multiple categories per record to be summed.
+Thus,  the embedding of ``Brad Pitt`` would be the same when he appears in a movie as a principal cast member, regardless whether he was first  or second star. 
+Though, he may have a different embedding when he is listed as a director.
+\item \textbf{Text:} 
+For the single text feature we use, we  preprocess the text by removing non alpha-numeric characters, pruning stopwords, and stemming the remaining words in the title text.
+We then follow the same approach that we did for categorical sequence variables.
+It would be straightforward to enable more sophisticated approaches (e.g,  convolutional layers).
+\item \textbf{Real-valued:} 
+For all real-valued features, we pass these features through a 3-layer feed-forward fully connected neural network that outputs a vector of dimension $r$, which we treat as the feature's embedding.
 Each intermediate layer has $r$ units with \texttt{relu} activation functions.
-These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space.
-
-In contrast, $\Word2Vec$ would be unable to know ex-ante that an IMDB rating of 5.5 is anything like an IMDB rating of 5.6; it would tokenize both values and treat them as independent words in a document.
-
+These real-valued features highlight one of the advantages of the $\Feat2Vec$ algorithm: using a numeric value as an input, $\Feat2Vec$ can learn a highly nonlinear relation mapping a real number to our high-dimensional embedding space. In contrast, $\Word2Vec$ would be unable to know ex-ante that an IMDB rating of 5.5 is anything like an IMDB rating of 5.6; it would tokenize both values and treat them as independent words in a document.
 \end{itemize}
+
 
 
 \subsection{Experimental Setup}
