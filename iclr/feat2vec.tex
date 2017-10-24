@@ -25,7 +25,7 @@
 \usepackage{amsthm}
 \usepackage{thmtools,thm-restate}
 \declaretheorem{theorem}
-\title{Feat2Vec:  Semantic Modularity for Continuous Representations of Data with Features}
+\title{Feat2Vec:  Continuous Representations of Data with Features}
 
 % Authors must not appear in the submitted version. They should be hidden
 % as long as the \iclrfinalcopy macro remains commented out below.
@@ -72,13 +72,12 @@ Address \\
 \begin{abstract}
 Methods that calculate dense embeddings for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
 Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---that is, datasets that have arbitrary features beyond words.
-
 We study how to estimate  continuous representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
-$\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing \textit{semantic modularity} across features---all different feature types exist in a common space.
-We demonstrate our work on two datasets.
-The first one is collected from a leading educational technology firm, and thus we are able to discover a common continuous space for entities such as universities, courses, textbooks and students.
-The second dataset is the public IMDB dataset, and we discover embeddings for entities that include actors, movies and producers.
-Our experiments suggest that $\Feat2Vec$ significantly outperforms existing algorithms that do not leverage the structure of the data.
+$\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing that all different feature types exist in a common space.
+We demonstrate our work on two datasets, and
+%The first one is collected from a leading educational technology firm, and thus we are able to discover a common continuous space for entities such as universities, courses, textbooks and students.
+%The second dataset is the public IMDB dataset, and we discover embeddings for entities that include actors, movies and producers.
+our experiments suggest that $\Feat2Vec$ significantly outperforms existing algorithms that do not leverage the structure of the data.
 
 \end{abstract}
 
@@ -219,9 +218,10 @@ We start with a dataset $S^+ $ of records with $n$ feature types.
 We then mark all observed records in the training set as positive examples.
 For each positive record, we generate $k$ negative labels using the following 2-step algorithm:
 
-\begin{algorithm}
+\begin{algorithm}[htb]
  \caption{Implicit sampling algorithm for $\Feat2Vec$: $\q$}
 \begin{algorithmic}[1]
+\footnotesize
 \Function{Feat2Vec\_Sample}{$S^+, k, \alpha_1, \alpha_2$}
 \State $S^-  \leftarrow \emptyset $
 \For {$\vect{x}^{\,+} \in S^+ $}
@@ -390,15 +390,13 @@ We pad the sequences with a ``null'' category whenever necessary to maintain a f
 We do this consistently for both $\Word2Vec$ and $\Feat2Vec$.
 We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to encompass all other tokens in a document during training, since the text in this application is unordered.
 
-
 \begin{figure}[ht]
 \begin{center}
-\includegraphics[width=3.5in]{imgs/w2v_example.pdf}
+\includegraphics[width=3.2in]{imgs/w2v_example.pdf}
 \caption{Sample document for $\Word2Vec$ for for Ocean 11 movie}
 \label{fig:ocean11}
 \end{center}
 \end{figure}
-
 
 
 \paragraph{Feat2Vec}
@@ -446,7 +444,7 @@ While regularization of the embeddings during training is possible, this did not
 \hl{In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document.} We learn $r=50$ dimensional embeddings under both algorithms.
 
 
-\subsection{Results}
+\subsubsection{Results}
 
 After training, we use the cast members associated with the movies of the test set and  attempt to predict the actual director the film was directed.
 We take the sum of the cast member embeddings, and rank the directors by cosine similarity of their embeddings to the summed cast member vector.
@@ -464,9 +462,8 @@ However, when we zoom-in on the absolute upper region of rankings (1 to 25), whi
 Intermediate rankings are still strong signals that our $\Feat2Vec$ algorithm is doing a better job of extracting information into embeddings, particularly those entities that appear sparsely in the training data and so are especially difficult.
 In fact,  $\Feat2Vec$ predicts the actual director 2.43\% of the times, while $\Word2Vec$ only does so 1.26\% of the time, making our approach almost 2 times better in terms of Top-1 Precision metric.
 
-To highlight $\Feat2Vec$'s performance on non-categorical features, we complement the above experiment with a ratings prediction task. We predict the rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the Root Mean Squared Error (RMSE) of the predicted rating in the test dataset. We also vary $\alpha_1$, the flattening hyperparameter for feature sampling, to see what the effect this hyperparameter has on our performance. Intuitively, a low $\alpha_1$ will greatly improve the quality of the ratings embeddings learned, since it has relatively few parameters and is otherwise sampled infrequently. At the same time, with low $\alpha_1$ the director feature will be sampled less since it is one of the most complex features to learn, so the learned director embeddings may be of poorer quality. Figure \ref{fig:ratings} displays the results of our experiment, benchmarked against $\Word2Vec$'s performance in the prediction task. We also show as a baseline the RMSE of a random uniform variable over the range of possible ratings (0 to 10). As is evident from the plot, $\Word2Vec$ performs a bit better than a random prediction, but is also handily outperformed by $\Feat2Vec$. There is no clear relation between $\alpha_1$ and the RMSE, suggesting the algorithm's performance is not very sensitive to our hyperparameter choice.
-
 \begin{table}[htb]
+\footnotesize
 \centering
 \caption{Mean percentile rank}
 \begin{tabular}{lcc}
@@ -483,8 +480,8 @@ Educational & 25.2\% & 29.2\% \\
 \begin{center}
 \makebox[0pt]{
 \begin{tikzpicture}
-\node (img1) at (0,0) {\includegraphics[scale=0.6]{rankcdf.pdf}};
-\node (img2) at (1.5,-0.75) {\includegraphics[scale=.3]{rankcdf_top25.pdf}};
+\node (img1) at (0,0) {\includegraphics[scale=0.5]{rankcdf.pdf}};
+\node (img2) at (1.5,-0.75) {\includegraphics[scale=.25]{rankcdf_top25.pdf}};
 \end{tikzpicture}
 }
 \end{center}
@@ -492,10 +489,20 @@ Educational & 25.2\% & 29.2\% \\
 \label{fig:cdf}
 \end{figure}
 
+\subsection{Can $\Feat2Vec$ handle non-categorical inputs?}
+%^We can probably wordsmith this
+%One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
+%We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using 
+We now focus on how well $\Feat2Vec$ performs on a real-valued feature with a complex feature extraction function.
+We evaluate the prediction of the real-valued rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the Root Mean Squared Error (RMSE) of the predicted rating in the test dataset. We also vary $\alpha_1$, the flattening hyperparameter for feature sampling, to see what the effect this hyperparameter has on our performance. Intuitively, a low $\alpha_1$ will greatly improve the quality of the ratings embeddings learned, since it has relatively few parameters and is otherwise sampled infrequently. At the same time, with low $\alpha_1$ the director feature will be sampled less since it is one of the most complex features to learn, so the learned director embeddings may be of poorer quality. Figure \ref{fig:ratings} displays the results of our experiment, benchmarked against $\Word2Vec$'s performance in the prediction task. We also show as a baseline the RMSE of a random uniform variable over the range of possible ratings (0 to 10). As is evident from the plot, $\Word2Vec$ performs a bit better than a random prediction, but is also handily outperformed by $\Feat2Vec$ across all hyper-parameter settings. 
+%There is no clear relation between $\alpha_1$ and the RMSE, suggesting 
+The algorithm's performance does not seem very sensitive to the hyperparameter choice.
+
+
 
 \begin{figure}
 \centering
-\includegraphics[scale=.6]{../paper/output/ratingsRankingRMSE.pdf}
+\includegraphics[scale=.5]{../paper/output/ratingsRankingRMSE.pdf}
 \caption{RMSE in Ratings Task as a Function of $\alpha_1$}
 \label{fig:ratings}
 \end{figure}
@@ -503,13 +510,13 @@ Educational & 25.2\% & 29.2\% \\
 \section{Relation to Prior Work}
 Algorithms that calculate continuous representations of entities other than words have been studied in the context of  bioinformatics for biological sequences~\cite{biovec},
 or in machine translation for embeddings of complete sentences~\cite{kiros2015skip}.
-While finishing this paper, we recently discovered a promising direction for an algorithm still in development called StarSpace~\cite{wu2017starspace} with similar goals from ours.
-However, eventhough they intend to be able to embed ``all things'', at the time of writing this paper, their pre-print method was constrained to only work for bag of words.
+We recently discovered a promising direction for an algorithm still in development called StarSpace~\cite{wu2017starspace} with similar goals from ours.
+Eventhough they intend to be able to embed ``all things'', at the time of writing this paper, their pre-print method was limited to only work for bag of words.
 While $\Feat2Vec$ is a convex combination of all possible prediction tasks given the featureset,  StarSpace samples a single arbitrary feature.
 Our preliminary experiments suggest that sampling a single feature does not produce embeddings that generalize well.
 Nonetheless, a limitation of our work is that we do not compare with StarSpace, which future work may decide to do.
 
-\section{Discussion}
+\section{Conclusion}
 %Embeddings are useful tools in in Artificial Intelligence.
 Motivated by the success of $\Word2Vec$, this paper proposes a novel algorithm that relies on Structured Deep Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features.
 Future work could study how to reduce the amount of  human knowledge our approach requires;
