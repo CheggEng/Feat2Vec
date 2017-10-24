@@ -71,7 +71,7 @@ Address \\
 
 \begin{abstract}
 Methods that calculate dense embeddings for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
-Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---this is, datasets that have arbitrary features beyond words.
+Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---that is, datasets that have arbitrary features beyond words.
 
 We study how to estimate  continuous representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
 $\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing \textit{semantic modularity} across features---all different feature types exist in a common space.
@@ -249,17 +249,17 @@ We use  $p_{\q}(x)$ to denote the probability of $x$ under a distribution $\q$.
 
 \textbf{Sampling Feature Types.} The function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\psi_i$.
 To sample a feature type, we choose a feature group  from a multinomial distribution with probabilities proportional a feature's complexity.
-\hl{The idea behind this choice is to weigh more heavily features that have more parameters/features and thus are going to require more training iterations to properly learn. If we were to naively sample each feature with equal probability in the first step of Algorithm 1, the algorithm would spend too little time resampling features with sparse elements.}
+\hl{This choice places more weight on features that have more parameters and thus are going to require more training iterations to properly learn.}
 For categorical variables using a linear fully-connected layer, the complexity is simply \hl{proportional to }the number of categories in the feature type:
 \begin{equation}
 P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n)  \
 = \frac{(r\times d_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}},  \quad \alpha_1 \in [0,1]
 \end{equation}
-However, if we have multiple intermediate layers for complex feature types (e.g., convolutional layers), these parameters should also be counted.
-The hyper-parameter $\alpha_1$ just helps flatten the distribution.
+However, if we have multiple intermediate layers for some feature types (e.g., convolutional layers), these parameters should also be counted.
+The hyper-parameter $\alpha_1$ helps flatten the distribution.
  When  $\alpha_1=0$, the feature types are sampled uniformly,
  and when  $\alpha_1=1$, they are sampled according to their complexity.
-Intermediate values are progressions.
+Figure \ref{fig:alpha} in the Appendix provides a visualization of how the feature sampling rate varies with the hyperparameter for features with differing levels of complexity.
 
 
 \textbf{Sampling Subfeatures.}
@@ -286,7 +286,6 @@ As a work-around, we appeal to the work of \citet{fastnnlang},
 who showed that in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.
 The intuition is that the underlying model has enough free parameters that it will effectively just learn the probabilities itself.
 Thus, it does not over/under predict the probabilities on average (since that will result in penalties on the loss function).
- Note that while we follow the same procedure, one could set $Z_{\vec{x}}$ to any positive value in advance and the same logic would follow, if one was worried about numerical issues with low probabilities.
 
 Written explicitly, the new structural probability model is:
 \begin{equation}
@@ -444,7 +443,7 @@ While regularization of the embeddings during training is possible, this did not
 %Cite keras???
  For training $\Feat2Vec$  we set $\alpha_1=\alpha_2 = 3/4$ in the IMDB dataset;
  and $\alpha_1 = 0.25$ and $\alpha_2 = 0.5$  for the educational.
-\hl{In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document.}
+\hl{In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document.} We learn $r=50$ dimensional embeddings under both algorithms.
 
 
 \subsection{Results}
@@ -463,9 +462,9 @@ This is not, however, the case at the upper tail of ranking space, where it appe
 %We would argue that actually,
 However, when we zoom-in on the absolute upper region of rankings (1 to 25), which might be a sensible length of ranks one might give an actual recommendation, it is the case that up until rank 8 or so, $\Feat2Vec$ outperforms $\Word2Vec$ still.
 Intermediate rankings are still strong signals that our $\Feat2Vec$ algorithm is doing a better job of extracting information into embeddings, particularly those entities that appear sparsely in the training data and so are especially difficult.
-In fact,  $\Feat2Vec$ predicts the actual director 2.43\% of the times, while $\Word2Vec$ only does so 1.26\% of the time, making our approach almost twice better in terms of Top-1 Precision metric.
+In fact,  $\Feat2Vec$ predicts the actual director 2.43\% of the times, while $\Word2Vec$ only does so 1.26\% of the time, making our approach almost 2 times better in terms of Top-1 Precision metric.
 
-
+To highlight $\Feat2Vec$'s performance on non-categorical features, we complement the above experiment with a ratings prediction task. We predict the rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the Root Mean Squared Error (RMSE) of the predicted rating in the test dataset. We also vary $\alpha_1$, the flattening hyperparameter for feature sampling, to see what the effect this hyperparameter has on our performance. Intuitively, a low $\alpha_1$ will greatly improve the quality of the ratings embeddings learned, since it has relatively few parameters and is otherwise sampled infrequently. At the same time, with low $\alpha_1$ the director feature will be sampled less since it is one of the most complex features to learn, so the learned director embeddings may be of poorer quality. Figure \ref{fig:ratings} displays the results of our experiment, benchmarked against $\Word2Vec$'s performance in the prediction task. We also show as a baseline the RMSE of a random uniform variable over the range of possible ratings (0 to 10). As is evident from the plot, $\Word2Vec$ performs a bit better than a random prediction, but is also handily outperformed by $\Feat2Vec$. There is no clear relation between $\alpha_1$ and the RMSE, suggesting the algorithm's performance is not very sensitive to our hyperparameter choice.
 
 \begin{table}[htb]
 \centering
@@ -494,6 +493,12 @@ Educational & 25.2\% & 29.2\% \\
 \end{figure}
 
 
+\begin{figure}
+\centering
+\includegraphics[scale=.6]{../paper/output/ratingsRankingRMSE.pdf}
+\caption{RMSE in Ratings Task as a Function of $\alpha_1$}
+\label{fig:ratings}
+\end{figure}
 
 \section{Relation to Prior Work}
 Algorithms that calculate continuous representations of entities other than words have been studied in the context of  bioinformatics for biological sequences~\cite{biovec},
@@ -532,12 +537,23 @@ To the extent of our knowledge, $\Feat2Vec$  is the first method able to calcula
 \bibliographystyle{iclr2018_conference}
 }
 
-
+\pagebreak
 \appendix
+\renewcommand\thefigure{A.\arabic{figure}}
+\setcounter{figure}{0}
 \section{Appendixes}
-\subsection{Proof to Theorem \label{thm:proof}}
-The gradient for learning embeddings with $\Feat2Vec$ is a convex combination of the gradient from $p$ targeted Factorization Machines for each feature in the data.
+\begin{figure}[h]
+\centering
+\includegraphics[scale=.6]{../paper/output/samplingprobs.pdf}
+\caption{Feature Sampling Probabilities as a Function of $\alpha_1$}
+\label{fig:alpha}
+\end{figure}
 
+\subsection{Proof to Theorem \ref{thm:proof}}
+\begin{theorem}
+The gradient for learning embeddings with $\Feat2Vec$ is a convex combination of the gradient from $p$ targeted Factorization Machines for each feature in the data.
+\label{thm:proof}
+\end{theorem}
 \begin{proof}
 Let $S^+_{\upkappa_i}$ denote the positively labeled records whose corresponding negative samples resample feature $\upkappa_i$. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
 
@@ -565,9 +581,4 @@ Thus, the loss function is just a convex combination  of the loss functions of t
  Thus the algorithm will, at each step, learn a convex combination of the gradient for a targeted classifier on feature $f$, with weights proportional to the feature type sampling probabilities in step 1 of the sampling algorithm.
 \end{proof}
 
-\begin{figure}[h!]
-\centering
-\includegraphics{../paper/output/samplingprobs.pdf}
-\caption{Feature Sampling Probabilities as a Function of $\alpha_1$}
-\end{figure}
 \end{document}

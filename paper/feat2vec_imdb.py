@@ -18,11 +18,11 @@ from feat2vec.feat2vec import Feat2Vec
 #datadir = '/home/luis/Data/IMDB/'
 datadir = '/media/luis/hdd3/Data/IMDB/'
 batch_size=1000
-feature_alpha=0.
+feature_alpha=0.5
 sampling_alpha=.75
 negative_samples=5
 dim = 50
-plot_alpha=True
+plot_alpha=False
 np.random.seed(9)
 deepin_features = [ ['runtimeMinutes'], ['averageRating','mi_rating'],['numVotes','mi_rating']]
 
@@ -137,6 +137,7 @@ print f2v.model.summary()
 
 #quick aside: get a printout of important layers to demonstrate importance
 if plot_alpha:
+    model_alpha = f2v.feature_alpha
     p_title=[]
     p_cast = []
     p_genre = []
@@ -156,6 +157,7 @@ if plot_alpha:
     plt.xlabel(r'$\alpha_1$')
     plt.savefig('paper/output/samplingprobs.pdf')
     plt.show()
+    f2v.feature_alpha = model_alpha
 f2v.fit_model(epochs=25,validation_split=.1,
     callbacks = callbacks)
 print f2v.model.get_layer('embedding_titleSeq').get_weights()[0]
