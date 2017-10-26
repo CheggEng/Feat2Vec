@@ -71,7 +71,7 @@ Address \\
 
 \begin{abstract}
 Methods that calculate dense vector representations for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
-Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---that is, datasets that have arbitrary features beyond words.
+Surprisingly, very little work has focused on methods for structured datasets where there is more than one type of feature---that is, datasets that have arbitrary features beyond words.
 We study how to estimate  dense representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
 $\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing that all different feature types exist in a common space.
 We demonstrate our work on two datasets, and
@@ -98,7 +98,7 @@ We call this approach  $\Feat2Vec$:}
 \Feat2Vec :\, & \bigl\{\; \vect{x\vphantom{\mathcal{f}}} \in \vect{\mathcal{F}} \mapsto \vect{y\vphantom{\mathcal{F}}} \in \mathbb{R}^r \; \bigr\}\\
 \vect{ \mathcal{F} } =\,& \bigl[\; \mathbb{R}^{d_1}, \mathbb{R}^{d_2}, \dots, \mathbb{R}^{d_n} \;\bigr]
 \end{align}
-Here, $\vect{\mathcal{F}}$ is a structured feature set---where each dimension represents a different feature type.
+Here, $\vect{\mathcal{F}}$ is a structured features set---where each element represents a different feature ``type''.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
 However,   $\Feat2Vec$  leverage the features' structure:
 it does not optimize the embeddings of individual subfeatures, instead it reasons at a more abstract level of complexity.
@@ -126,7 +126,7 @@ Finally, in \S~\ref{sec:learning} we describe how to learn a $\Feat2Vec$ model f
 \subsection{Structured Deep-In Factorization Machine}
 \label{sec:model}
 
-\citet{levy2014neural} showed that  a $\Word2Vec$ model can be formalized as a Shallow Factorization Machine~\cite{rendle2010factorization} with two features types---a word  and its context.
+\citet{levy2014neural} showed that  a $\Word2Vec$ model can be formalized as a Factorization Machine~\cite{rendle2010factorization} with two features types---a word  and its context.
 This factorization model is a binary classifier that scores the likelihood of an observation $\vect{x} \in \mathbb{R}^n$ being labeled  $y \in \{0,1\}$, as proportional to the sum of the factorized pairwise interactions:
 
 \begin{align}
@@ -143,28 +143,18 @@ Here, $Y$ is the random variable that defines whether the observation is ``seman
 \end{equation}
 
 However, features  may have some structure that is known beforehand.
-For example, consider multiple discrete entity types, like universities, students, and textbooks.
-To model this data, a Shallow Factorization Machine would  ignore the structure and simply concatenate the one-hot encoding representation of each entity into a single feature vector.
 Feat2Vec relies on an novel extension to factorization called  Structured Deep-In Factorization Machine, which we describe in detail in a companion paper \cite{deepfm}.
 %On the other hand, Structured Deep-In Factorization Machine considers the structure explicitly.
-While Shallow Factorization Machine  learns an embedding per feature, the Structured Deep-In model allows greater flexibility.
+While Factorization Machine  learns an embedding per feature, the Structured Deep-In model allows greater flexibility.
 For example, consider using images or text on these factorization models.
-The shallow model learns an embedding for each word, or an embedding per pixel.
+The ``shallow'' or regular Factorization Machine model learns an embedding for each word, or an embedding per pixel.
 The structured model enables higher-level of abstraction and flexibility, and it can learn an embedding per passage of text, or an embedding per image.
 
 
-Structured Deep-In Factorization Machine inputs $\vect{\upkappa}$  as a vector of vectors that define  the structure of the groups of features.
-Each entry $i$  is a vector of size $d_i$ and it is used to represent the feature types of $\mathcal{F}_i$.
-%LA: i'm having trouble following this explanation.
-In a shallow model, a feature interacts with all other features, but in the structured model they only interact with features from different groups.
-For example, consider a model with four features.
-If we define
-$
-\vect{\upkappa} = \bigl[  \, [1, 2 ], [ 3 , 4 ] \, \bigr]
-$,
-the structure of the model would not allow $x_1$ to interact with $x_2$, or $x_3$ to interact with $x_4$.
-Additionally, for each group of features, the model allows applying a $d_i  \times r $ feature extraction function $\phi_i$ that calculates an embedding.
-More formally, this is:
+Structured Deep-In Factorization Machine inputs $\vect{\upkappa}$  as a vector that defines which features group together. Each entry $i$  is a vector of size $d_i$ and it is used to represent the feature type $\mathcal{F}_i$.
+In a shallow model, a feature in the dataset interacts with all other features, but in the structured model it’s the groups of feature types (as a whole) that interact with each other.
+For each feature type, the model applies a  $d_i  \times r $  feature extraction function $\phi_i$ that calculates an embedding for each type. More formally, this is:
+
 \begin{align}
 %\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})=
 p \bigl(Y=1| \vect{\vphantom{\phi}x};  \vect{\phi}, \vect{\upbeta}, \vect{\vphantom{\phi}\upkappa} \bigr )
@@ -197,7 +187,7 @@ Individual subfeatures are not important; what matters is that feature types fro
 The training dataset for a $\Feat2Vec$ model consists of only semantic observations.
 In natural language, these would be documents written by humans.
 Since Structured Deep-In Factorization Machine~(Equation \ref{eq:deepfm}) requires positive and negative examples, we also need to supply  observations that are not semantic.
-Consider a  feature type $\mathcal{F}_i \in \mathbb{R}^{d_i}$, that exists in very high dimensional space (i.e, $d_i$ is large).
+Consider a feature type $\mathcal{F}_i = \mathbb{R}^{d_i}$, that exists in very high dimensional space (i.e, $d_i$ is large).
 For example, this could happen because we are modeling with one-hot encoding a categorical variable with   large number of possible values.
 In such scenario, it is overwhelmingly costly to feed the model all negative labels, particularly if the model is fairly sparse.
 
@@ -249,8 +239,8 @@ We use  $p_{\q}(x)$ to denote the probability of $x$ under a distribution $\q$.
 
 \textbf{Sampling Feature Types.} The function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\psi_i$.
 To sample a feature type, we choose a feature group  from a multinomial distribution with probabilities proportional a feature's complexity.
-\hl{This choice places more weight on features that have more parameters and thus are going to require more training iterations to properly learn.}
-For categorical variables using a linear fully-connected layer, the complexity is simply \hl{proportional to }the number of categories in the feature type:
+This choice places more weight on features that have more parameters and thus are going to require more training iterations to properly learn.
+For categorical variables using a linear fully-connected layer, the complexity is simply proportional to the number of categories in the feature type:
 \begin{equation}
 P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1p )  \
 = \frac{\operatorname{params}(\phi_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}}=\frac{(r\times d_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}},  \quad \alpha_1 \in [0,1]
@@ -308,7 +298,7 @@ For example, it is well known that Factorization Machines can be used as a multi
 with at least two feature groups, one can use one of the feature groups as the target label, and the other group(s) as the input features to make a prediction.
 In such setting, the output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$), and therefore the input can be associated with more than one label.
 With $n$ feature types, $\Feat2Vec$ is equivalent to optimizing a convex combination of the loss functions from $n$ individual Factorization Machines.
-In other words, it optimizes $n$ multi-label classifiers, where each classifier  is optimized for a different target (i.e., feature type).
+In other words, it optimizes $n$ multi-label classifiers, where each classifier  is optimized for a different target (i.e.,a specific feature type).
 We show the proof of this in the Appendix~\ref{thm:proof}.
 
 
@@ -319,7 +309,7 @@ We show the proof of this in the Appendix~\ref{thm:proof}.
 \subsection{Does $\Feat2Vec$ enable better embeddings?}
  Ex ante, it is unclear how to evaluate the performance of an unsupervised embedding algorithm, but we felt that a reasonable task would be to assess the similarity of trained embeddings using unseen records in a left-out dataset.
 In order to test the relative performance of our learned embeddings, we train our $\Feat2Vec$ algorithm and compare its performance in a targeted ranking task to $\Word2Vec$.
-Thus, our evaluation approach we use the embeddings of one entity, and evaluate its nearest-neighbors from a different entity from which we know the ground-truth.
+Thus, our evaluation approach we use the embeddings of one entity (a particular feature value), and evaluate its nearest-neighbors from a different entity from which we know the ground-truth.
 In particular, in the movie dataset we  retrieve movie directors from actors embeddings;
 and from an educational dataset, we retrieve textbooks from user embeddings.
 We evaluate the rankings according to  their  mean percentile rank (MPR):
@@ -433,7 +423,7 @@ For the educational dataset, our testing set only has observations for textbooks
 For both $\Feat2Vec$ and $\Word2Vec$, we perform cross-validation on the loss function,
  by splitting the 10\% of the training data randomly into a validation set,
  to determine the number of epochs to train, and then train the full training dataset with this number of epochs.
- \hl{\footnote{because we train $\Word2Vec$ with the \texttt{gensim} python library, it is impossible to recover the output weight matrix, and so the loss function is inaccessible for an outside document set. So, we created our own loss function that measures average within-document cosine similarity of all possible token pairs. The result was that both algorithms are trained for a similar number of epochs. }}
+ \footnote{because we train $\Word2Vec$ with the \texttt{gensim} python library, it is impossible to recover the output weight matrix, and so the loss function is inaccessible for an outside document set. So, we created our own loss function that measures average within-document cosine similarity of all possible token pairs. The result was that both algorithms are trained for a similar number of epochs. }
 While regularization of the embeddings during training is possible, this did not dramatically change results, so we ignore this dimension of hyperparameters.
 
 %The $\Feat2Vec$ algorithm takes approximately 5 minutes per epoch on a home desktop computer.
@@ -441,7 +431,7 @@ While regularization of the embeddings during training is possible, this did not
 %Cite keras???
  For training $\Feat2Vec$  we set $\alpha_1=\alpha_2 = 3/4$ in the IMDB dataset;
  and $\alpha_1 = 0.25$ and $\alpha_2 = 0.5$  for the educational.
-\hl{In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document.} We learn $r=50$ dimensional embeddings under both algorithms.
+In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document. We learn $r=50$ dimensional embeddings under both algorithms.
 
 
 \subsubsection{Results}
@@ -489,7 +479,7 @@ Educational & 25.2\% & 29.2\% \\
 \label{fig:cdf}
 \end{figure}
 
-\subsection{Can $\Feat2Vec$ handle non-categorical inputs?}
+\subsection{$\Feat2Vec$ Performance with Continuous Inputs}
 %^We can probably wordsmith this
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
 %We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
@@ -511,8 +501,8 @@ The algorithm's performance does not seem very sensitive to the hyperparameter c
 Algorithms that calculate continuous representations of entities other than words have been studied in the context of  bioinformatics for biological sequences~\cite{biovec},
 or in machine translation for embeddings of complete sentences~\cite{kiros2015skip}.
 We recently discovered a promising direction for an algorithm still in development called StarSpace~\cite{wu2017starspace} with similar goals from ours.
-Even though they intend to be able to embed ``all things'', at the time of the writing of this paper, their pre-print method was limited to only work for bag of words.
-While $\Feat2Vec$ is a convex combination of all possible prediction tasks given the feature set,  StarSpace samples a single arbitrary feature.
+Even though they intend to be able to embed all types of features, at the time of the writing of this paper, their pre-print method was limited to only work for bag of words.
+While $\Feat2Vec$ can jointly learn embeddings for all feature values in a dataset,  StarSpace samples a single arbitrary feature.
 Our preliminary experiments suggest that sampling a single feature does not produce embeddings that generalize well.
 Nonetheless, a limitation of our work is that we do not compare with StarSpace, which future work may decide to do.
 
@@ -521,7 +511,10 @@ Nonetheless, a limitation of our work is that we do not compare with StarSpace, 
 Motivated by the success of $\Word2Vec$, this paper proposes a novel algorithm that relies on Structured Deep Factorization Machines with implicit sampling to learn general purpose embedding representations of different types of features.
 Future work could study how to reduce the amount of  human knowledge our approach requires;
 for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
-These ideas can extend to our codebase that we make available\footnote{\hl{dropbox link here?}}.
+These ideas can extend to our codebase that we make available
+\footnote{The code for the $\Feat2Vec$ algorithm is available \href{https://www.dropbox.com/sh/wdr2sgt0z9gj6kb/AABlzw7QhteTYViSoMk3CDZpa?dl=0}{here} and the empirical experiments for the IMDB data can be found
+\href{https://www.dropbox.com/sh/uc07ng403i4ss9a/AAAPshFzdOug_ooeLn4SGR3Ua?dl=0}{here}
+}.
 
 Our evaluation is limited to two datasets---a public dataset that is freely available,  and a proprietary one that we are unable to distribute.
 Though further experimentation is definitely necessary, we believe that our results are extremely encouraging.
@@ -529,7 +522,7 @@ $\Feat2Vec$'s embeddings are able to capture relationships across features that 
 
 $\Feat2Vec$ exploits the structure of a datasets to learn embeddings in a way that is structurally more sensible than existing methods.
 The sampling method, and loss function that we use have interesting theoretical properties.
-To the extent of our knowledge, $\Feat2Vec$  is the first method able to calculate continuous representations of data with arbitrary feature sets.
+To the extent of our knowledge, $\Feat2Vec$  is the first method able to calculate continuous representations of data with arbitrary feature types.
 
 
 
