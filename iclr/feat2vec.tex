@@ -112,11 +112,11 @@ Semantic modularity is useful because it enables making principled comparisons b
 
 
 \section{Feat2Vec}
-The rest of this section describes the three parts of a $\Feat2Vec$ implementation.
+This section describes the three parts of a $\Feat2Vec$ implementation.
 \S~\ref{sec:model} describes a  model that infers an  embedding from an observation.
 To learn this model we need positive and negative examples:
  a positive example is ``semantic'' and it is observed during training, but negative examples are not.
-This is similar how a positive example in $\Word2Vec$ are grammatical co-ocurrences, and negative examples are generated.
+This is similar to how positive examples in $\Word2Vec$ are grammatical co-ocurrences, and negative examples are generated.
 \S~\ref{sec:sampling} describes our novel sampling strategy.
 %This is similar of how $\Word2Vec$ learns the relationships of words  that co-occur.
 %Both $\Word2Vec$ and $\Feat2Vec$ resort to sampling implicit samples,  though we propose a different algorithm.
@@ -145,7 +145,7 @@ Here, $Y$ is the random variable that defines whether the observation is ``seman
 However, features  may have some structure that is known beforehand.
 For example, consider multiple discrete entity types, like universities, students, and textbooks.
 To model this data, a Shallow Factorization Machine would  ignore the structure and simply concatenate the one-hot encoding representation of each entity into a single feature vector.
-Feat2Vec relies on an novel extension to factorization called  Structured Deep-In Factorization Machine, which we describe in detail in a \hl{companion paper} \cite{deepfm}.
+Feat2Vec relies on an novel extension to factorization called  Structured Deep-In Factorization Machine, which we describe in detail in a companion paper \cite{deepfm}.
 %On the other hand, Structured Deep-In Factorization Machine considers the structure explicitly.
 While Shallow Factorization Machine  learns an embedding per feature, the Structured Deep-In model allows greater flexibility.
 For example, consider using images or text on these factorization models.
@@ -252,8 +252,8 @@ To sample a feature type, we choose a feature group  from a multinomial distribu
 \hl{This choice places more weight on features that have more parameters and thus are going to require more training iterations to properly learn.}
 For categorical variables using a linear fully-connected layer, the complexity is simply \hl{proportional to }the number of categories in the feature type:
 \begin{equation}
-P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n)  \
-= \frac{(r\times d_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}},  \quad \alpha_1 \in [0,1]
+P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1p )  \
+= \frac{\operatorname{params}(\phi_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}}=\frac{(r\times d_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}},  \quad \alpha_1 \in [0,1]
 \end{equation}
 However, if we have multiple intermediate layers for some feature types (e.g., convolutional layers), these parameters should also be counted.
 The hyper-parameter $\alpha_1$ helps flatten the distribution.
@@ -274,7 +274,7 @@ Here, $\operatorname{count}(x)$ is the number of times a subfeature $x$ appeared
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
 The literature offers two possibilities:
 in the Negative Sampling that $\Word2Vec$  follows, the collusions are simply ignored~\cite{samplingnotes}.
-Alternatively, we it is possible to account for o account for the possibility of random negative labels that appear identical to positively labeled data using Noise Contrastive Estimation (NCE)~\cite{nce}.
+Alternatively, we it is possible to account for the possibility of random negative labels that appear identical to positively labeled data using Noise Contrastive Estimation (NCE)~\cite{nce}.
 
 
 \subsection{Learning From data}
@@ -284,7 +284,7 @@ However, an additional burden of NCE is that we need to calculate a partition fu
 Normally, this would introduce an astronomical amount of computation and greatly increase the complexity of the model.
 As a work-around, we appeal to the work of \citet{fastnnlang},
 who showed that in the context of language models that setting the $Z_{\vec{x}}=1$ in advance effectively does not change the performance of the model.
-The intuition is that the underlying model has enough free parameters that it will effectively just learn the probabilities itself.
+The intuition is that if the underlying model has enough free parameters that it will effectively just learn the probabilities itself.
 Thus, it does not over/under predict the probabilities on average (since that will result in penalties on the loss function).
 
 Written explicitly, the new structural probability model is:
@@ -307,7 +307,7 @@ $\Feat2Vec$ has interesting theoretical properties.
 For example, it is well known that Factorization Machines can be used as a multi-label classifier:
 with at least two feature groups, one can use one of the feature groups as the target label, and the other group(s) as the input features to make a prediction.
 In such setting, the output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$), and therefore the input can be associated with more than one label.
-With $n$ feature types, $\Feat2Vec$ is equivalent to optimizing a convex combination of the embeddings learned from $n$ individual Factorization Machines.
+With $n$ feature types, $\Feat2Vec$ is equivalent to optimizing a convex combination of the loss functions from $n$ individual Factorization Machines.
 In other words, it optimizes $n$ multi-label classifiers, where each classifier  is optimized for a different target (i.e., feature type).
 We show the proof of this in the Appendix~\ref{thm:proof}.
 
@@ -361,7 +361,7 @@ It contains information on writers, directors, and principal cast members attach
 Feature Group Name      & Type              & \# of feats. & Example for an instance                                      \\ \midrule
 Runtime (minutes)       & Real-valued       & 1                 & 116                                                           \\
 IMDB rating (0-10)      & Real-valued       & 1                 & 7.8                                                          \\
-\# of IMDB rating votes & Real-valued       & 1                 & 4,368                                                          \\
+\# of IMDB rating votes & Real-valued       & 1                 & 435,682                                                          \\
 Is adult film?          & Boolean           & 2                 & False                                                        \\
 Movie releaes year      & Categorical          & 271               & 2001                                                         \\
 Movie title             & Text      & 165,471           & ``Ocean's", ``Eleven"                                  \\
@@ -393,7 +393,7 @@ We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to enc
 \begin{figure}[ht]
 \begin{center}
 \includegraphics[width=3.2in]{imgs/w2v_example.pdf}
-\caption{Sample document for $\Word2Vec$ for for Ocean 11 movie}
+\caption{Sample document for $\Word2Vec$ for the Ocean's Eleven movie}
 \label{fig:ocean11}
 \end{center}
 \end{figure}
@@ -492,10 +492,10 @@ Educational & 25.2\% & 29.2\% \\
 \subsection{Can $\Feat2Vec$ handle non-categorical inputs?}
 %^We can probably wordsmith this
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
-%We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using 
+%We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
 We now focus on how well $\Feat2Vec$ performs on a real-valued feature with a complex feature extraction function.
-We evaluate the prediction of the real-valued rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the Root Mean Squared Error (RMSE) of the predicted rating in the test dataset. We also vary $\alpha_1$, the flattening hyperparameter for feature sampling, to see what the effect this hyperparameter has on our performance. Intuitively, a low $\alpha_1$ will greatly improve the quality of the ratings embeddings learned, since it has relatively few parameters and is otherwise sampled infrequently. At the same time, with low $\alpha_1$ the director feature will be sampled less since it is one of the most complex features to learn, so the learned director embeddings may be of poorer quality. Figure \ref{fig:ratings} displays the results of our experiment, benchmarked against $\Word2Vec$'s performance in the prediction task. We also show as a baseline the RMSE of a random uniform variable over the range of possible ratings (0 to 10). As is evident from the plot, $\Word2Vec$ performs a bit better than a random prediction, but is also handily outperformed by $\Feat2Vec$ across all hyper-parameter settings. 
-%There is no clear relation between $\alpha_1$ and the RMSE, suggesting 
+We evaluate the prediction of the real-valued rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the Root Mean Squared Error (RMSE) of the predicted rating in the test dataset. We also vary $\alpha_1$, the flattening hyperparameter for feature sampling, to see what the effect this hyperparameter has on our performance. Intuitively, a low $\alpha_1$ will greatly improve the quality of the ratings embeddings learned, since it has relatively few parameters and is otherwise sampled infrequently. At the same time, with low $\alpha_1$ the director feature will be sampled less since it is one of the most complex features to learn, so the learned director embeddings may be of poorer quality. Figure \ref{fig:ratings} displays the results of our experiment, benchmarked against $\Word2Vec$'s performance in the prediction task. We also show as a baseline the RMSE of a random uniform variable over the range of possible ratings (0 to 10). As is evident from the plot, $\Word2Vec$ performs a bit better than a random prediction, but is also handily outperformed by $\Feat2Vec$ across all hyper-parameter settings.
+%There is no clear relation between $\alpha_1$ and the RMSE, suggesting
 The algorithm's performance does not seem very sensitive to the hyperparameter choice.
 
 
@@ -511,8 +511,8 @@ The algorithm's performance does not seem very sensitive to the hyperparameter c
 Algorithms that calculate continuous representations of entities other than words have been studied in the context of  bioinformatics for biological sequences~\cite{biovec},
 or in machine translation for embeddings of complete sentences~\cite{kiros2015skip}.
 We recently discovered a promising direction for an algorithm still in development called StarSpace~\cite{wu2017starspace} with similar goals from ours.
-Eventhough they intend to be able to embed ``all things'', at the time of writing this paper, their pre-print method was limited to only work for bag of words.
-While $\Feat2Vec$ is a convex combination of all possible prediction tasks given the featureset,  StarSpace samples a single arbitrary feature.
+Even though they intend to be able to embed ``all things'', at the time of the writing of this paper, their pre-print method was limited to only work for bag of words.
+While $\Feat2Vec$ is a convex combination of all possible prediction tasks given the feature set,  StarSpace samples a single arbitrary feature.
 Our preliminary experiments suggest that sampling a single feature does not produce embeddings that generalize well.
 Nonetheless, a limitation of our work is that we do not compare with StarSpace, which future work may decide to do.
 
