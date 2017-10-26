@@ -28,25 +28,12 @@ if redo_w2v:
 f2v = pd.read_csv(os.path.join(datadir,'imdb_movie_embeddings.tsv'),sep='\t')
 f2v = f2v.set_index(['feature','values'])
 
-
-#f2v.loc['directors'].loc[r'\N'].values
-#f2v_dict = { [ (idx,f2v.loc['directors'].loc[idx].values) for idx in f2v.loc['directors'].index.tolist()]}
-#f2v.loc['directors'].index
-#f2v.loc['directors'].loc[r'\N'].values
-#f2v_dict[r'\N']
-
 print f2v.head()
 
-
-#print f2v.loc['titleSeq'].loc['maya']
 print "Loading df..."
 with open(os.path.join(datadir,'imdb_test_movie_data.p'),'r') as f:
     testdf = cPickle.load(f)
 
-#fixlist = lambda x: [x]
-#testdf.loc[testdf['titleSeq']=='\\N','titleSeq'] = testdf.loc[testdf['titleSeq']=='\\N','titleSeq'].map(fixlist)
-#print testdf['titleSeq'][4432635]
-#print np.sum(testdf['titleSeq']=='\\N')
 print testdf.head()
 
 #create document list vsn of test dataframe
@@ -125,35 +112,6 @@ def rank_byfeature_w2v(doc_list,target_feature,source_feature):
         rankings.append(rank)
     return rankings
 
-
-def rank_byfeature_w2v2(doc_list,target_feature,source_feature):
-    '''
-    Rank a set of features associated with a given vetor.
-    source_feature is the feature in docs you want to use as an input to calculate the vector. this is the "labeled info"
-    target_feature is the feature type you want to rank against
-    '''
-    target_tokens = [i for i in w2v.vocab if i.startswith(target_feature + '_')]
-    target_vecs = np.concatenate([np.expand_dims(w2v[i],axis=0) for i in target_tokens],axis=0)
-    print target_vecs.shape
-    rankings=[]
-    source_vecs =np.concatenate([ np.sum([w2v[w] for w in doc if w.startswith(source_feature+'_') if w in w2v.vocab],axis=0)[:,np.newaxis] for doc in doc_list ],axis=1)
-    source_vecs = source_vecs.T
-    print source_vecs.shape
-    print "Scoring data..."
-    scores = cosine_similarity(source_vecs,target_vecs)
-    print scores.shape
-    print "Creating Ranks..."
-    tempranks = np.argsort(-scores,axis=1)
-    for i,doc in enumerate(doc_list):
-        targetid = ( w for w in doc if w.startswith(target_feature + '_') ).next()
-        ranks = np.empty(len(target_tokens), int)
-        ranks[tempranks[i,:]] = np.arange(len(target_tokens))
-        rank=ranks[target_tokens.index(targetid)]
-        sys.stdout.write("\r Ranking: {s}/{l}".format(s=i,l=len(doc_list)))
-        sys.stdout.flush()
-        rankings.append(rank)
-    return rankings
-
 if redo_w2v:
     w2v_ranks = rank_byfeature_w2v(test_docs,target_feature = 'directors',source_feature='principalCast')
 else:
@@ -166,37 +124,9 @@ else:
 
 
 
-def rank_byfeature_f2v(df,target_feature,source_feature):
-    '''
-    Rank a set of features associated with a given vetor.
-    feature is the var name
-    feature_weight_name is the name of the embedding layer the embeddings come from.
-    '''
-    target_tokens = f2v.loc[target_feature].index.tolist()
-    target_vecs = np.array(f2v.loc[target_feature])
-    source_vecs = f2v.loc[source_feature]
-    print target_vecs.shape
-    rankings=[]
-    def sum_vec(x):
-        return  np.sum([source_vecs.loc[w] for w in x],axis=0)
-    #def first_elem(x):
-    #    return x[0]
-    for index, row in df.iterrows():
-        targetid = row[target_feature][0]
-        sourcevec = np.sum([source_vecs.loc[w] for w in row[source_feature] if w in source_vecs.index ],axis=0)[:,np.newaxis]
-        #print sourcevec.shape
-        scores = cosine_similarity(sourcevec.T,target_vecs)[0]
-        temp = np.argsort(-scores)
-        ranks = np.empty(len(scores), int)
-        ranks[temp] = np.arange(len(scores))
-        rank=ranks[target_tokens.index(targetid)]
-        sys.stdout.write("\r Ranking: {s}/{l}".format(s=index,l=len(df)))
-        sys.stdout.flush()
-        rankings.append(rank)
-    return rankings
 
 
-def rank_byfeature_f2v2(df,target_feature,source_feature,batch_size=100):
+def rank_byfeature_f2v(df,target_feature,source_feature,batch_size=100):
     '''
     Rank a set of features associated with a given vetor.
     feature is the var name
@@ -230,7 +160,7 @@ def rank_byfeature_f2v2(df,target_feature,source_feature,batch_size=100):
         sys.stdout.flush()
     return rankings
 
-f2v_ranks = rank_byfeature_f2v2(testdf,target_feature='directors',source_feature='principalCast',batch_size=1000)
+f2v_ranks = rank_byfeature_f2v(testdf,target_feature='directors',source_feature='principalCast',batch_size=1000)
 
 
 
