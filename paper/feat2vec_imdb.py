@@ -26,6 +26,7 @@ plot_alpha=False
 np.random.seed(9)
 deepin_features = [ ['runtimeMinutes'], ['averageRating','mi_rating'],['numVotes','mi_rating']]
 
+
 #load data
 with open(os.path.join(datadir,'imdb_train_movie_data.p'),'r') as f:
     df = cPickle.load(f)
@@ -33,7 +34,6 @@ with open(os.path.join(datadir,'imdb_train_movie_data.p'),'r') as f:
 print df.head()
 vocab_maps = {} #we will store our maps here from categories/identifiers  to integers
 #map categories to integers
-#again, mask zero
 
 
 for c in ['tconst','startYear']:
@@ -43,7 +43,7 @@ for c in ['tconst','startYear']:
     vocab_maps[c] = vocab_dict
     df[c] = df[c].cat.codes
 
-#normalize continuous vars to be 0 to 1
+#normalize continuous vars to be 0 to 1 for overflow reasons
 df.dtypes
 df.loc[df['runtimeMinutes']==r'\N','runtimeMinutes'] = '0'
 df['runtimeMinutes'] = pd.to_numeric(df['runtimeMinutes'])
@@ -72,8 +72,7 @@ for c in seqlengths.keys():
     #now create the integer sequences
     for idx in range(seqlengths[c]):
         df['{c}_{ind}'.format(c=c,ind=idx+1)] = df[c].map(lambda x: vocab_dict[x[idx]] if len(x) >=idx+1 else 0)
-    #print vocab_dict
-    #print df[[c] + ['{c}_{ind}'.format(c=c,ind=idx+1) for idx in range(seqlengths[c])]].head()
+
 
 ##create deepin features (relu layers)
 deep_input_layers=[]
@@ -88,10 +87,6 @@ for c in deepin_features:
 
 
 
-#normalize realvalued space to be in [0,1]
-#df['numVotes'] = df['numVotes']/np.max(df['numVotes'])
-#df['averageRating'] /= 10.
-#define feature space
 titlecols = [c for c in df.columns if c.startswith('titleSeq_')]
 genrecols = [c for c in df.columns if c.startswith('genres_')]
 castcols = [c for c in df.columns if c.startswith('principalCast_')]
@@ -135,7 +130,7 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
 
 print f2v.model.summary()
 
-#quick aside: get a printout of important layers to demonstrate importance
+#figure A1 in paper to visualize feature sampling probs
 if plot_alpha:
     model_alpha = f2v.feature_alpha
     p_title=[]
@@ -158,6 +153,8 @@ if plot_alpha:
     plt.savefig('paper/output/samplingprobs.pdf')
     plt.show()
     f2v.feature_alpha = model_alpha
+
+
 f2v.fit_model(epochs=25,validation_split=.1,
     callbacks = callbacks)
 print f2v.model.get_layer('embedding_titleSeq').get_weights()[0]
@@ -178,7 +175,6 @@ f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
     negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
 
 f2v.fit_model(epochs=opt_epoch,validation_split=None)
-#opt_epochs =
 f2v.model.save(os.path.join(datadir,'f2v_imdb.h5'))
 
 

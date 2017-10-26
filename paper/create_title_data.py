@@ -51,16 +51,7 @@ print df['primaryTitle'].tail(15)
 df['titleSeq'] = texts
 df.loc[df['titleSeq']==r'\N','titleSeq'] = df.loc[df['titleSeq']==r'\N','titleSeq'].map(lambda x: [r'\N'])
 print df['titleSeq'].head(15)
-#create genre matrix
-#print "creating genre matrix"
-#genstrMat = df['genres'].str.split(',',expand=True)
-#genstrMat = np.array(genstrMat.fillna(r'\N'))
-#genre_types = np.unique(genstrMat).tolist()
-#for g in genre_types:
-#    df[r'genre_{}'.format(g)] = np.any(genstrMat==g,axis=1)
-#    df[r'genre_{}'.format(g)] = df[r'genre_{}'.format(g)].astype('bool')
 
-#
 
 #import crew and principals data
 print "importing crew data"
@@ -135,5 +126,3 @@ else:
         cPickle.dump(df,f)
 
 print "Done!"
-
-print len(df),len(traindf)+len(testdf)

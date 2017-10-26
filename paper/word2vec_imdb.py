@@ -34,12 +34,11 @@ train_index = [x for x in df.index if x not in validation_index]
 
 valdf = df.loc[validation_index,:]
 traindf= df.loc[train_index,:]
-#create df as a document for training and testing
 
-exclude_tokens = set(['isAdult_0','mi_rating_0'])
-sentence_fcn = lambda x: ' '.join([w for w in x if w not in exclude_tokens])
 
 #create document version of df
+exclude_tokens = set(['isAdult_0','mi_rating_0'])
+sentence_fcn = lambda x: ' '.join([w for w in x if w not in exclude_tokens])
 docs = []
 seqlengths = {'genres':3,'writers':5,'directors':5,'principalCast':10,'titleSeq':5}
 for i,df in enumerate([traindf,valdf,df]):
