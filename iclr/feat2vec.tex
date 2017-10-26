@@ -25,7 +25,7 @@
 \usepackage{amsthm}
 \usepackage{thmtools,thm-restate}
 \declaretheorem{theorem}
-\title{Feat2Vec:  Continuous Representations of Data with Features}
+\title{Feat2Vec:  Dense Vector Representation for Data with Features}
 
 % Authors must not appear in the submitted version. They should be hidden
 % as long as the \iclrfinalcopy macro remains commented out below.
@@ -70,9 +70,9 @@ Address \\
 \maketitle
 
 \begin{abstract}
-Methods that calculate dense embeddings for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
+Methods that calculate dense vector representations for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
 Surprisingly, very little work has focused on methods for structured datasets where there is more than one feature type---that is, datasets that have arbitrary features beyond words.
-We study how to estimate  continuous representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
+We study how to estimate  dense representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
 $\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing that all different feature types exist in a common space.
 We demonstrate our work on two datasets, and
 %The first one is collected from a leading educational technology firm, and thus we are able to discover a common continuous space for entities such as universities, courses, textbooks and students.
@@ -82,7 +82,7 @@ our experiments suggest that $\Feat2Vec$ significantly outperforms existing algo
 \end{abstract}
 
 \section{Preliminaries}
-Informally, in machine learning an \textit{embedding}  of a vector   $\vect{x} \in \mathbb{R}^n$  is another vector $\vect{y} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation, and can be used to replace the original vector  in downstream prediction tasks.
+Informally, in machine learning a \textit{dense representation}, or \textit{embedding}  of a vector   $\vect{x} \in \mathbb{R}^n$  is another vector $\vect{y} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation, and can be used to replace the original vector  in downstream prediction tasks.
 %Embeddings are often used to compress sparse categorical variables, and they result into continuous representation of them.
 Embeddings  have multiple advantages, as they enable more efficient training~\cite{mikolov2013distributed},
 and unsupervised learning~\cite{schnabel2015evaluation}.
@@ -100,11 +100,11 @@ We call this approach  $\Feat2Vec$:}
 \end{align}
 Here, $\vect{\mathcal{F}}$ is a structured feature set---where each dimension represents a different feature type.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
-However,   $\Feat2Vec$  leverage the features' structure  to enforce what we call  \textit{semantic modularity}:
+However,   $\Feat2Vec$  leverage the features' structure:
 it does not optimize the embeddings of individual subfeatures, instead it reasons at a more abstract level of complexity.
 %That is, the embedding of an observation is additive in respect to the embeddings of its feature types;
 %thus, each feature type  $\mathcal{F}_i$ must be  projected into the same embedding space.
-Semantic modularity is useful because it enables making principled comparisons between different feature types.
+This  enables making principled comparisons between different feature types.
 %For example, on an educational dataset that contains many feature types, including  students and courses, semantic modularity enables inferring course preferences for students.
 %On the other hand, $\Feat2Vec$ is able to generalize on  $\Word2Vec$ when there is only one feature type $\mathcal{F}(n)$.
 
