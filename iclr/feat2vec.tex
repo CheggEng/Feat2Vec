@@ -95,7 +95,7 @@ We call this approach  $\Feat2Vec$:}
 \Feat2Vec :\, & \bigl\{\; \vect{x\vphantom{\mathcal{f}}} \in \vect{\mathcal{F}} \mapsto \vect{y\vphantom{\mathcal{F}}} \in \mathbb{R}^r \; \bigr\}\\
 \vect{ \mathcal{F} } =\,& \bigl[\; \mathbb{R}^{d_1}, \mathbb{R}^{d_2}, \dots, \mathbb{R}^{d_n} \;\bigr]
 \end{align}
-Here, $\vect{\mathcal{F}}$ is a structured features set---where each element represents a different feature ``type''.
+Here, $\vect{\mathcal{F}}$ is a structured feature set---where each element represents a different \textit{feature type}.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
 However,   $\Feat2Vec$  leverage the features' structure:
 it does not optimize the embeddings of individual subfeatures, instead it reasons at a more abstract level of complexity.
