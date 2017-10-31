@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 from gensim.models.word2vec import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 from sklearn.metrics.pairwise import cosine_similarity
+sys.path.append('feat2vec/')
 import feat2vec
-datadir = '/home/luis/Data/IMDB/'
-datadir = '/media/luis/hdd3/Data/IMDB/'
+datadir = ''
 
 #datadir = ''
-outputdir= 'paper/output/alpha_75_25/'
+outputdir= 'paper/output/'
 #load both sets of vectors
 print "Loading w2v embeddings..."
 w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)

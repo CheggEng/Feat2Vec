@@ -216,9 +216,7 @@ class DeepFM():
     def build_realval_feature_layers(self,feature_index):
         '''
         create keras bias and embedding layers (where relevant depending on bias_only, embeddings_only)
-        for a discrete categorical feature, where each integer represents a new category
-        args:
-            feature_index: the position of the feature in question in our list of features
+        realvalued variable. so each column in this feature is passed is interpreted as a number and passed through a linear fully connected layer
         '''
         feature_dim = self.feature_dimensions[feature_index]
         feature = Input(batch_shape=(None, feature_dim), name=self.feature_names[feature_index])

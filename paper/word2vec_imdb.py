@@ -10,8 +10,7 @@ import feat2vec
 import gensim
 import itertools
 from gensim.models.word2vec import Word2Vec
-#datadir = '/home/luis/Data/IMDB/'
-datadir = '/media/luis/hdd3/Data/IMDB/'
+datadir=''
 batch_size=1000
 negative_samples=5
 dim = 50

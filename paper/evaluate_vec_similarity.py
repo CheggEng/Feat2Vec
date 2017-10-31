@@ -6,22 +6,19 @@
 import numpy  as np
 import pandas as pd
 import sys,os
-sys.path.append('/home/luis/feat2vec/')
+sys.path.append('feat2vec/')
 import cPickle
 import matplotlib.pyplot as plt
 from gensim.models.word2vec import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 from sklearn.metrics.pairwise import cosine_similarity
 import feat2vec
-datadir = '/home/luis/Data/IMDB/'
-datadir = '/media/luis/hdd3/Data/IMDB/'
-#datadir = ''
-outputdir= 'paper/output/alpha_75_100/'
+datadir=''
+outputdir= 'paper/output/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
 import sys
 redo_w2v = False
-sys.path.append('/home/luis/feat2vec/')
 if redo_w2v:
     w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
 

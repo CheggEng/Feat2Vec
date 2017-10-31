@@ -6,7 +6,7 @@ import gzip
 import cPickle
 import os
 import sys
-sys.path.append('/home/luis/feat2vec/')
+sys.path.append('feat2vec/')
 
 import matplotlib.pyplot as plt
 import feat2vec
@@ -15,8 +15,9 @@ reload(keras)
 from keras.callbacks import EarlyStopping
 from keras.layers import Input,Dense
 from feat2vec.feat2vec import Feat2Vec
-#datadir = '/home/luis/Data/IMDB/'
-datadir = '/media/luis/hdd3/Data/IMDB/'
+
+datadir = ''
+
 batch_size=1000
 feature_alpha=0.5
 sampling_alpha=.75
