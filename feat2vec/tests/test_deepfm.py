@@ -3,9 +3,10 @@
 import numpy as np
 import pandas as pd
 import math
-import tensorflow as tf
-
+import os
+import logging
 import re
+import tensorflow as tf
 
 from feat2vec import DeepFM
 
@@ -38,17 +39,22 @@ class TestDeepFM(TestCase):
         testdata['y'] = (testdata['latenty'] > 0).astype('int')
 
         # now apply Deep-Out FM
-        features = ['cat1', 'cat2', 'real1']
+        features = [['cat1'], ['cat2'], ['real1']]
         feature_dim = [len(testdata['cat1'].unique()), len(testdata['cat2'].unique()), 1]
         realvals = [False, False, True]
 
-        fm_obj = DeepFM(feature_dim,
-                        feature_names=features, realval=realvals)
 
+
+        fm_obj = DeepFM(model_features=features,
+                        feature_dimensions=feature_dim,
+                        realval=realvals)
+
+
+        print feature_dim
+        print features
         fm = fm_obj.build_model(embed_dim,
                                 l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
-                                deep_out_bias=True, deep_out_activation='linear',
-                                deep_weight_groups=['cat', 'cat', 'real'])
+                                deep_out_bias=True, deep_out_activation='linear')
         print fm.summary()
 
         train = testdata.iloc[:90000, :]
@@ -56,7 +62,7 @@ class TestDeepFM(TestCase):
         earlyend = EarlyStopping()
         fm.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
         inputs = [train['cat1'], train['cat2'], train['real1']]
-        fm.fit(x=inputs, y=train['y'], batch_size=1000, epochs=100,
+        fm.fit(x=inputs, y=train['y'], batch_size=1000, epochs=2,
                verbose=1, callbacks=[earlyend], validation_split=.1, shuffle=True)
 
 
@@ -132,7 +138,7 @@ class TestDeepFM(TestCase):
         word_final_layer = Dense(units=embed_dim, name='textfeats')(word_dense_layer)
 
         # collect relevant valuesfor deepFM model
-        features = ['cat1', 'cat2', 'real1', 'offset_', 'textseq']
+        features = [['cat1'], ['cat2'], ['real1'], ['offset_'], ['textseq']]
         feature_dim = [len(textdata['cat1'].unique()), len(textdata['cat2'].unique()), 1, 1, embed_dim]
         deep_inputs = [word_seq]
         deep_feature = [word_final_layer]
@@ -143,8 +149,9 @@ class TestDeepFM(TestCase):
                   sequence_mat]
 
         # build deep-in FM
-        difm_obj = DeepFM(feature_dim,
-                          feature_names=features, realval=realvalued,
+        difm_obj = DeepFM(features,
+                          feature_dim,
+                          realval=realvalued,
                           deepin_feature=deepin,
                           deepin_inputs=deep_inputs, deepin_layers=deep_feature)
 
@@ -159,7 +166,7 @@ class TestDeepFM(TestCase):
         earlyend = EarlyStopping(monitor='val_loss')
         difm.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
 
-        difm.fit(x=inputs, y=textdata['y'], batch_size=100, epochs=100,
+        difm.fit(x=inputs, y=textdata['y'], batch_size=100, epochs=2,
                  verbose=1, callbacks=[earlyend], validation_split=.1, shuffle=True)
 
         # now add a deep-out layer for the interactions

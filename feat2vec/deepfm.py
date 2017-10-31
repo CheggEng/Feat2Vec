@@ -11,7 +11,14 @@ from keras.layers.merge import Add,Multiply,Concatenate,Dot
 from keras.constraints import non_neg
 
 import keras.backend as K
+import itertools
 
+
+def flatten(list_of_lists):
+    flattened = []
+    for sublist in list_of_lists:
+        flattened.append("_".join(sublist))
+    return flattened
 
 def NCEobj(probs):
         '''
@@ -31,49 +38,59 @@ def nce_output_shape(input_shape):
     return (1)
 
 class DeepFM():
-    def __init__(self, feature_dimensions,
-                 feature_names=None, realval=None, obj='ns',
+    def __init__(self,model_features, feature_dimensions, feature_names=None,
+                 realval=None, obj='ns',mask_zero=False,
                  deepin_feature=None,deepin_inputs=None, deepin_layers = None):
         """
-        Initializes a Factorization Machine Model
-        :param feature_dimensions: A list where each entry represents the number of possible values  
-            a discrete feature has if it is a categorical. Otherwise, if the feature is real-valued, it 
+        Initializes a Deep Factorization Machine Model
+        :param model_features: a list of lists of columns for each feature / embedding in the model
+        :param feature_dimensions: A list where each entry represents the number of possible values
+            a discrete feature has if it is a categorical. Otherwise, if the feature is real-valued, it
             indicates the dimensionality of the feature (how many cols)
+         (just a number)
+         If zero, only biases will be used, and there will be no embeddings.
+         If you only have one feature, this MUST be zero (because there are no interactions)
         :param feature_names: the names of the features to be used in the training sample
         :param realval: whether or not features are real-valued:
         (either True or False which indicates all are Real-valued or categories/indices, respectively,
         or a list as long as feature_dimensions of Booleans indicating status of each feature.
         only relevant for features that are not deep-in
         :param obj: the objective function used for evaluating the model (ns=negative sampling, nce=noise contrastive estimation)
-        :param deepin_feature: a bool list of length features that specifies whether the 
-         feature requires a deep feature extraction. if a 
-        :param deepin_layers: a list of keras layers, corresponding to each "deep" feature. this will be directly input into the FM 
-            as if it were an factor. It is assumed that deepin_layers output a real-valued matrix of dimension = feature_dimensions 
+        :param deepin_feature: a bool list of length features that specifies whether the
+         feature requires a deep feature extraction. if a
+        :param deepin_layers: a list of keras layers, corresponding to each "deep" feature. this will be directly input into the FM
+            as if it were an factor. It is assumed that deepin_layers output a real-valued matrix of dimension = feature_dimensions
             specified in the feature_dimensions list.
-        :param deepin_inputs: a list of keras layers, corresponding to each raw input feature for the feature extraction. 
-            this will be directly input into the keras model as an Input tensor. 
-        
+        :param deepin_inputs: a list of keras layers, corresponding to each raw input feature for the feature extraction.
+            this will be directly input into the keras model as an Input tensor.
+        :param mask_zero: a toggle to mask ALL zero values for categoricals as zero vectors
         """
         if realval is None:
             self.realval = [False]*len(feature_dimensions) #default to all categoricals
         else:
             self.realval = realval
         assert (type(self.realval)==list) and len(self.realval) == len(feature_dimensions),            "realval must either be a boolean list with length = #features, or None"
+
+
+
+        self.model_features = model_features
+        self.feature_dimensions = feature_dimensions
         if feature_names is None:
-            self.feature_names = [str(i) for i in xrange(0, len(feature_dimensions))]
+            self.feature_names =  flatten(model_features)
         else:
             self.feature_names = feature_names
-        assert type(self.feature_names)==list and len(self.feature_names) == len(feature_dimensions),            "feature_names must either be a list with length = #features, or None"
 
-        self.feature_dimensions = feature_dimensions
+        assert len(self.feature_names) == len(self.feature_dimensions), "lengths do not match"
 
-        assert obj=='ns' or obj=='nce' or obj=='linear', "obj. function must be negative sampling (ns) or noise contrastive estimation (nce), or linear"
+        assert obj=='ns' or obj=='nce',"obj. function must be negative sampling (ns) or noise contrastive estimation (nce)"
         self.obj = obj
+        self.mask_zero=mask_zero
         #####
         #Deep-in feature indicators
         if deepin_feature == None:
             self.deepin_feature = [False]*len(feature_dimensions) #default to all categoricals
         else:
+            print len(deepin_feature),len(feature_dimensions)
             assert len(deepin_feature) == len(feature_dimensions), "must provide boolean list w/ length=#features"
             self.deepin_feature = deepin_feature
 
@@ -107,12 +124,12 @@ class DeepFM():
                 for i in range(len(feature_dimensions)):
                     if self.deepin_feature[i]:
                         self.deepin_layers[i] = deepin_layers[layer_count]
-                        layer_count+=1                   
-                        
-                        
+                        layer_count+=1
+
+
     def check_build_params(self,l2_bias, l2_factors, l2_deep,bias_only,embeddings_only,deep_weight_groups,
                     deep_out_bias, deep_out_activation,
-                    dropout_input, 
+                    dropout_input,
                     dropout_layer):
         '''
         confirm that all passed params are of correct format and attach to model object
@@ -120,7 +137,7 @@ class DeepFM():
         assert type(l2_bias)==float and type(l2_factors)==float and type(l2_deep)==float, \
         "L2 regularization terms must all be floats"
         assert l2_bias >= 0. and l2_bias >= 0. and l2_bias >= 0., \
-        "L2 regularization terms must be non-negative" 
+        "L2 regularization terms must be non-negative"
         self.l2_bias = l2_bias
         self.l2_factors = l2_factors
         self.l2_deep = l2_deep
@@ -128,21 +145,21 @@ class DeepFM():
             self.bias_only = [False]*len(self.feature_dimensions)
         else:
             assert type(bias_only)==list and len(bias_only) == len(self.feature_dimensions), \
-            "bias_only must be a boolean list with length = #features, or None"    
+            "bias_only must be a boolean list with length = #features, or None"
             self.bias_only = bias_only
-        
+
         if embeddings_only is None:
             self.embeddings_only = [True]*len(self.feature_dimensions)
         else:
             assert type(embeddings_only)==list and len(embeddings_only) == len(self.feature_dimensions),\
-            "embeddings_only    must either be a boolean list with length = #features, or None" 
+            "embeddings_only    must either be a boolean list with length = #features, or None"
             self.embeddings_only = embeddings_only
-         
-        if deep_weight_groups==None:   
+
+        if deep_weight_groups==None:
             self.deep_weight_groups=None
         else:
             assert type(deep_weight_groups)==list and len(deep_weight_groups) == len(self.feature_dimensions), \
-            "weight_groups must either be a list of identifiers with length = #features"  
+            "weight_groups must either be a list of identifiers with length = #features"
             self.deep_weight_groups=deep_weight_groups
         assert type(deep_out_bias) == bool,'deepout_bias must be a boolean'
         self.deep_out_bias = deep_out_bias
@@ -151,7 +168,7 @@ class DeepFM():
         "Dropout args should be in [0,1]"
         self.dropout_input = dropout_input
         self.dropout_layer = dropout_layer
-        
+
     def build_discrete_feature_layers(self,feature_index):
         '''
         create keras bias and embedding layers (where relevant depending on bias_only, embeddings_only)
@@ -160,28 +177,35 @@ class DeepFM():
             feature_index: the position of the feature in question in our list of features
         '''
         feature_dim = self.feature_dimensions[feature_index]
-        feature = Input(batch_shape=(None, 1), name=self.feature_names[feature_index])
+        feature_cols = len(self.model_features[feature_index])
+        feature = Input(batch_shape=(None, feature_cols), name=self.feature_names[feature_index])
         if (self.embedding_dimensions > 0) and (not self.bias_only[feature_index]):
             ftemp = Embedding(input_dim=feature_dim,
                           output_dim=self.embedding_dimensions,
                           embeddings_regularizer=l2(self.l2_factors),
-                          input_length=1,
+                          input_length=feature_cols,
                           embeddings_initializer='normal',
+                          mask_zero = self.mask_zero,
                           name="embedding_{}".format(self.feature_names[feature_index]))(feature)
             if self.dropout_input > 0:
                 ftemp_filtered = SpatialDropout1D(self.dropout_input,
                     name='dropout_embedding_{}'.format(self.feature_names[feature_index]))(ftemp)
             else:
                 ftemp_filtered = ftemp
+            if feature_cols > 1:
+                ftemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_embedding_{}".format(self.feature_names[feature_index]))(ftemp_filtered)
+                #if self.mask_zero ==True:
+            ftemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
             factor = Reshape((self.embedding_dimensions,),
-                name="factor_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
+                name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
             factor=None
         #bias term for categ. feature
         if not self.embeddings_only[feature_index]:
             btemp = Embedding(input_dim=feature_dim,
                               output_dim=1,
-                              input_length=1,
+                              input_length=feature_cols,
+                              mask_zero = self.mask_zero,
                               embeddings_regularizer=l2(self.l2_bias),
                               embeddings_initializer='normal',
                               name="bias_{}".format(self.feature_names[feature_index]))(feature)
@@ -190,6 +214,10 @@ class DeepFM():
                     name='dropout_biased_{}'.format(self.feature_names[feature_index]))(btemp)
             else:
                 btemp_filtered = btemp
+            if feature_cols > 1:
+                btemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_bias_{}".format(self.feature_names[feature_index]))(btemp_filtered)
+            if self.mask_zero ==True:
+                btemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_bias_{}'.format(self.feature_names[feature_index]))(btemp_filtered)
             bias = Reshape((1,),
                            name="bias_{}_reshaped".format(self.feature_names[feature_index]))(btemp_filtered)
         else:
@@ -198,14 +226,12 @@ class DeepFM():
     def build_realval_feature_layers(self,feature_index):
         '''
         create keras bias and embedding layers (where relevant depending on bias_only, embeddings_only)
-        for a discrete categorical feature, where each integer represents a new category
-        args:
-            feature_index: the position of the feature in question in our list of features
+        realvalued variable. so each column in this feature is passed is interpreted as a number and passed through a linear fully connected layer
         '''
         feature_dim = self.feature_dimensions[feature_index]
         feature = Input(batch_shape=(None, feature_dim), name=self.feature_names[feature_index])
         if self.dropout_input > 0:
-            feature_filtered = Dropout(self.dropout_input)(feature)
+            feature_filtered = Dropout(self.dropout_input,name='dropout_{}'.format(self.feature_names[feature_index]))(feature)
         else:
             feature_filtered = feature
         if (self.embedding_dimensions > 0) and (not self.bias_only[feature_index]):
@@ -213,8 +239,8 @@ class DeepFM():
                   use_bias = False,
                   kernel_regularizer=l2(self.l2_factors),
                   kernel_initializer='normal',
-                  name="factor_{}".format(self.feature_names[feature_index]))(feature_filtered)
-            
+                  name="embedding_{}".format(self.feature_names[feature_index]))(feature_filtered)
+
         else:
             factor=None
         if not self.embeddings_only[feature_index]:
@@ -237,17 +263,17 @@ class DeepFM():
             grouped_interactions = []
             #now pre-aggregate (sum up) unique weight-index pairs
             for t1 in xrange(0, len(unique_weight_groups)):
-                for t2 in xrange(t1, len(unique_weight_groups)): 
+                for t2 in xrange(t1, len(unique_weight_groups)):
                     g1=unique_weight_groups[t1]
                     g2=unique_weight_groups[t2]
                     sub_interactions = []
                     int_index = 0
                     for i in xrange(0, len(factors)):
-                        for j in xrange(i+1, len(factors)):       
+                        for j in xrange(i+1, len(factors)):
                             if (self.deep_weight_groups[i]==g1 and self.deep_weight_groups[j]==g2) \
-                                or (self.deep_weight_groups[i]==g2 and self.deep_weight_groups[j]==g1):           
+                                or (self.deep_weight_groups[i]==g2 and self.deep_weight_groups[j]==g1):
                                 sub_interactions.append(interactions[int_index])
-                            int_index +=1 
+                            int_index +=1
                     if len(sub_interactions) == 1:
                         grouped_interactions.append(sub_interactions[0])
                     elif len(sub_interactions) > 1:
@@ -258,33 +284,30 @@ class DeepFM():
 
         factors_revised = Dense(units=1, name="factor_weights", use_bias=self.deep_out_bias,
                                 activation=self.deep_out_activation,
-                                kernel_initializer='normal', 
+                                kernel_initializer='normal',
                                 bias_initializer = 'normal',
                                 kernel_regularizer = l2(self.l2_deep),
                                 bias_regularizer=l2(self.l2_deep))(factors_term)
         return factors_revised
     def build_model(self,
                     embedding_dimensions,
-                    l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True, 
+                    l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
                     bias_only=None,embeddings_only=None,deep_weight_groups=None,
                     deep_out_bias=True, deep_out_activation = 'linear',
-                    dropout_input=0., 
+                    dropout_input=0.,
                     dropout_layer=0.,
                     **kwargs):
         """
         Builds the FM model in Keras Network
         :param embedding_dimensions: The number of dimensions of the embeddings
-         (just a number)
-         If zero, only biases will be used, and there will be no embeddings.
-         If you only have one feature, this MUST be zero (because there are no interactions)
         :param l2_bias: L2 regularization for bias terms
         :param l2_factors: L2 regularization for interaction terms
         :param l2_deep: L2 regularization for the deep layer
         :param deep_out: Whether to have a fully connected "deep" layer to weight the factors
         :param deep_out_bias: whether to use bias terms in the "deep" intermediate layer. Only applies if the deep=True
         :paran deep_out_activation: the activation function for the "deep" intermediate layer. Only applies if the deep=True.
-            should be a keyword keras recognizes 
-        :param weight_groups: an ordered list of integers representing weight groups for each feature; these correspond to the 
+            should be a keyword keras recognizes
+        :param weight_groups: an ordered list of integers representing weight groups for each feature; these correspond to the
             t() function in the DeepFM paper(section II.B.1). Default is each input feature gets there own unique weight for the deep layer.
             NOTE: my current implementation , for dropout in the deep layer, when using weight groups, will equally weight each unique weight group
             cross-sectionm rather than individual interactions.
@@ -296,11 +319,11 @@ class DeepFM():
         :param kwargs: any additional arguments passed directly to the Model Keras class initializer
         Returns a Keras model
         """
-        self.embedding_dimensions = embedding_dimensions # This shouldn't be in the constructor, but maybe shouldn' be an instance variable either
+        self.embedding_dimensions = embedding_dimensions
 
         self.check_build_params(l2_bias, l2_factors, l2_deep,bias_only,embeddings_only,deep_weight_groups,
                     deep_out_bias, deep_out_activation,
-                    dropout_input, 
+                    dropout_input,
                     dropout_layer)
         features = []
         biases = []
@@ -328,9 +351,9 @@ class DeepFM():
                     biases.append(bias)
             else:
                 #initialize Input layer, then apply dropout
-                if self.realval[i]==False:   
+                if self.realval[i]==False:
                     feature,factor,bias = self.build_discrete_feature_layers(i)
-                    
+
                 elif self.realval[i]==True:
                     feature,factor,bias = self.build_realval_feature_layers(i)
                 features.append(feature)
@@ -375,11 +398,9 @@ class DeepFM():
             output_layer = bias_term  # Lambda(lambda x: K.sum(x, axis=-1, keepdims=True), name="output_layer")(biases)
         if self.obj=='ns':
             output = Reshape((1,),name='final_output')(Activation('sigmoid', name="sigmoid")(output_layer))
-        elif self.obj=="linear":
-            output = Reshape((1,), name='final_output')(Activation('linear', name="linear")(output_layer))
         elif self.obj=='nce':
             noise_probs = Input(batch_shape=(None, 1), name='noise_probs')
-            features.append(noise_probs)  
+            features.append(noise_probs)
             #noise_mult_tensor = K.constant([self.noise_multiplier],name='noise_mult_tens')
             #noise_multiplier = Input(batch_shape=(None,1),name='noise_multiplier',tensor=noise_mult_tensor)
             output = Lambda(NCEobj,name='nce_obj')([output_layer,noise_probs])
