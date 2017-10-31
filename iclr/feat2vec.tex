@@ -74,10 +74,7 @@ Methods that calculate dense vector representations for features in unstructured
 Surprisingly, very little work has focused on methods for structured datasets where there is more than one type of feature---that is, datasets that have arbitrary features beyond words.
 We study how to estimate  dense representations for multiple feature types within a dataset,  where each feature type exists in a different higher-dimensional space.
 $\Feat2Vec$ is a novel method that calculates embeddings for data with multiple feature types enforcing that all different feature types exist in a common space.
-We demonstrate our work on two datasets, and
-%The first one is collected from a leading educational technology firm, and thus we are able to discover a common continuous space for entities such as universities, courses, textbooks and students.
-%The second dataset is the public IMDB dataset, and we discover embeddings for entities that include actors, movies and producers.
-our experiments suggest that $\Feat2Vec$ significantly outperforms existing algorithms that do not leverage the structure of the data.
+We demonstrate our work on two datasets, and our experiments suggest that $\Feat2Vec$ significantly outperforms existing algorithms that do not leverage the structure of the data.
 
 \end{abstract}
 
@@ -98,7 +95,7 @@ We call this approach  $\Feat2Vec$:}
 \Feat2Vec :\, & \bigl\{\; \vect{x\vphantom{\mathcal{f}}} \in \vect{\mathcal{F}} \mapsto \vect{y\vphantom{\mathcal{F}}} \in \mathbb{R}^r \; \bigr\}\\
 \vect{ \mathcal{F} } =\,& \bigl[\; \mathbb{R}^{d_1}, \mathbb{R}^{d_2}, \dots, \mathbb{R}^{d_n} \;\bigr]
 \end{align}
-Here, $\vect{\mathcal{F}}$ is a structured features set---where each element represents a different feature ``type''.
+Here, $\vect{\mathcal{F}}$ is a structured feature set---where each element represents a different \textit{feature type}.
 Notice  that  is possible to use   $\Word2Vec$ on structured data by simply flattening the input.
 However,   $\Feat2Vec$  leverage the features' structure:
 it does not optimize the embeddings of individual subfeatures, instead it reasons at a more abstract level of complexity.
@@ -131,7 +128,7 @@ This factorization model is a binary classifier that scores the likelihood of an
 
 \begin{align}
 %\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})=
-p\bigl(Y=1| \vect{\vphantom{\phi}x}  \bigr ) &=
+p\bigl(Y=1| \vect{\vphantom{\phi}x} \vect{\beta}  \bigr ) &=
 \sigma \biggl(
                        \sum_{i =1}^{n} \sum_{j=i}^{n}  \; \langle \,  \vect{\beta}_i x_i,\,   \vect{\beta}_j x_j  \, \rangle  %{x}_i {x}_j
   \biggr)
@@ -151,9 +148,9 @@ The ``shallow'' or regular Factorization Machine model learns an embedding for e
 The structured model enables higher-level of abstraction and flexibility, and it can learn an embedding per passage of text, or an embedding per image.
 
 
-Structured Deep-In Factorization Machine inputs $\vect{\upkappa}$  as a vector that defines which features group together. Each entry $i$  is a vector of size $d_i$ and it is used to represent the feature type $\mathcal{F}_i$.
-In a shallow model, a feature in the dataset interacts with all other features, but in the structured model it’s the groups of feature types (as a whole) that interact with each other.
-For each feature type, the model applies a  $d_i  \times r $  feature extraction function $\phi_i$ that calculates an embedding for each type. More formally, this is:
+Structured Deep-In Factorization Machine takes an additional input $\vect{\upkappa}$,  a vector that defines which features group together. Each entry $i$ in $\vect{\upkappa}$ is a vector of size $d_i$ and it is used to represent the feature type $\mathcal{F}_i$ in the data.
+In a shallow model, a feature in the dataset interacts with all other features, but in the structured model it is the \textit{groups} of feature types (as a whole) that interact with each other.
+For each feature type, the model applies a  $d_i  \times r $  feature extraction function $\phi_i$ that calculates an embedding for the feature type. More formally, this is:
 
 \begin{align}
 %\hat y(\vect{x}; \vect{b}, \vect{\upphi}, \vect{G})=
@@ -175,8 +172,8 @@ A simple   implementation for $\phi_i$ is a linear fully-connected layer, where 
 \end{equation}
 
 
-In $\Word2Vec$, the embeddings for individual words of a document need to be similar;
-while  $\Feat2Vec$ has no such constraint.
+In $\Word2Vec$, the embeddings for individual words of a document need to be similar.
+$\Feat2Vec$ has no such constraint.
 Individual subfeatures are not important; what matters is that feature types from within an observation are similar to each other.
 
 
@@ -200,8 +197,8 @@ We can learn the correlation of features within a dataset by imputing negative l
 % replaced n <- p;  because we use p for probabilities
 Unlike $\Word2Vec$, we do not constraint features types to be words.
 Features types can be  individual numeric columns,  but they need not to be.
-By grouping subfeatures as   using $\upkappa$ parameter in Equation \ref{eq:deepfm}, the model can reason on more complex entities.
-For example, in our experiments on a movie dataset, we use a ``genre'' feature type, where we  group non-mutually exclusive indicators for comedy, action, and drama films.
+By grouping subfeatures using the parameter $\upkappa$ in Equation \ref{eq:deepfm}, the model can reason on more complex entities. By entity, we mean a particular feature value.
+For example, in our experiments on a movie dataset, we use a ``genre'' feature type, where we  group non-mutually exclusive indicators for movie genres including comedy, action, and drama films.
 %For more involved feature types (e.g., an image),  one would need to  define a function $\phi$ that builds intermediate layers  to map the entity to an embedding .
 
 We start with a dataset $S^+ $ of records with $n$ feature types.
@@ -238,22 +235,22 @@ We now describe the two noise distributions that we use.
 We use  $p_{\q}(x)$ to denote the probability of $x$ under a distribution $\q$.
 
 \textbf{Sampling Feature Types.} The function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\psi_i$.
-To sample a feature type, we choose a feature group  from a multinomial distribution with probabilities proportional a feature's complexity.
+To sample a feature type, we choose a feature type  from a multinomial distribution with probabilities proportional a feature's complexity.
 This choice places more weight on features that have more parameters and thus are going to require more training iterations to properly learn.
 For categorical variables using a linear fully-connected layer, the complexity is simply proportional to the number of categories in the feature type:
 \begin{equation}
 P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1p )  \
 = \frac{\operatorname{params}(\phi_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}}=\frac{(r\times d_i)^{\alpha_1}}{\sum_{k=1}^n \operatorname{params}(\phi_k)^{\alpha_1}},  \quad \alpha_1 \in [0,1]
 \end{equation}
-However, if we have multiple intermediate layers for some feature types (e.g., convolutional layers), these parameters should also be counted.
+However, if we have multiple intermediate layers for some feature extraction functions (e.g., convolutional layers), these parameters should also be counted.
 The hyper-parameter $\alpha_1$ helps flatten the distribution.
  When  $\alpha_1=0$, the feature types are sampled uniformly,
- and when  $\alpha_1=1$, they are sampled according to their complexity.
+ and when $\alpha_1=1$, they are sampled proportional to their complexity.
 Figure \ref{fig:alpha} in the Appendix provides a visualization of how the feature sampling rate varies with the hyperparameter for features with differing levels of complexity.
 
 
 \textbf{Sampling Subfeatures.}
-To sample a subfeature  from within a group, we use a similar strategy to $\Word2Vec$ and use the subfeature empirical distribution:
+To sample a subfeature value from within a feature type $\upkappa_i$, we use a similar strategy to $\Word2Vec$ and use the subfeature empirical distribution:
 %For  $\q_2(\mathrm{X}_{\upkappa_i}, \alpha_2)$, is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $\upkappa_i$, as in the negative sampling procedure used in $\Word2Vec$ :
 \begin{equation}
 P_{\q_2}(x_j=x|\mathrm{X}_{\upkappa_i},\alpha_2)  \
@@ -263,8 +260,8 @@ Here, $\operatorname{count}(x)$ is the number of times a subfeature $x$ appeared
 
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
 The literature offers two possibilities:
-in the Negative Sampling that $\Word2Vec$  follows, the collusions are simply ignored~\cite{samplingnotes}.
-Alternatively, we it is possible to account for the possibility of random negative labels that appear identical to positively labeled data using Noise Contrastive Estimation (NCE)~\cite{nce}.
+in the Negative Sampling that $\Word2Vec$  follows, the duplicate negative samples are simply ignored~\cite{samplingnotes}.
+Alternatively, it is possible to account for the possibility of random negative labels that appear identical to positively labeled data using Noise Contrastive Estimation (NCE)~\cite{nce}.
 
 
 \subsection{Learning From data}
@@ -295,7 +292,7 @@ L(S)  = \arg\min_\upbeta   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\l
 
 $\Feat2Vec$ has interesting theoretical properties.
 For example, it is well known that Factorization Machines can be used as a multi-label classifier:
-with at least two feature groups, one can use one of the feature groups as the target label, and the other group(s) as the input features to make a prediction.
+with at least two feature type, one can use one of the feature types as the target label, and the other type(s) as the input features to make a prediction.
 In such setting, the output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$), and therefore the input can be associated with more than one label.
 With $n$ feature types, $\Feat2Vec$ is equivalent to optimizing a convex combination of the loss functions from $n$ individual Factorization Machines.
 In other words, it optimizes $n$ multi-label classifiers, where each classifier  is optimized for a different target (i.e.,a specific feature type).
@@ -309,7 +306,7 @@ We show the proof of this in the Appendix~\ref{thm:proof}.
 \subsection{Does $\Feat2Vec$ enable better embeddings?}
  Ex ante, it is unclear how to evaluate the performance of an unsupervised embedding algorithm, but we felt that a reasonable task would be to assess the similarity of trained embeddings using unseen records in a left-out dataset.
 In order to test the relative performance of our learned embeddings, we train our $\Feat2Vec$ algorithm and compare its performance in a targeted ranking task to $\Word2Vec$.
-Thus, our evaluation approach we use the embeddings of one entity (a particular feature value), and evaluate its nearest-neighbors from a different entity from which we know the ground-truth.
+Thus, in our evaluation approach we use the embeddings of one entity, and evaluate its nearest-neighbors from a different entity from which we know the ground-truth.
 In particular, in the movie dataset we  retrieve movie directors from actors embeddings;
 and from an educational dataset, we retrieve textbooks from user embeddings.
 We evaluate the rankings according to  their  mean percentile rank (MPR):
@@ -348,7 +345,7 @@ It contains information on writers, directors, and principal cast members attach
 \begin{tabular}{@{}lllp{6cm}@{}}
 \toprule
 % Created with: https://www.tablesgenerator.com/
-Feature Group Name      & Type              & \# of feats. & Example for an instance                                      \\ \midrule
+Feature Type Name      & Type              & \# of feats. & Example for an instance                                      \\ \midrule
 Runtime (minutes)       & Real-valued       & 1                 & 116                                                           \\
 IMDB rating (0-10)      & Real-valued       & 1                 & 7.8                                                          \\
 \# of IMDB rating votes & Real-valued       & 1                 & 435,682                                                          \\
@@ -363,15 +360,16 @@ Principal cast members (actors) & Bag of categories & 1,104,280         & ``Geor
 \end{table}
 
 \paragraph{Education}
-We use a dataset from \hl{Anonymized}, a leading technology company that provides educational services.
-In this proprietary dataset, we have 57  million observations and 9 categorical feature groups which include textbook identifier, user identifier, school identifier, and course the book is typically used, along with other proprietary features.
-Here, each observation contains an ``operation" a user acted on a textbook.
+%We use a dataset from \hl{Anonymized}, a leading technology company that provides educational services.
+We use a dataset from an anonymized leading technology company that provides educational services.
+In this proprietary dataset, we have 57  million observations and 9 categorical feature types which include textbook identifier, user identifier, school identifier, and course the book is typically used with, along with other proprietary features.
+Here, each observation is an ``interaction" a user had with a textbook.
 
 
 \subsubsection{Feature Representation}
 \paragraph{Word2Vec}
 For every observation in each of the datasets, we create a document that contains the same information that we feed into $\Feat2Vec$.
-We prepend each feature by its feature group name, and we remove spaces from within features.
+We prepend each feature by its feature type name, and we remove spaces from within features.
 In Figure~\ref{fig:ocean11} we show an example document.
 Some features may  allow multiple values (e.g., multiple writers, directors).
 To feed these  features into the models, for convenience, we constraint the number of values,  by  truncating each feature to no more than 10 levels (and sometimes less if reasonable).
@@ -390,7 +388,7 @@ We use the \texttt{cbow} $\Word2Vec$ algorithm and set the context window to enc
 
 
 \paragraph{Feat2Vec}
-Feature representation in $\Feat2Vec$ may require a feature extraction function for each feature group.
+Feature representation in $\Feat2Vec$ may require a feature extraction function for each feature type.
 Here, we explain how we build these functions:
 \begin{itemize}
 \item  \textbf{Bag of categories,  categorical, and boolean:}
@@ -423,14 +421,14 @@ For the educational dataset, our testing set only has observations for textbooks
 For both $\Feat2Vec$ and $\Word2Vec$, we perform cross-validation on the loss function,
  by splitting the 10\% of the training data randomly into a validation set,
  to determine the number of epochs to train, and then train the full training dataset with this number of epochs.
- \footnote{because we train $\Word2Vec$ with the \texttt{gensim} python library, it is impossible to recover the output weight matrix, and so the loss function is inaccessible for an outside document set. So, we created our own loss function that measures average within-document cosine similarity of all possible token pairs. The result was that both algorithms are trained for a similar number of epochs. }
+ \footnote{Because we train $\Word2Vec$ with the \texttt{gensim} python library, it is impossible to recover the output weight matrix, and so the loss function is inaccessible for an outside document set. So, we created our own loss function that measures average within-document cosine similarity of all possible token pairs. The result was that both algorithms are trained for a similar number of epochs. }
 While regularization of the embeddings during training is possible, this did not dramatically change results, so we ignore this dimension of hyperparameters.
 
 %The $\Feat2Vec$ algorithm takes approximately 5 minutes per epoch on a home desktop computer.
 %The $\Feat2Vec$ model is built on the python library Keras
 %Cite keras???
  For training $\Feat2Vec$  we set $\alpha_1=\alpha_2 = 3/4$ in the IMDB dataset;
- and $\alpha_1 = 0.25$ and $\alpha_2 = 0.5$  for the educational.
+ and $\alpha_1 = 0$ and $\alpha_2 = 0.5$  for the educational.
 In each setting, $\alpha_2$ is set to the same flattening hyperparameter we use for $\Word2Vec$ to negatively sample words in a document. We learn $r=50$ dimensional embeddings under both algorithms.
 
 
