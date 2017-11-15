@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='feat2vec',
-      version='0.2.0',
+      version='0.2.1',
       description='Feat2Vec Library',
       author='Anonymous Author for Peer Review',
       packages=[
@@ -16,7 +16,6 @@ setup(name='feat2vec',
                     'Cython>=0.23.5',
       ],
       install_requires=[
-                     "tensorflow>=1.1.0",
                      "keras>=2.0.8",
                      "dask>=0.15.0", 
                      "pandas>=0.19.2"
