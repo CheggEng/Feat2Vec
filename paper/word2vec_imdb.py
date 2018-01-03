@@ -10,14 +10,15 @@ import feat2vec
 import gensim
 import itertools
 from gensim.models.word2vec import Word2Vec
-datadir=''
+datadir='/home/luis/Data/IMDB'
 batch_size=1000
 negative_samples=5
 dim = 50
 np.random.seed(9)
 recreate_docs = True
-skipgram=False
+skipgram=True
 #load data
+print "Loading Data..."
 with open(os.path.join(datadir,'imdb_train_movie_data.p'),'r') as f:
     df = cPickle.load(f)
 
@@ -26,7 +27,7 @@ with open(os.path.join(datadir,'imdb_train_movie_data.p'),'r') as f:
 df.drop(['tconst','endYear','primaryTitle','originalTitle'],axis=1,inplace=True)
 print df.head()
 
-#split the data
+#split the dataa
 validation_split =.1
 validation_index = np.random.choice(df.index,size=int(len(df)*validation_split),replace=False)
 train_index = [x for x in df.index if x not in validation_index]
@@ -117,22 +118,22 @@ print w2v.iter
 print "Building vocab..."
 w2v.build_vocab(fulldocs)
 print "Beginning Training..."
-dev_losses=[]
-dev_losses.append(0)
-for i in range(num_epochs):
-    w2v.train(traindocs,epochs=w2v.iter,total_examples=len(traindocs))
-    #evaluate
-    loss = dev_loss(valdocs,w2v)
-    dev_losses.append(loss)
-    print "Epoch {i}: {l}".format(i=i,l=loss)
-    if loss > dev_losses[len(dev_losses)-2]:
-        print "Exiting at Epoch {} due to decrease in Validation Similarity!!!".format(i)
-        break
+# dev_losses=[]
+# dev_losses.append(0)
+# for i in range(num_epochs):
+#     w2v.train(traindocs,epochs=w2v.iter,total_examples=len(traindocs))
+#     #evaluate
+#     loss = dev_loss(valdocs,w2v)
+#     dev_losses.append(loss)
+#     print "Epoch {i}: {l}".format(i=i,l=loss)
+#     if loss > dev_losses[len(dev_losses)-2]:
+#         print "Exiting at Epoch {} due to decrease in Validation Similarity!!!".format(i)
+#         break
 
 
 
-opt_epoch = np.argmin(dev_losses)
-
+#opt_epoch = np.argmin(dev_losses)
+opt_epoch = 3
 print "Now Completing full training on full corpus ({} epochs)...".format(opt_epoch)
 w2v = Word2Vec(sentences=fulldocs,size=dim, window=window,
  min_count=0, max_vocab_size=None, sample=0.,
@@ -142,5 +143,9 @@ w2v = Word2Vec(sentences=fulldocs,size=dim, window=window,
  iter=opt_epoch, sorted_vocab=1, batch_words=1000, compute_loss=False)
 
 print "exporting embeddings..."
-w2v.save(os.path.join(datadir,'w2v_gensim_model'))
-w2v.wv.save_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'))
+if skipgram:
+    w2v.save(os.path.join(datadir,'w2v_gensim_model_sg'))
+    w2v.wv.save_word2vec_format(os.path.join(datadir,'w2v_vectors_sg.txt'))
+else:
+    w2v.save(os.path.join(datadir,'w2v_gensim_model_cbow'))
+    w2v.wv.save_word2vec_format(os.path.join(datadir,'w2v_vectors_cbow.txt'))

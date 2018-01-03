@@ -41,32 +41,32 @@ def monkeypatch_method(cls):
     return decorator
 
 @monkeypatch_method(pd.DataFrame)
-def to_keras_flex_format(self,feature_cols=None,text_dict=None,cutoff=None):
+def to_keras_flex_format(self,feature_cols,custom_formats=None):
     '''
     Converts a DF to a generator ready for compatibility with Keras Fmachine Model
     Arguments
     :param feature_cols is an (ordered) list of columns (so a list of lists) corresponding to each feature in the keras model
     in "feature". can either be names of columns in DFs or the indices
         (e.g. either ["feature1"], [1], or ['feature1','feature2'] as an ex. entry in the list)
-    :param text_dict: a dictionary converting words/characters to integers when dealing with text
-    :param cutoff: a cutoff (max # of tokens) to implement for the sequence created that is fed to keras
+    :param custom_formats is a list of len feature_cols that maps feature_cols to a function instead of regular array extraction. it determines which function maps to which feature by the position in the list.
+     this function should define how to take the features in feature_cols into a representation keras will accept. Columns without custom extraction should have their position in custom_formats be None.
+    The functions defined should accept one argument: the dataframe the operation is being performed on.
+    Often, this arg will be used for NLP-type extraction of inputs.
     '''
-    #the default is deprecated; no longer support categoricals (must be converted to codes beforehand
-    if feature_cols is None:
-        return [self[f].cat.codes if self[f].dtype.name == "category" else self[f] for f in self.columns]
-    else:
-        feature_list=[]
-        for d in feature_cols:
-            if self[d].dtypes.values.tolist()==[np.dtype('O')]:
-                #we assume all object columns are strings / text features
-                seq=sequence.pad_sequences(self[d],
-                                           maxlen=cutoff,value=0,padding='post',truncating='post',dtype=np.int16)
-                #print seq
-                feature_list.append(seq)
-            else:
-                numeric_feat_cols = [self[f] for f in d]
-                feature_list.append(np.array(pd.concat(numeric_feat_cols,axis=1)))
-        return feature_list
+    feature_list=[]
+    #print self.shape
+    #print feature_cols
+    #print custom_formats
+    #print self.head()
+    #print self.tail()
+    for idx,d in enumerate(feature_cols):
+        if custom_formats[idx] is not None:
+            feature_list.append(custom_formats[idx](self))
+        else:
+
+            numeric_feat_cols = [self[f] for f in d]
+            feature_list.append(np.array(pd.concat(numeric_feat_cols,axis=1)))
+    return feature_list
 
 
 
@@ -251,7 +251,7 @@ class ImplicitSampler():
                  sampling_strategy=None, sampling_alpha=None,sampling_bias=None,
                  oversampler='twostep',init_probs = None,
                  keep_noise_probs=False,
-                 text_dict=None,text_cutoff=None,
+                 custom_formats=[],
                  cache_epoch=False, sample_once=False,prob_dict=None):
         '''
         Class Initializer:
@@ -320,6 +320,7 @@ class ImplicitSampler():
             sampling_items = []
             print self.sampling_features
             for f in self.sampling_features:
+                print f
                 sampling_items.append([tuple(i) for i in self.df[f].drop_duplicates().values.tolist()])
         assert len(sampling_items) == len(sampling_features), \
         "sampling items should be a list of length = length of  sampling_features"
@@ -373,8 +374,7 @@ class ImplicitSampler():
                 self.prob_dict[tuple(f)] = dict( zip([tuple(j) for j in list(i)],p) )
         else:
             self.prob_dict = prob_dict
-        self.text_dict = text_dict
-        self.text_cutoff = text_cutoff
+        self.custom_formats = custom_formats
 
 
     @staticmethod
@@ -401,7 +401,7 @@ class ImplicitSampler():
                 self.epoch_cache_df = self.epoch_cache_df.sample(frac=1)  # shuffle
                 for batch in ImplicitSampler.chunker(self.epoch_cache_df, self.batch_size):
                     keras_covars = batch.to_keras_flex_format(feature_cols = self.model_features,
-                                                 text_dict=self.text_dict,cutoff=self.text_cutoff)
+                                                  custom_formats=self.custom_formats)
                     if self.keep_noise_probs:
                         keras_covars.append(batch['__noise_probs__'])
                     yield keras_covars,batch["_y_"], batch["_w_"]
@@ -417,7 +417,8 @@ class ImplicitSampler():
                         print "for some reason, it returned none?"
                         print x,y,w
                     keras_covars = x.to_keras_flex_format(feature_cols = self.model_features,
-                                                 text_dict=self.text_dict,cutoff=self.text_cutoff)
+                                                 custom_formats=self.custom_formats)
+                    #print len(keras_covars)
                     if self.keep_noise_probs:
                         keras_covars.append(np.array(x['__noise_probs__']*self.negative_samples))
                     yield keras_covars, y, w

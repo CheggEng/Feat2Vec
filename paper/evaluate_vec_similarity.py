@@ -13,14 +13,15 @@ from gensim.models.word2vec import Word2Vec
 from gensim.models.keyedvectors import KeyedVectors
 from sklearn.metrics.pairwise import cosine_similarity
 import feat2vec
-datadir=''
+datadir='/home/luis/Data/IMDB'
 outputdir= 'paper/output/'
 #load both sets of vectors
 print "Loading w2v/f2v embeddings..."
 import sys
-redo_w2v = False
+redo_w2v = True
 if redo_w2v:
-    w2v = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors.txt'), binary=False)
+    w2v_sg = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors_sg.txt'), binary=False)
+    w2v_cbow = KeyedVectors.load_word2vec_format(os.path.join(datadir,'w2v_vectors_cbow.txt'), binary=False)
 
 f2v = pd.read_csv(os.path.join(datadir,'imdb_movie_embeddings.tsv'),sep='\t')
 f2v = f2v.set_index(['feature','values'])
@@ -75,10 +76,13 @@ for c in testdf.columns:
                 return trunc_tag_fcn(x)
         testdf[c] = testdf[c].map(seq_tag)
 
+
+print testdf.head()
+
 print testdf['directors'].head()
 testdf = testdf.reset_index(drop=True)
 
-def rank_byfeature_w2v(doc_list,target_feature,source_feature):
+def rank_byfeature_w2v(doc_list,w2v,target_feature,source_feature):
     '''
     Rank a set of features associated with a given vetor.
     source_feature is the feature in docs you want to use as an input to calculate the vector. this is the "labeled info"
@@ -110,10 +114,13 @@ def rank_byfeature_w2v(doc_list,target_feature,source_feature):
     return rankings
 
 if redo_w2v:
-    w2v_ranks = rank_byfeature_w2v(test_docs,target_feature = 'directors',source_feature='principalCast')
+    w2v_ranks_sg = rank_byfeature_w2v(test_docs,w2v_sg,target_feature = 'directors',source_feature='principalCast')
+    w2v_ranks_cbow = rank_byfeature_w2v(test_docs,w2v_cbow,target_feature = 'directors',source_feature='principalCast')
 else:
-    with open(os.path.join(datadir,'w2v_test_ranks.p'),'r') as f:
-        w2v_ranks=cPickle.load(f)
+    with open(os.path.join(datadir,'w2v_test_ranks_cbow.p'),'r') as f:
+        w2v_ranks_cbow=cPickle.load(f)
+    with open(os.path.join(datadir,'w2v_test_ranks_sg.p'),'r') as f:
+        w2v_ranks_sg=cPickle.load(f)
 
 #w2v_ranks_old = rank_byfeature_w2v(test_docs[0:10],target_feature = 'directors',source_feature='principalCast')
 #print w2v_ranks[0:10]
@@ -166,7 +173,8 @@ f2v_ranks = rank_byfeature_f2v(testdf,target_feature='directors',source_feature=
 maxrank =  len(f2v.loc['directors'])
 
 #hists
-plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=100,histtype='step')
+plt.hist(w2v_ranks_cbow,alpha=1.,label='CBOW',bins=100,histtype='step')
+plt.hist(w2v_ranks_sg,alpha=1.,label='Skipgram',bins=100,histtype='step')
 plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=100,histtype='step')
 plt.xlim([0, maxrank])
 plt.xlabel('Rankings')
@@ -176,7 +184,8 @@ plt.savefig(os.path.join(outputdir,'rankhist.pdf'))
 plt.show()
 
 #cdf
-plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks_cbow,alpha=1.,label='CBOW',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks_sg,alpha=1.,label='Skipgram',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.xlim([0, maxrank])
 plt.xlabel('Rankings')
@@ -187,7 +196,8 @@ plt.show()
 
 
 #cdf mediumzoomed
-plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks_cbow,alpha=1.,label='CBOW',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks_sg,alpha=1.,label='Skipgram',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.xlim([0, maxrank/10])
 plt.ylim([0.,.6])
@@ -198,7 +208,8 @@ plt.savefig(os.path.join(outputdir,'rankcdf_10pct.pdf'))
 plt.show()
 
 #cdf super zoom
-plt.hist(w2v_ranks,alpha=1.,label='W2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks_cbow,alpha=1.,label='CBOW',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks_sg,alpha=1.,label='Skipgram',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.hist(f2v_ranks,alpha=1.,label='F2V',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.xlim([0, 50])
 plt.ylim([0.,.2])
@@ -208,7 +219,7 @@ plt.legend(loc=2)
 plt.savefig(os.path.join(outputdir,'rankcdf_top50.pdf'))
 plt.show()
 
-np.min(w2v_ranks)
+np.min(w2v_ranks_cbow)
 #summary statistics
 def MPR(ranks):
     return np.mean(ranks)/maxrank
@@ -225,16 +236,17 @@ with open(os.path.join(outputdir,'summstats.txt'),'w') as f:
         print "*"*30
         print stat.__name__
         print "F2V:", stat(f2v_ranks)
-        print "W2V:",  stat(w2v_ranks)
+        print "CBOW:",  stat(w2v_ranks_cbow)
+        print "SG:",  stat(w2v_ranks_sg)
         f.write( "*"*30 + "\n")
         f.write( stat.__name__ + '\n')
         f.write( "F2V:{}\n".format( stat(f2v_ranks) ) )
-        f.write( "W2V:{}\n".format( stat(w2v_ranks)    )   )
-
+        f.write( "CBOW:{}\n".format( stat(w2v_ranks_cbow)    )   )
+        f.write( "SG:{}\n".format( stat(w2v_ranks_sg)    )   )
 
 with open(os.path.join(datadir,'f2v_test_ranks.p'),'w') as f:
     cPickle.dump(f2v_ranks,f)
-
-
-with open(os.path.join(datadir,'w2v_test_ranks.p'),'w') as f:
-    cPickle.dump(w2v_ranks,f)
+with open(os.path.join(datadir,'w2v_test_ranks_cbow.p'),'w') as f:
+    cPickle.dump(w2v_ranks_cbow,f)
+with open(os.path.join(datadir,'w2v_test_ranks_sg.p'),'w') as f:
+    cPickle.dump(w2v_ranks_sg,f)

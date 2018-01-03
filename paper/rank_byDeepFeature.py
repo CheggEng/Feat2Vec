@@ -10,9 +10,8 @@ from gensim.models.keyedvectors import KeyedVectors
 from sklearn.metrics.pairwise import cosine_similarity
 sys.path.append('feat2vec/')
 import feat2vec
-datadir = ''
-
-#datadir = ''
+#datadir = '/home/luis/Data/IMDB'
+datadir = '/media/luis/hdd3/Data/IMDB/'
 outputdir= 'paper/output/'
 #load both sets of vectors
 print "Loading w2v embeddings..."
@@ -83,10 +82,12 @@ avgRatings.head()
 
 #F2V evaluation by alpha1
 alphas = [0,25,50,75,100]
+#alphas = [75]
 testerrs = []
 for a in alphas:
     print "alpha:{}".format(a)
     f2vdir = os.path.join(datadir,'alpha_75_{}'.format(a))
+    #f2vdir=datadir
     f2v = pd.read_csv(os.path.join(f2vdir,'imdb_movie_embeddings.tsv'),sep='\t')
     f2v = f2v.set_index(['feature','values'])
     f2v_directors = f2v.loc['directors']
@@ -101,7 +102,7 @@ for a in alphas:
     testdf['PredictedRating'] = testdf['firstDirector'].map(lambda x: avgRatings.loc[x,'PredictedRating'])
     RMSE= np.sqrt( np.mean( (testdf['PredictedRating'] - testdf['averageRating'])**2) )
     testerrs.append(RMSE)
-    print RMSE,WRMSE
+    print RMSE, #WRMSE
 
 #W2V as a comparison
 directortokens = [w for w in w2v.vocab if w.startswith('directors_')]
@@ -130,7 +131,7 @@ print unif_RMSE,unif_RMSE
 
 #plt.plot([a/100. for a in alphas],testerrs,label='Feat2Vec')
 plt.plot([a/100. for a in alphas],testerrs,label='Feat2Vec',marker='o',lw=3)
-plt.axhline(y=W2V_RMSE,xmin=0.,xmax=1.,color='g',ls='--',label='Word2Vec',lw=3)
+plt.axhline(y=W2V_RMSE,xmin=0.,xmax=1.,color='g',ls='--',label='CBOW',lw=3)
 plt.axhline(y=unif_RMSE,xmin=0.,xmax=1.,color='black',ls='--',label='Random Uniform',lw=3)
 
 

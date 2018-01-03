@@ -11,9 +11,12 @@ datadir = '/media/luis/hdd3/Data/IMDB/'
 #datadir = ''
 outputdir= 'iclr/'
 
+# with open(os.path.join(datadir,'w2v_test_ranks_cbow.p'),'r') as f:
+#     w2v_ranks_cbow=cPickle.load(f)
+# with open(os.path.join(datadir,'w2v_test_ranks_sg.p'),'r') as f:
+#     w2v_ranks_sg=cPickle.load(f)
 with open(os.path.join(datadir,'w2v_test_ranks.p'),'r') as f:
-    w2v_ranks=cPickle.load(f)
-
+     w2v_ranks=cPickle.load(f)
 with open(os.path.join(datadir,'alpha_75_25/f2v_test_ranks.p'),'r') as f:
     f2v_ranks_25=cPickle.load(f)
 
@@ -27,7 +30,8 @@ np.max(f2v_ranks_25)
 #plt.xlabel('Rankings (1000s)')
 bins = range(maxrank)
 plt.hist(f2v_ranks_25,alpha=1.,label='Feat2Vec',bins=bins,cumulative=True,normed=1,histtype='step')
-plt.hist(w2v_ranks,alpha=1.,label='Word2Vec',bins=bins,cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks,alpha=1.,label='CBOW',bins=bins,cumulative=True,normed=1,histtype='step')
+#plt.hist(w2v_ranks_sg,alpha=1.,label='Skipgram',bins=bins,cumulative=True,normed=1,histtype='step')
 plt.xlim([0, maxrank])
 plt.xlabel('Director Ranking')
 plt.ylabel('CDF')
@@ -38,7 +42,8 @@ plt.show()
 
 
 plt.hist(f2v_ranks_25,alpha=1.,label='Feat2Vec',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
-plt.hist(w2v_ranks,alpha=1.,label='Word2Vec',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+plt.hist(w2v_ranks,alpha=1.,label='CBOW',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
+#plt.hist(w2v_ranks_sg,alpha=1.,label='Skipgram',bins=range(maxrank),cumulative=True,normed=1,histtype='step')
 plt.xlim([0, 25])
 plt.ylim([0.,.1])
 #plt.xlabel('Rankings')

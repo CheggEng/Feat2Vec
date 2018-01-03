@@ -16,10 +16,10 @@ from keras.callbacks import EarlyStopping
 from keras.layers import Input,Dense
 from feat2vec.feat2vec import Feat2Vec
 
-datadir = ''
+datadir = '/home/luis/Data/IMDB/'
 
 batch_size=1000
-feature_alpha=0.5
+feature_alpha=0.75
 sampling_alpha=.75
 negative_samples=5
 dim = 50

@@ -1,0 +1,32 @@
+Notes on f2v:
+-contrast rating and cuisine (yelp dataset)
+-me and ralph talked about predicting restaurant embeddings given users , post 
+	-idea: for multi-reviewed restaurants, exclude 10% of total sample of their reviews on restaurants so that at least one remains in training per reviewer.
+	-given a set of users, predict the restaurant being reviewd
+	-analogous to director - cast member pairs
+
+-uplo
+
+Code
+
+word_embed_layer=keras.layers.Embedding(input_dim=text_embedding_weights.shape[0], output_dim=text_embedding_size, weights=[text_embedding_weights], input_length=text_max_len, mask_zero=False, name='word_embedding_layer')(text_input)
+conv_layer=keras.layers.convolutional.Convolution1D(filters=100,kernel_size=3,activation='relu',name='conv')(word_embed_layer)
+maxpool_layer=keras.layers.GlobalMaxPool1D()(conv_activated)
+text_embed_layer=keras.layers.Dense(embedding_size,name='final_text_dense',activation='relu')(maxpool_layer)
+text_embed_model=keras.models.Model(text_input,text_embed_activated_layer)
+
+Below is how to parse the JSONs to give you a dataframe with the columns you need:
+
+import pandas as pd, json
+
+with open("dataset/review.json","r") as f:
+    review_json=f.read()
+
+parsed_jsons=[]
+for i in review_json.split("\n"):
+    try:
+        parsed_jsons.append(json.loads(i))
+    except:
+        pass
+
+review_pd=pd.DataFrame(parsed_jsons)

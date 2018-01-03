@@ -15,6 +15,7 @@ class Feat2Vec:
         embedding_dim,feature_alpha=None,sampling_alpha=None,
         obj='nce', negative_samples=1,  sampling_bias=None,batch_size=None,
         realvalued=None,deepin_feature=None,deepin_inputs=None, deepin_layers = None,
+        custom_formats=None,
         dropout = 0.,
         mask_zero=False,step1_probs=None,
         sampling_items=None, sampling_probs=None,prob_dict=None,**kwargs):
@@ -31,13 +32,7 @@ class Feat2Vec:
         self.deepin_inputs = deepin_inputs
         self.deepin_layers = deepin_layers
         self.step1_probs = step1_probs
-        #add intercept term
-        self.df['__offset__'] = 1
-        self.model_feature_names.append('offset')
-        self.model_features.append(['__offset__'])
-        if self.deepin_feature is not None:
-            self.deepin_feature.append(False)
-        self.feature_dimensions.append(1)
+
         self.mask_zero=mask_zero
         #sampling parameters
         self.negative_samples=negative_samples
@@ -59,7 +54,19 @@ class Feat2Vec:
             print "inferred the following values for realvalued arg:",zip(self.model_features,self.realvalued)
         else:
             self.realvalued = realvalued
-
+        if custom_formats is None:
+            self.custom_formats = [None]*len(model_features)
+        else:
+            self.custom_formats=custom_formats
+        #add intercept term
+        self.df['__offset__'] = 1
+        self.model_feature_names.append('offset')
+        self.model_features.append(['__offset__'])
+        if self.deepin_feature is not None:
+            self.deepin_feature.append(False)
+        self.feature_dimensions.append(1)
+        self.realvalued.append(True)
+        self.custom_formats.append(None)
         #create additional deepFM args to build the model
         embeddings_only=[True]*len(self.model_features)
         embeddings_only[self.model_feature_names.index('offset')] = False
@@ -88,7 +95,7 @@ class Feat2Vec:
                   sampling_strategy=None, sampling_alpha=self.sampling_alpha,sampling_bias=sampling_bias,
                   oversampler='twostep',init_probs = self.step1_probs,
                   keep_noise_probs=(self.obj=='nce'),
-                  text_dict=None,text_cutoff=None,
+                  custom_formats=self.custom_formats,
                   cache_epoch=False, sample_once=False,prob_dict=prob_dict)
 
 
@@ -122,6 +129,7 @@ class Feat2Vec:
                     else:
                         l = self.model.get_layer('embedding_{}'.format(self.model_feature_names[m]) )
                         init_probs[i] += l.count_params()
+        print init_probs
         print "--Original Probs--"
         print init_probs/np.sum(init_probs)
         init_probs = np.power(init_probs,self.feature_alpha)
@@ -152,6 +160,7 @@ class Feat2Vec:
                       batch_size=self.batch_size,
                       sampling_alpha=self.sampling_alpha,sampling_bias=self.sampler.sampling_bias,
                       oversampler='twostep',init_probs = self.sampler.init_probs,
+                      custom_formats = self.custom_formats,
                       keep_noise_probs=(self.obj=='nce'),prob_dict=self.sampler.prob_dict)
             validationsampler = ImplicitSampler( validationdata, negative_samples=self.negative_samples,
                       sampling_features=self.sampling_features,model_features=self.model_features,
@@ -159,6 +168,7 @@ class Feat2Vec:
                       batch_size=self.batch_size,
                       sampling_alpha=self.sampling_alpha,sampling_bias=self.sampler.sampling_bias,
                       oversampler='twostep',init_probs = self.sampler.init_probs,
+                      custom_formats=self.custom_formats,
                       keep_noise_probs=(self.obj=='nce'),prob_dict=self.sampler.prob_dict)
             num_train_steps = sum([1 for e in trainsampler.chunker(traindata,self.batch_size)])
             num_validation_steps = sum([1 for e in validationsampler.chunker(validationdata,self.batch_size)])
@@ -175,6 +185,8 @@ class Feat2Vec:
         #-----------------
         #fit model
         self.model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
+        for x,y,w in generator:
+            break
         history = self.model.fit_generator(generator=generator,
             epochs=epochs,steps_per_epoch=num_train_steps,
             validation_data=validation_data,
@@ -205,7 +217,11 @@ class Feat2Vec:
                 continue
             if self.deepin_feature[idx]:
                 print self.df[self.model_features[idx]]
-                if len(self.model_features[idx])==1:
+                if self.custom_formats[idx] is not None:
+                    #assumes custom format spits out something with at least 2 cols- otherwise, it would make more sense to just use another routine.
+                    levels = np.array(pd.DataFrame(self.custom_formats[idx](self.df)).drop_duplicates())
+                    print levels.shape
+                elif len(self.model_features[idx])==1:
                     levels = np.array(pd.unique(self.df[self.model_features[idx][0]]))
                     levels = levels[:,np.newaxis]
                     print levels.shape
@@ -216,13 +232,20 @@ class Feat2Vec:
                 else:
                     deepinNetwork = keras.models.Model(inputs=[self.deepin_inputs[idx]],outputs=[self.deepin_layers[idx]])
                 deepinNetwork.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
-                weights=deepinNetwork.predict(x=[np.array(levels)])
+                weights=deepinNetwork.predict(x=[levels])
                 print weights
                 weights= pd.DataFrame(weights,columns = embed_names)
                 weights['feature'] = l
                 if 'max' in vocab_map[l].keys():
                     levels[:,self.model_features[idx].index(l)] = levels[:,self.model_features[idx].index(l)] * (vocab_map[l]['max']-vocab_map[l]['min']) + vocab_map[l]['min']
-                if len(self.model_features[idx])==1:
+
+                #if self.custom_formats[idx] is not None:
+                #    rawlevels =  np.array(self.df[self.model_features[idx]].drop_duplicates())
+                #    print rawlevels.shape
+                #else:
+                #    rawlevels = levels
+
+                if len(self.model_features[idx])==1 and  self.custom_formats[idx] is None:
                     weights['values'] = levels
                 else:
                     levels =  tuple(map(tuple, levels))

@@ -7,10 +7,11 @@ import re
 import nltk
 import cPickle
 import os
+import sys
 import matplotlib.pyplot as plt
 nltk.download('stopwords')
 sys.path.append('feat2vec/')
-datadir=''
+datadir='/home/luis/Data/IMDB/'
 movies_only = True
 #load data
 with gzip.open(datadir + 'title.basics.tsv.gz') as f:
