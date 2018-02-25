@@ -76,8 +76,8 @@ text_embed_layer=keras.layers.Dense(dim,name='embedding_textseq',activation='lin
 
 ### define F2V params
 model_features = [['business_id'],['user_id'],['textseq']]
-is_deepin_feature=[False,False,False,True]
-realvalued=[False,False,False,False]
+is_deepin_feature=[False,False,True]
+realvalued=[False,False,False]
 model_feature_names = ['business_id','user_id', 'textseq']
 feature_dimensions = [ len(vocab_map['business_id'].keys()),
                        len(vocab_map['user_id'].keys()),

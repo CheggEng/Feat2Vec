@@ -9,17 +9,24 @@ import re
 from keras.preprocessing.text import Tokenizer
 datadir = '/home/luis/Data/Yelp/dataset/'
 split=False #whether to split into test and train df
+fullyelp = True #whether to input all the yelp data or a fixed number of rows
 with open(os.path.join(datadir,"review.json"),"r") as f:
     review_json=f.read()
 parsed_jsons=[]
-num_reviews=1000000
+num_reviews=10000
 max_vocab = 100000 #max vocab size
-for i in review_json.split("\n")[0:num_reviews]:
-#for i in review_json.split("\n"):
-    try:
-        parsed_jsons.append(json.loads(i))
-    except:
-        pass
+if fullyelp:
+    for i in review_json.split("\n"):
+        try:
+            parsed_jsons.append(json.loads(i))
+	except:
+            pass
+else:
+    for i in review_json.split("\n")[0:num_reviews]:
+        try:
+            parsed_jsons.append(json.loads(i))
+	except:
+            pass
 review_pd=pd.DataFrame(parsed_jsons)
 print review_pd.head()
 
