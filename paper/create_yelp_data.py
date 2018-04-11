@@ -31,7 +31,6 @@ for i in review_jsons:
 print "Concatenating..."
 reviews=pd.DataFrame(reviews)
 print reviews.head()
-
 del review_jsons
 #remove ambience indicators (except funny which we keep)
 reviews.drop(['cool','useful','date',],axis=1,inplace=True)

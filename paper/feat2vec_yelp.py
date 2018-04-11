@@ -1,20 +1,18 @@
 import pandas as pd
 import numpy as np
-import gzip
 import json
 import cPickle
 import os
 import sys
 sys.path.append('feat2vec/')
-import matplotlib.pyplot as plt
 import keras
-import gc
 from keras.preprocessing.text import Tokenizer
 from keras.layers import Input
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 import feat2vec
 from feat2vec.feat2vec import Feat2Vec
 import yaml
+keras.__version__
 constants = yaml.load(open("paper/constants.yaml", 'rU'))
 datadir =constants['datadir']
 glovedir=constants['wordembeddir']
@@ -24,30 +22,22 @@ feature_alpha=0.25
 sampling_alpha=.75
 negative_samples=5
 dim = 50
-text_embedding_size=50
+text_embedding_size=100
 text_max_len = 250
 
 ### Load DF
 print "Loading DF..."
-<<<<<<< HEAD
-#with open(os.path.join(datadir,'yelp_train_data.p'),'r') as f:
-#    traindf=cPickle.load(f)
+with open(os.path.join(datadir,'yelp_train_data.p'),'r') as f:
+    traindf=cPickle.load(f)
 #with open(os.path.join(datadir,'yelp_train_mini.p'),'w') as f:
 #    cPickle.dump(traindf.iloc[0:10000],f)
-with open(os.path.join(datadir,'yelp_train_mini.p'),'r') as f:
-=======
-with open(os.path.join(datadir,'yelp_data.p'),'r') as f:
->>>>>>> 78099176b31d00c2fb7ded40499df91fe58403aa
-    traindf=cPickle.load(f)
+# with open(os.path.join(datadir,'yelp_train_mini.p'),'r') as f:
+#     traindf=cPickle.load(f)
 with open(os.path.join(datadir,'yelp_textfilter.p'),'r') as f:
     review_filter = cPickle.load(f)
 
 vocab_map = {}
-<<<<<<< HEAD
 for c in ['business_id','user_id','stars','funny']:
-=======
-for c in ['business_id','user_id']:
->>>>>>> 78099176b31d00c2fb7ded40499df91fe58403aa
     vocab_map[c] = dict([(cat,i) for i,cat in enumerate(traindf[c].cat.categories)])
     traindf[c] = traindf[c].cat.codes
 
@@ -157,28 +147,10 @@ initial_weights = f2v.model.get_weights()
 f2v.fit_model(epochs=25,validation_split=1./9.,
     callbacks = callbacks)
 
-<<<<<<< HEAD
 #now determine optimal number of epochs, and train the full sample with these.
 opt_epoch = len(f2v.model.history.epoch) - 1
 print "Optimal Epochs: ", opt_epoch
 f2v.model.set_weights(initial_weights)
-=======
-opt_epoch = len(f2v.model.history.epoch) - 1
-print "Optimal Epochs: ", opt_epoch
-#run final model on full dataset
-f2v = Feat2Vec(df=df,model_feature_names=model_feature_names,
-    feature_dimensions=feature_dimensions,
-    model_features=model_features,
-    sampling_features=sampling_features,
-    embedding_dim=dim,
-    dropout=0.,
-    mask_zero=False,
-    deepin_feature = is_deepin_feature,
-    deepin_inputs=deep_input_layers,deepin_layers=deep_embed_layers,
-    feature_alpha=feature_alpha,sampling_alpha=sampling_alpha,
-    negative_samples=negative_samples,  sampling_bias=0,batch_size=batch_size)
-
->>>>>>> 78099176b31d00c2fb7ded40499df91fe58403aa
 f2v.fit_model(epochs=opt_epoch,validation_split=None)
 
 #save learned embeddings from model
