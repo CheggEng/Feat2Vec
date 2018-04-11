@@ -53,11 +53,11 @@ class Feat2Vec:
                     self.realvalued[i]=True
             print "inferred the following values for realvalued arg:",zip(self.model_features,self.realvalued)
         else:
-            self.realvalued = realvalued
+            self.realvalued = [i for i in realvalued]
         if custom_formats is None:
             self.custom_formats = [None]*len(model_features)
         else:
-            self.custom_formats=custom_formats
+            self.custom_formats=[i for i in custom_formats]
         #add intercept term
         self.df['__offset__'] = 1
         self.model_feature_names.append('offset')
@@ -123,6 +123,7 @@ class Feat2Vec:
                             l = layers.pop()
                             init_probs[i] +=l.count_params()
                             for node in l.inbound_nodes:
+                                print node
                                 for li in node.inbound_layers:
                                     print li.name,li.count_params()
                                     layers.append(li)

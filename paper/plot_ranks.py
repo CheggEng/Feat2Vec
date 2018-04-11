@@ -17,7 +17,7 @@ outputdir= 'iclr/'
 #     w2v_ranks_sg=cPickle.load(f)
 with open(os.path.join(datadir,'w2v_test_ranks.p'),'r') as f:
      w2v_ranks=cPickle.load(f)
-with open(os.path.join(datadir,'alpha_75_25/f2v_test_ranks.p'),'r') as f:
+with open(os.path.join(datadir,'alpha_75_75/f2v_test_ranks.p'),'r') as f:
     f2v_ranks_25=cPickle.load(f)
 
 maxrank =  173620
