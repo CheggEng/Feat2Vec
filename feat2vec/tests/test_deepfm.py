@@ -21,7 +21,111 @@ from unittest import TestCase
 
 
 class TestDeepFM(TestCase):
-    # Structured DFM
+    def test_all_pairwise(self):
+
+        feature_names = ["skill_id", "skill_match", "skills", "education", "experience", "summary", "titles",
+                         "professional", "norm_major", "norm_dpt"]
+
+        fm = DeepFM(model_features=[["skill_id", ],
+                                    ["skill_match"],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10]],
+                    feature_dimensions=[100,
+                                        1,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100],
+                    realval=[False, True, False, False, False, False, False, False, False, False],
+                    mask_zero=True,
+                    feature_names=feature_names,
+                    obj="nce")
+
+        model = fm.build_model(10,
+                               dropout_layer=0.5,
+                               deep_out=True,
+                               deep_out_bias=False)
+
+        try:
+            from keras.utils import plot_model
+            plot_model(model, to_file="all_pairwise.png")
+        except:
+            pass
+
+
+    def test_some_pairwise(self):
+
+        feature_names = ["skill_id", "skill_match", "skills", "education", "experience", "summary", "titles",
+                         "professional", "norm_major", "norm_dpt"]
+
+        fm = DeepFM(model_features=[["skill_id", ],
+                                    ["skill_match"],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10],
+                                    [10]],
+                    feature_dimensions=[100,
+                                        1,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100,
+                                        100],
+                    realval=[False, True, False, False, False, False, False, False, False, False],
+                    mask_zero=True,
+                    feature_names=feature_names,
+                    obj="nce")
+
+        model = fm.build_model(10,
+                               dropout_layer=0.5,
+                               deep_out=True,
+                               deep_out_bias=False,
+                               deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)) )
+
+        try:
+            from keras.utils import plot_model
+            plot_model(model, to_file="some_pairwise.png")
+        except:
+            pass
+
+
+
+
+    def a_simple_test(self):
+        fm1 = DeepFM(model_features=[["feat1"],
+                                     ["subfeat2a", "subfeat2b"],
+                                     ["subfeat3a", "subfeat3b"]],
+                     feature_dimensions=[10, 20, 30],
+                     mask_zero=True,
+                     feature_names=["feat1", "feat2", "feat3"],
+                     # feature_names=feature_names,
+                     obj="ns")
+
+        k = fm1.build_model(10, deep_out=False)
+
+
+        self.assertTrue(k.inputs[0].name.startswith("feat1"))
+
+
+
+
     def test_deepfm(self):
         np.random.seed(1)
         # generate some data
