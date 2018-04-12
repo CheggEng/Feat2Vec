@@ -255,6 +255,14 @@ class DeepFM():
     def build_deep_fm_layer(self,interactions,factors):
         if self.deep_weight_groups==None:
             factors_term = Concatenate(name="factors_term")(interactions)
+
+            return  Dense(units=1,
+                          name="factor_weights", use_bias=self.deep_out_bias,
+                          activation=self.deep_out_activation,
+                          kernel_initializer='normal',
+                          bias_initializer='normal',
+                          kernel_regularizer=l2(self.l2_deep),
+                          bias_regularizer=l2(self.l2_deep))(factors_term)
         else:
             unique_weight_groups = []
             for w in self.deep_weight_groups:
@@ -264,6 +272,9 @@ class DeepFM():
             #now pre-aggregate (sum up) unique weight-index pairs
             for t1 in xrange(0, len(unique_weight_groups)):
                 for t2 in xrange(t1, len(unique_weight_groups)):
+                    if t1 == t2:
+                        continue # do not interact with self
+
                     g1=unique_weight_groups[t1]
                     g2=unique_weight_groups[t2]
                     sub_interactions = []
@@ -277,18 +288,17 @@ class DeepFM():
                     if len(sub_interactions) == 1:
                         grouped_interactions.append(sub_interactions[0])
                     elif len(sub_interactions) > 1:
-                        grouped_interactions.append(Add(name='grouped_interaction_{}x{}'.format(g1,g2))(sub_interactions))
-            factors_term = Concatenate(name="factors_term")(grouped_interactions)
-        if self.dropout_layer > 0:
-            factors_term = Dropout(self.dropout_layer, name="Dropout_deep")(factors_term)
+                        group = Concatenate(name='group_{}x{}'.format(g1, g2))(sub_interactions)
+                        if self.dropout_layer > 0:
+                            group = Dropout(self.dropout_layer, name='dropout_{}x{}'.format(g1, g2))(group)
+                        grouped_interactions.append(Dense(units=1, name='grouped_interaction_{}x{}'.format(g1,g2))(group))
 
-        factors_revised = Dense(units=1, name="factor_weights", use_bias=self.deep_out_bias,
-                                activation=self.deep_out_activation,
-                                kernel_initializer='normal',
-                                bias_initializer = 'normal',
-                                kernel_regularizer = l2(self.l2_deep),
-                                bias_regularizer=l2(self.l2_deep))(factors_term)
-        return factors_revised
+
+            if len(grouped_interactions) == 1:
+                return grouped_interactions[0]
+            else:
+                return Add(name="factors_term")(grouped_interactions)
+
     def build_model(self,
                     embedding_dimensions,
                     l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
@@ -362,6 +372,8 @@ class DeepFM():
                     factors.append(factor)
                 if bias is not None:
                     biases.append(bias)
+
+
         #consolidate biases to one term for the input -> embedding portion of model
         if len(biases) == 0:
             bias_term = None
@@ -406,5 +418,6 @@ class DeepFM():
             output = Lambda(NCEobj,name='nce_obj')([output_layer,noise_probs])
         global graph
         graph = tf.get_default_graph()
-        return Model(features, output, name="Factorization Machine",**kwargs)
+        print "~~~", features
+        return Model(inputs=features, outputs=output, name="Factorization Machine",**kwargs)
         # Model.__init__(self, features, sigmoid)
