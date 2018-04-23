@@ -38,9 +38,9 @@ def nce_output_shape(input_shape):
     return (1)
 
 class DeepFM():
-    def __init__(self,model_features, feature_dimensions, feature_names=None,
-                 realval=None, obj='ns',mask_zero=False,
-                 deepin_feature=None,deepin_inputs=None, deepin_layers = None, deep_kernel_contraint=None):
+    def __init__(self, model_features, feature_dimensions, feature_names=None,
+                 realval=None, obj='ns', mask_zero=False,
+                 deepin_feature=None, deepin_inputs=None, deepin_layers = None, deep_kernel_constraint=None):
         """
         Initializes a Deep Factorization Machine Model
         :param model_features: a list of lists of columns for each feature / embedding in the model
@@ -66,7 +66,7 @@ class DeepFM():
         :param mask_zero: a toggle to mask ALL zero values for categoricals as zero vectors
         :param deep_kernel_constraint: the contraint for the deep out parameters
         """
-        self.deep_kernel_contraint = deep_kernel_contraint
+        self.deep_kernel_constraint = deep_kernel_constraint
 
         if realval is None:
             self.realval = [False]*len(feature_dimensions) #default to all categoricals
@@ -266,7 +266,7 @@ class DeepFM():
                           bias_initializer='normal',
                           kernel_regularizer=l2(self.l2_deep),
                           bias_regularizer=l2(self.l2_deep),
-                          kernel_constraint=self.deep_kernel_contraint
+                          kernel_constraint=self.deep_kernel_constraint
                           )(factors_term)
         else:
             unique_weight_groups = []
@@ -303,7 +303,7 @@ class DeepFM():
                                                           bias_initializer = 'normal',
                                                           kernel_regularizer = l2(self.l2_deep),
                                                           bias_regularizer = l2(self.l2_deep),
-                                                          kernel_constraint = self.deep_kernel_contraint
+                                                          kernel_constraint = self.deep_kernel_constraint
                                                           )(group))
 
 
