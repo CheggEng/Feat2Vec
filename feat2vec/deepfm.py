@@ -38,9 +38,9 @@ def nce_output_shape(input_shape):
     return (1)
 
 class DeepFM():
-    def __init__(self,model_features, feature_dimensions, feature_names=None,
-                 realval=None, obj='ns',mask_zero=False,
-                 deepin_feature=None,deepin_inputs=None, deepin_layers = None, deep_kernel_contraint=None):
+    def __init__(self, model_features, feature_dimensions, feature_names=None,
+                 realval=None, obj='ns', mask_zero=False,
+                 deepin_feature=None, deepin_inputs=None, deepin_layers = None):
         """
         Initializes a Deep Factorization Machine Model
         :param model_features: a list of lists of columns for each feature / embedding in the model
@@ -64,9 +64,8 @@ class DeepFM():
         :param deepin_inputs: a list of keras layers, corresponding to each raw input feature for the feature extraction.
             this will be directly input into the keras model as an Input tensor.
         :param mask_zero: a toggle to mask ALL zero values for categoricals as zero vectors
-        :param deep_kernel_constraint: the contraint for the deep out parameters
         """
-        self.deep_kernel_contraint = deep_kernel_contraint
+
 
         if realval is None:
             self.realval = [False]*len(feature_dimensions) #default to all categoricals
@@ -255,7 +254,7 @@ class DeepFM():
         else:
             bias=None
         return feature, factor, bias
-    def build_deep_fm_layer(self,interactions,factors):
+    def build_deep_fm_layer(self,interactions,factors, deep_kernel_constraint):
         if self.deep_weight_groups==None:
             factors_term = Concatenate(name="factors_term")(interactions)
 
@@ -266,7 +265,7 @@ class DeepFM():
                           bias_initializer='normal',
                           kernel_regularizer=l2(self.l2_deep),
                           bias_regularizer=l2(self.l2_deep),
-                          kernel_constraint=self.deep_kernel_contraint
+                          kernel_constraint=deep_kernel_constraint
                           )(factors_term)
         else:
             unique_weight_groups = []
@@ -303,7 +302,7 @@ class DeepFM():
                                                           bias_initializer = 'normal',
                                                           kernel_regularizer = l2(self.l2_deep),
                                                           bias_regularizer = l2(self.l2_deep),
-                                                          kernel_constraint = self.deep_kernel_contraint
+                                                          kernel_constraint = deep_kernel_constraint
                                                           )(group))
 
 
@@ -316,9 +315,10 @@ class DeepFM():
                     embedding_dimensions,
                     l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
                     bias_only=None,embeddings_only=None,deep_weight_groups=None,
-                    deep_out_bias=True, deep_out_activation = 'linear',
+                    deep_out_bias=True, deep_out_activation = 'linear', deep_kernel_constraint=None,
                     dropout_input=0.,
                     dropout_layer=0.,
+
                     **kwargs):
         """
         Builds the FM model in Keras Network
@@ -330,6 +330,7 @@ class DeepFM():
         :param deep_out_bias: whether to use bias terms in the "deep" intermediate layer. Only applies if the deep=True
         :paran deep_out_activation: the activation function for the "deep" intermediate layer. Only applies if the deep=True.
             should be a keyword keras recognizes
+        :param deep_kernel_constraint whether to have a constraint on the deep layer
         :param weight_groups: an ordered list of integers representing weight groups for each feature; these correspond to the
             t() function in the DeepFM paper(section II.B.1). Default is each input feature gets there own unique weight for the deep layer.
             NOTE: my current implementation , for dropout in the deep layer, when using weight groups, will equally weight each unique weight group
@@ -407,7 +408,7 @@ class DeepFM():
                 #adds additional layer on top of embeddings that weights the interactions by feature group,
                 #and adds a relu transformation.
                 print "deep"
-                factors_revised = self.build_deep_fm_layer(interactions,factors)
+                factors_revised = self.build_deep_fm_layer(interactions,factors, deep_kernel_constraint)
             else:
                 #just outputs the linear interactions straight-up as in normal FM
                 print "shallow" #,factors,len(factors)

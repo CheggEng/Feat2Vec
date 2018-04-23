@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='feat2vec',
-      version='0.3.0',
+      version='0.4.0',
       description='Feat2Vec Library',
       author='Anonymous Author for Peer Review',
       packages=[

@@ -14,7 +14,7 @@ from keras.callbacks import EarlyStopping
 from keras.preprocessing import text, sequence
 from keras.layers import Input, GlobalMaxPool1D, Dense, Embedding
 from keras.layers.convolutional import Convolution1D
-
+from keras.constraints import non_neg
 embed_dim = 10
 
 from unittest import TestCase
@@ -28,14 +28,14 @@ class TestDeepFM(TestCase):
 
         fm = DeepFM(model_features=[["skill_id", ],
                                     ["skill_match"],
-                                    [10],
-                                    [10],
-                                    [10],
-                                    [10],
-                                    [10],
-                                    [10],
-                                    [10],
-                                    [10]],
+                                    [1, 2],
+                                    [1, 2],
+                                    [1, 2],
+                                    [1, 2],
+                                    [1, 2],
+                                    [1, 2],
+                                    [1, 2],
+                                    [1, 2]],
                     feature_dimensions=[100,
                                         1,
                                         100,
@@ -49,13 +49,26 @@ class TestDeepFM(TestCase):
                     realval=[False, True, False, False, False, False, False, False, False, False],
                     mask_zero=True,
                     feature_names=feature_names,
-                    obj="nce")
+                    obj="ns")
 
         model = fm.build_model(10,
                                dropout_layer=0.5,
                                deep_out=True,
-                               deep_out_bias=False)
+                               deep_out_bias=False,
+                               deep_kernel_constraint=non_neg())
 
+        model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
+        model.fit( x=[np.array([0]), # skill_id
+                      np.array([0]), #skill_match
+                      np.array([[51, 2]]), # skills
+                      np.array([[0, 0]]), # education
+                      np.array([[25, 1]]), # experience
+                      np.array([[0, 0]]), # summary
+                      np.array([[17, 1]]), # titles
+                      np.array([[1, 1]]), #professional
+                      np.array([[1, 1]]), # norm_major
+                      np.array([[0, 0]])], #norm_department,
+                  y=np.array([0]))
         try:
             from keras.utils import plot_model
             plot_model(model, to_file="all_pairwise.png")
@@ -97,7 +110,8 @@ class TestDeepFM(TestCase):
                                dropout_layer=0.5,
                                deep_out=True,
                                deep_out_bias=False,
-                               deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)) )
+                               deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)),
+                               deep_kernel_constraint=non_neg())
 
         try:
             from keras.utils import plot_model
