@@ -259,7 +259,8 @@ class DeepFM():
             factors_term = Concatenate(name="factors_term")(interactions)
 
             return  Dense(units=1,
-                          name="factor_weights", use_bias=self.deep_out_bias,
+                          name="factor_weights",
+                          use_bias=self.deep_out_bias,
                           activation=self.deep_out_activation,
                           kernel_initializer='normal',
                           bias_initializer='normal',
@@ -298,6 +299,7 @@ class DeepFM():
                         grouped_interactions.append(Dense(units=1,
                                                           name='grouped_interaction_{}x{}'.format(g1,g2),
                                                           activation = self.deep_out_activation,
+                                                          use_bias=self.deep_out_bias,
                                                           kernel_initializer = 'normal',
                                                           bias_initializer = 'normal',
                                                           kernel_regularizer = l2(self.l2_deep),
