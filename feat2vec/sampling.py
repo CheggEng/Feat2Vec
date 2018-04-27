@@ -1,8 +1,5 @@
-from . import deepfm
-from . import implicitsampler
-reload(deepfm)
 from implicitsampler import ImplicitSampler,gen_step1_probs
-from deepfm import DeepFM
+from model import DeepFM
 
 from keras.optimizers import TFOptimizer
 import tensorflow as tf
@@ -10,7 +7,7 @@ import numpy as np
 import pandas as pd
 import keras
 
-class Feat2Vec:
+class Feat2VecSampling:
     def __init__(self,df,model_feature_names,feature_dimensions,model_features,sampling_features,
         embedding_dim,feature_alpha=None,sampling_alpha=None,
         obj='nce', negative_samples=1,  sampling_bias=None,batch_size=None,

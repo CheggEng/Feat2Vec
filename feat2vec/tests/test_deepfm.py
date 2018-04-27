@@ -1,26 +1,61 @@
 # file: test_deepfm.py
 # provide a test example for Fmachines
+
+from feat2vec import DeepFM, Feat2VecModel
 import numpy as np
+from keras.callbacks import EarlyStopping
+from keras.preprocessing import sequence
+from keras.layers import Input, GlobalMaxPool1D, Dense, Embedding
+from keras.constraints import  non_neg
+from keras.layers.convolutional import Convolution1D
+import tensorflow as tf
 import pandas as pd
 import math
-import os
-import logging
 import re
-import tensorflow as tf
-
-from feat2vec import DeepFM
-
-from keras.callbacks import EarlyStopping
-from keras.preprocessing import text, sequence
-from keras.layers import Input, GlobalMaxPool1D, Dense, Embedding
-from keras.layers.convolutional import Convolution1D
-from keras.constraints import non_neg
-embed_dim = 10
 
 from unittest import TestCase
 
 
 class TestDeepFM(TestCase):
+
+    def test_easy(self):
+        f2vm = Feat2VecModel([{"name": "disc1",
+                               "type": "discrete",
+                               "vocab": 10}, # disc1 has a vocabulary of 10 words
+                              {"name": "cont1",
+                               "type": "real"}, #cont1 is a real number
+                              {"name": "disc100",
+                               "type": "discrete",
+                               "len": 100,
+                               "vocab": 10}, # disc100 is a sequence of 100 words, with a vocabulary of 10 words
+                              {"name": "cont100",
+                               "len": 100,
+                               "type": "real"}, #cont100 is a sequence of 100 numbers
+                             ])
+        keras_model = f2vm.build_model(embedding_dimensions=5)
+        keras_model.compile(loss='binary_crossentropy', optimizer=tf.train.AdamOptimizer())
+
+
+    def test_easy_in(self):
+        import keras.layers
+        input_layer = keras.layers.Input( shape=(1,) )
+        custom_layer = keras.layers.Embedding(input_dim=1, output_dim=5)(input_layer)
+        f2vm = Feat2VecModel([{"name": "disc1",
+                               "type": "discrete",
+                               "vocab": 10}, # disc1 is a (single) discrete feature with a vocabulary of 10 words
+                              {"name": "cont1",
+                               "type": "real",
+                               "len":  20},  # cont1 is a sequence of 20 real numbers
+                              {"name": "disc100",
+                               "type": {"input": input_layer,
+                                        "output": custom_layer}}
+                             ])
+        keras_model = f2vm.build_model(embedding_dimensions=5)
+        keras_model.compile(loss='binary_crossentropy', optimizer=tf.train.AdamOptimizer())
+
+
+
+
     def test_all_pairwise(self):
 
         feature_names = ["skill_id", "skill_match", "skills", "education", "experience", "summary", "titles",
@@ -141,6 +176,9 @@ class TestDeepFM(TestCase):
 
 
     def test_deepfm(self):
+
+
+
         np.random.seed(1)
         # generate some data
         samplesize = 100000
@@ -170,6 +208,7 @@ class TestDeepFM(TestCase):
 
         print feature_dim
         print features
+        embed_dim = 10
         fm = fm_obj.build_model(embed_dim,
                                 l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
                                 deep_out_bias=True, deep_out_activation='linear')
@@ -187,6 +226,7 @@ class TestDeepFM(TestCase):
         # Deep FM with features
 
     def test_deepin_fm(self):
+
         try:
             import nltk
             nltk.download('movie_reviews')
@@ -247,6 +287,8 @@ class TestDeepFM(TestCase):
 
         # build the feature extraction layer
         # do a CNN mimicing ralph's architecture (but of significantly lower dimensionality)
+        embed_dim = 10
+
         word_seq = Input(batch_shape=(None, sequence_mat.shape[1]), name='wordind_seq')
         word_embeddings = Embedding(input_dim=vocabsize + 1, output_dim=1, input_length=cutoff, mask_zero=False)(
             word_seq)
