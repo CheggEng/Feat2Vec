@@ -13,7 +13,6 @@ from keras.constraints import non_neg
 import keras.backend as K
 import itertools
 
-
 def flatten(list_of_lists):
     flattened = []
     for sublist in list_of_lists:
@@ -37,10 +36,13 @@ def NCEobj(probs):
 def nce_output_shape(input_shape):
     return (1)
 
+
+
+
 class DeepFM():
     def __init__(self, model_features, feature_dimensions, feature_names=None,
                  realval=None, obj='ns', mask_zero=False,
-                 deepin_feature=None, deepin_inputs=None, deepin_layers = None):
+                 deepin_feature=None, deepin_inputs=[], deepin_layers =[]):
         """
         Initializes a Deep Factorization Machine Model
         :param model_features: a list of lists of columns for each feature / embedding in the model
@@ -97,37 +99,12 @@ class DeepFM():
             self.deepin_feature = deepin_feature
 
         #construct list of deep-in inputs
-        if deepin_inputs==None:
-            self.deepin_inputs = [None]*len(feature_dimensions)
-        else:
-            assert len(deepin_inputs) == sum(deepin_feature) or len(deepin_inputs) == len(feature_dimensions), "provide deep input list of length = #deep features or # features"
-            if len(deepin_inputs) == len(feature_dimensions):
-                self.deepin_inputs = deepin_inputs
-            #if provided list = #deep features, space it out to get list of length equal to total #features
-            elif len(deepin_inputs) == sum(deepin_feature):
-                self.deepin_inputs = [None]*len(feature_dimensions)
-                layer_count = 0
-                for i in range(len(feature_dimensions)):
-                    if self.deepin_feature[i]:
-                        self.deepin_inputs[i] = deepin_inputs[layer_count]
-                        layer_count+=1
+        self.deepin_inputs = [deepin_inputs.pop() if self.deepin_feature[i] else None for i in xrange(len(feature_dimensions))]
+        assert(len(deepin_inputs) == 0), "provide deep input list of length = #deep features or # features"
 
         #construct list of extracted deep-in features
-        if deepin_layers==None:
-            self.deepin_layers = [None]*len(feature_dimensions)
-        else:
-            assert len(deepin_layers) == sum(deepin_feature) or len(deepin_layers) == len(feature_dimensions), "provide deep feature layer list of length = #deep features or # features"
-            if len(deepin_layers) == len(feature_dimensions):
-                self.deepin_layers = deepin_layers
-            #if provided list = #deep features, space it out to get list of length equal to total #features
-            elif len(deepin_layers) == sum(deepin_feature):
-                self.deepin_layers = [None]*len(feature_dimensions)
-                layer_count = 0
-                for i in range(len(feature_dimensions)):
-                    if self.deepin_feature[i]:
-                        self.deepin_layers[i] = deepin_layers[layer_count]
-                        layer_count+=1
-
+        self.deepin_layers = [deepin_layers.pop() if self.deepin_feature[i] else None for i in xrange(len(feature_dimensions))  ]
+        assert (len(deepin_layers) == 0), "provide deep feature layer list of length = #deep features or # features"
 
     def check_build_params(self,l2_bias, l2_factors, l2_deep,bias_only,embeddings_only,deep_weight_groups,
                     deep_out_bias, deep_out_activation,
@@ -361,11 +338,16 @@ class DeepFM():
             if self.deepin_feature[i]==True:
                 #built embeddings / bias for deepin layers
                 feature = self.deepin_inputs[i]
+                if isinstance(feature, list):
+                    features.extend(feature)
+                else:
+                    features.append(feature)
+
                 if self.dropout_input > 0:
                     factor = Dropout(rate=self.dropout_input,name='dropout_{}'.format(self.feature_names[i]))(self.deepin_layers[i])
                 else:
                     factor = self.deepin_layers[i]
-                features.append(feature)
+
                 factors.append(factor)
                 factor_features.append(self.feature_names[i])
                 if not self.embeddings_only[i]:
@@ -434,6 +416,70 @@ class DeepFM():
             output = Lambda(NCEobj,name='nce_obj')([output_layer,noise_probs])
         global graph
         graph = tf.get_default_graph()
-        print "~~~", features
+
         return Model(inputs=features, outputs=output, name="Factorization Machine",**kwargs)
         # Model.__init__(self, features, sigmoid)
+
+
+class Feat2VecModel(DeepFM):
+    def __init__(self, features, obj='ns', mask_zero=False):
+        sequence_lengths     = []
+        vocabulary_sizes     = []
+        feature_names        = []
+        continuous_variables = []
+        deepin_features      = []
+        deepin_inputs        = []
+        deepin_layers        = []
+        for i, feature in enumerate(features):
+            feature_name    = feature.get("name", "feature_{}".format(i))
+            sequence_length = ["feature_{}_{}".format(i, j) for j in range(0, feature.get("length", 1))]
+            feature_type = feature["type"]
+
+            vocabulary_size, continuous, deepin_feature, deepin_input, deepin_output = None, None, None, None, None
+            if feature_type == "discrete":
+                if "vocab" not in feature:
+                    raise RuntimeError("Feature '{}' is discrete, but does not have vocab_size property".format(feature_name))
+                vocabulary_size = feature["vocab"]
+                continuous = False
+                deepin_feature = False
+            elif feature_type ==  "real":
+                if "vocab" in feature:
+                    raise  RuntimeError("Vocabulary size not expected in real feature {}".format(feature_name))
+                vocabulary_size = 1
+                continuous = True
+                deepin_feature = False
+            elif isinstance(feature, dict):
+                if "vocab" in feature:
+                    raise  RuntimeError("Vocabulary size not expected in complex feature {}".format(feature_name))
+                if ("input" not in feature["type"]) or ("output" not in feature["type"]):
+                    raise RuntimeError ("Feature '{}' is complex, but does not have input and output embeddings. {}".format(feature_name, feature["type"]))
+                vocabulary_size = 1
+                continuous = True
+                deepin_feature = True
+                deepin_input  = feature["type"]["input"]
+                deepin_output = feature["type"]["output"]
+            else:
+                raise RuntimeError("Feature type should be 'discrete'|'real'|or a dictionary with layers")
+
+            sequence_lengths.append(sequence_length)
+            vocabulary_sizes.append(vocabulary_size)
+            feature_names.append(feature_name)
+            continuous_variables.append(continuous)
+            deepin_features.append(deepin_feature)
+
+            if deepin_feature:
+                deepin_inputs.append(deepin_input)
+                deepin_layers.append(deepin_output)
+
+        DeepFM.__init__(self,
+                        model_features=sequence_lengths,
+                        feature_dimensions=vocabulary_sizes,
+                        feature_names=feature_names,
+                        realval=continuous_variables,
+                        obj=obj,
+                        mask_zero=mask_zero,
+                        deepin_feature=deepin_features,
+                        deepin_inputs=deepin_inputs,
+                        deepin_layers =deepin_layers)
+
+
