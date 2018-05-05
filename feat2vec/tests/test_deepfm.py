@@ -5,9 +5,10 @@ from feat2vec import DeepFM, Feat2VecModel
 import numpy as np
 from keras.callbacks import EarlyStopping
 from keras.preprocessing import sequence
-from keras.layers import Input, GlobalMaxPool1D, Dense, Embedding
+from keras.layers import Input, GlobalMaxPool1D, Dense, Embedding, Lambda, Reshape, concatenate
 from keras.constraints import  non_neg
 from keras.layers.convolutional import Convolution1D
+import keras.backend as K
 import tensorflow as tf
 import pandas as pd
 import math
@@ -17,6 +18,85 @@ from unittest import TestCase
 
 
 class TestDeepFM(TestCase):
+
+
+    def test_rai(self):
+        dimensions = 10
+        dup_dimension = 20
+        EMBEDING_DIM = 5
+        SEC_EMBEDDING = 5
+
+
+        feature_names = ["principal", "f1", "f2", "f3", "f4", "f5"]
+
+        # DEFINE CUSTOM LAYERS
+        skream_rotator = Dense(units=dimensions, activation="linear", use_bias=False,name="rotator")
+
+        # Popularity
+        f1_input = Input(batch_shape=(None, 1), name="f1")
+        popularity_embed_inter = Embedding(input_dim=EMBEDING_DIM, output_dim=dup_dimension, name="embedding_dup",
+                                           mask_zero=True)(f1_input)
+        popularity_unmasker = Lambda(lambda x: x, name='unmasker_dup')(popularity_embed_inter)
+        popularity_embed1 = Dense(units=dimensions, activation="linear", use_bias=False, name="resized_embedding")(
+            popularity_unmasker)
+        f1_embed = Reshape((dimensions,))(popularity_embed1)
+
+        # Principal id
+
+        principal_input = Input(batch_shape=(None, 1), name="principal")
+        principal_embedding = Embedding(input_dim=EMBEDING_DIM, output_dim=SEC_EMBEDDING, name="embedding_principal",
+                                    mask_zero=True)(principal_input)
+        principal_makser = Lambda(lambda x: x, name='unmasker_principal')(principal_embedding)
+        principal_reshape = Reshape((SEC_EMBEDDING,))(principal_makser)
+
+        merged_principal = concatenate([principal_reshape, f1_embed])
+        rotated_principal = Reshape((dimensions,), name="rotated_principal")(skream_rotator(merged_principal))
+
+        # F2
+        f2_input = Input(batch_shape=(None, 20), name="f2")
+        f2_temp = Embedding(input_dim=5, input_length=20,output_dim=SEC_EMBEDDING, mask_zero=True, name="embedding_f2")(f2_input)
+        avg_f2 = Reshape((SEC_EMBEDDING,))(Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_f2_embedding")(f2_temp))
+
+        merged_f2 = concatenate([avg_f2, f1_embed])
+        f2_embed = Reshape((dimensions,), name="rotated_f2")(skream_rotator(merged_f2))
+
+        # DEFINE FM MACHINE:
+        feature_specification = []
+        for feat in feature_names:
+            if feat == "principal":
+                feature_specification.append({"name": "principal",
+                                              "type": {"input": principal_input,
+                                                       "output": rotated_principal}})
+            elif feat == "f1":
+                feature_specification.append({"name": "f1",
+                                              "type": {"input": f1_input,
+                                                       "output": f1_embed}})
+            elif feat == "f2":
+                feature_specification.append({"name": feat,
+                                              "type": {"input": f2_input,
+                                                       "output": f2_embed}})
+            elif feat == "f3":
+                feature_specification.append({"name": feat,
+                                              "type": "real"})
+            else:
+                feature_specification.append({"name": feat,
+                                              "type": "discrete",
+                                              "len": 10,
+                                              "vocab": 100
+                                              })
+        fm = Feat2VecModel(features=feature_specification,
+                           mask_zero=True,
+                           obj='ns')
+        keras_model = fm.build_model(dimensions,
+                                     deep_out=True,
+                                     deep_out_bias=False,
+                                     deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)),
+                                     )
+        try:
+            from keras.utils import plot_model
+            plot_model(keras_model, to_file="rai.png")
+        except:
+            pass
 
     def test_easy(self):
         f2vm = Feat2VecModel([{"name": "disc1",
@@ -36,21 +116,24 @@ class TestDeepFM(TestCase):
         keras_model.compile(loss='binary_crossentropy', optimizer=tf.train.AdamOptimizer())
 
 
+
     def test_easy_in(self):
         import keras.layers
+        # define custom layer:
         input_layer = keras.layers.Input( shape=(1,) )
-        custom_layer = keras.layers.Embedding(input_dim=1, output_dim=5)(input_layer)
-        f2vm = Feat2VecModel([{"name": "disc1",
+        custom_layer = keras.layers.Embedding(input_dim=1, output_dim=5)(input_layer) #keeping it simple here
+        # define feat2vec model
+        f2vm = Feat2VecModel([{"name": "disc1", # 'disc1 is a (single) discrete feature with a vocabulary of 10 words
                                "type": "discrete",
-                               "vocab": 10}, # disc1 is a (single) discrete feature with a vocabulary of 10 words
-                              {"name": "cont1",
+                               "vocab": 10},
+                              {"name": "cont1", # 'cont1' is a sequence of 20 real numbers
                                "type": "real",
-                               "len":  20},  # cont1 is a sequence of 20 real numbers
-                              {"name": "disc100",
+                               "len":  20},
+                              {"name": "custom", # 'custom' is a custom-type feature
                                "type": {"input": input_layer,
                                         "output": custom_layer}}
                              ])
-        keras_model = f2vm.build_model(embedding_dimensions=5)
+        keras_model = f2vm.build_model(embedding_dimensions=5) # this returns a Keras network
         keras_model.compile(loss='binary_crossentropy', optimizer=tf.train.AdamOptimizer())
 
 
@@ -58,11 +141,11 @@ class TestDeepFM(TestCase):
 
     def test_all_pairwise(self):
 
-        feature_names = ["skill_id", "skill_match", "skills", "education", "experience", "summary", "titles",
-                         "professional", "norm_major", "norm_dpt"]
+        feature_names = ["f1", "f2", "f3", "f5", "f6", "f7", "f8",
+                         "f9", "f10", "f11"]
 
-        fm = DeepFM(model_features=[["skill_id", ],
-                                    ["skill_match"],
+        fm = DeepFM(model_features=[["f1", ],
+                                    ["f2"],
                                     [1, 2],
                                     [1, 2],
                                     [1, 2],
@@ -93,16 +176,16 @@ class TestDeepFM(TestCase):
                                deep_kernel_constraint=non_neg())
 
         model.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
-        model.fit( x=[np.array([0]), # skill_id
-                      np.array([0]), #skill_match
-                      np.array([[51, 2]]), # skills
-                      np.array([[0, 0]]), # education
-                      np.array([[25, 1]]), # experience
-                      np.array([[0, 0]]), # summary
-                      np.array([[17, 1]]), # titles
-                      np.array([[1, 1]]), #professional
-                      np.array([[1, 1]]), # norm_major
-                      np.array([[0, 0]])], #norm_department,
+        model.fit( x=[np.array([0]),
+                      np.array([0]),
+                      np.array([[51, 2]]),
+                      np.array([[0, 0]]),
+                      np.array([[25, 1]]),
+                      np.array([[0, 0]]),
+                      np.array([[17, 1]]),
+                      np.array([[1, 1]]),
+                      np.array([[1, 1]]),
+                      np.array([[0, 0]])],
                   y=np.array([0]))
         try:
             from keras.utils import plot_model
@@ -113,11 +196,11 @@ class TestDeepFM(TestCase):
 
     def test_some_pairwise(self):
 
-        feature_names = ["skill_id", "skill_match", "skills", "education", "experience", "summary", "titles",
-                         "professional", "norm_major", "norm_dpt"]
+        feature_names = ["f1", "f2", "f3", "f5", "f6", "f7", "f8",
+                         "f9", "f10", "f11"]
 
-        fm = DeepFM(model_features=[["skill_id", ],
-                                    ["skill_match"],
+        fm = DeepFM(model_features=[["f1", ],
+                                    ["f2"],
                                     [10],
                                     [10],
                                     [10],
