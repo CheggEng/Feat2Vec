@@ -288,6 +288,8 @@ class DeepFM():
                 #adds additional layer on top of embeddings that weights the interactions by feature group,.
                 print "deep"
                 factors_term = Concatenate(name="factors_term")(interactions)
+                if self.dropout_layer > 0:
+                    factors_term  = Dropout(self.dropout_layer, name="dropout_terms")(factors_term)
                 factors_revised = Dense(units=1,
                                         name="factor_weights",
                                         use_bias=self.deep_out_bias,

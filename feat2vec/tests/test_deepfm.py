@@ -91,6 +91,7 @@ class TestDeepFM(TestCase):
                                      deep_out=True,
                                      deep_out_bias=False,
                                      deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)),
+                                     dropout_layer=0.5
                                      )
         try:
             from keras.utils import plot_model
