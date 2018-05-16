@@ -135,11 +135,14 @@ class DeepFM():
             self.embeddings_only = embeddings_only
 
         if deep_weight_groups is None:
-            self.deep_weight_groups=range(len(self.feature_dimensions))
+            self.deep_weight_groups= [ itertools.combinations(self.feature_names, 2) ]
         else:
-            assert type(deep_weight_groups)==list and len(deep_weight_groups) == len(self.feature_dimensions), \
-            "weight_groups must either be a list of identifiers with length = #features"
+            for g in deep_weight_groups:
+                if not isinstance(g, list):
+                    raise RuntimeError("deep_weight_groups must be a list of lists. Where each element is a tuple for an interaction")
             self.deep_weight_groups=deep_weight_groups
+
+
         assert type(deep_out_bias) == bool,'deepout_bias must be a boolean'
         self.deep_out_bias = deep_out_bias
         self.deep_out_activation = deep_out_activation
@@ -267,50 +270,69 @@ class DeepFM():
 
 
     def two_way_interactions(self, factors, deep_out, deep_kernel_constraint):
-
+        # Calculate interactions with a dot product
         interactions = []
-        for i in xrange(0, len(factors)):
-            if (factors[i] is None):
-                continue
-            for j in xrange(i+1, len(factors)):
-                if (factors[j] is None):
+        for groups in self.deep_weight_groups:
+            subinteractions = []
+            for feature_i, feature_j in groups:
+
+                dot_product = Dot(axes=-1, name="interaction_{}X{}".format(feature_i,feature_j))
+                factor_i = factors[ self.feature_names.index(feature_i) ]
+                factor_j = factors[ self.feature_names.index(feature_j) ]
+
+                if factor_i is None:
+                    print "Warning... {} does not have an embedding".format(feature_i)
                     continue
-                if self.deep_weight_groups[i] == self.deep_weight_groups[j]:
+                if factor_j is None:
+                    print "Warning... {} does not have an embedding".format(feature_j)
                     continue
 
-                interaction = Dot(axes=-1, name="interaction_{}X{}".format(self.feature_names[i],self.feature_names[j]))
-                interaction_applied = interaction([factors[i],factors[j]])
-                interactions.append(interaction_applied)
+                interaction_applied = dot_product([factor_i,factor_j])
+                subinteractions.append(interaction_applied)
+
+            interactions.append(subinteractions)
 
 
-        if len(interactions) > 0:
-            if deep_out:
-                #adds additional layer on top of embeddings that weights the interactions by feature group,.
-                print "deep"
-                factors_term = Concatenate(name="factors_term")(interactions)
-                if self.dropout_layer > 0:
-                    factors_term  = Dropout(self.dropout_layer, name="dropout_terms")(factors_term)
-                factors_revised = Dense(units=1,
-                                        name="factor_weights",
-                                        use_bias=self.deep_out_bias,
-                                        activation=self.deep_out_activation,
-                                        kernel_initializer='normal',
-                                        bias_initializer='normal',
-                                        kernel_regularizer=l2(self.l2_deep),
-                                        bias_regularizer=l2(self.l2_deep),
-                                        kernel_constraint=deep_kernel_constraint
-                                        )(factors_term)
-            else:
-                #just outputs the linear interactions straight-up as in normal FM
-                print "shallow" #,factors,len(factors)
-                if len(interactions)==1:
-                    factors_revised = interactions[0]
-                else:
-                    factors_revised = Add(name="factors_term")(interactions)
-
-            return factors_revised
-        else:
+        # Figure out how to merge interactions:
+        if len(interactions) ==  0:
             return None
+
+        interactions_processed = []
+        if deep_out:
+            #adds additional layer on top of embeddings that weights the interactions by feature group,.
+            for i, group in enumerate(interactions):
+
+                if len(group) > 1:
+                    factors_term = Concatenate(name="factors_term_{}".format(i))(group)
+                    if self.dropout_layer > 0:
+                        factors_term  = Dropout(self.dropout_layer, name="dropout_terms_{}".format(i))(factors_term)
+                    dense_layer = Dense(units=1,
+                                            name="factor_weights_{}".format(i),
+                                            use_bias=self.deep_out_bias,
+                                            activation=self.deep_out_activation,
+                                            kernel_initializer='normal',
+                                            bias_initializer='normal',
+                                            kernel_regularizer=l2(self.l2_deep),
+                                            bias_regularizer=l2(self.l2_deep),
+                                            kernel_constraint=deep_kernel_constraint
+                                            )(factors_term)
+                    interactions_processed.append(dense_layer)
+                else:
+                    interactions_processed.append(group[0])
+
+        else:
+            # Flatten the groups:
+            for group in interactions:
+                for subgroup in group:
+                    interactions_processed.append(subgroup)
+
+        # Add whatever you have now:
+        if len(interactions_processed)==1:
+            return interactions_processed[0]
+        else:
+            return Add(name="factors_term")(interactions_processed)
+
+
 
     def build_model(self,
                     embedding_dimensions,

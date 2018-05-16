@@ -87,12 +87,23 @@ class TestDeepFM(TestCase):
         fm = Feat2VecModel(features=feature_specification,
                            mask_zero=True,
                            obj='ns')
+
+        groups = []
+        groups.append( zip(["principal"] * (len(feature_names)-1), feature_names[1:]) )
+        groups.append( zip(["f1"] * (len(feature_names)-2), feature_names[2:]) )
+        groups.append([ ("f1", "principal") ] )
+        print groups
         keras_model = fm.build_model(dimensions,
                                      deep_out=True,
                                      deep_out_bias=False,
-                                     deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)),
-                                     dropout_layer=0.5
+                                     deep_weight_groups=groups,
+                                     dropout_layer=0.5,
+                                     dropout_input=0.1
                                      )
+
+        f5 = keras_model.get_layer("dropout_embedding_f5")
+        assert f5.rate > 0.
+        f5.rate = 0.
         try:
             from keras.utils import plot_model
             plot_model(keras_model, to_file="rai.png")
@@ -224,12 +235,13 @@ class TestDeepFM(TestCase):
                     mask_zero=True,
                     feature_names=feature_names,
                     obj="nce")
-
+        groups = zip(["f1"] * (len(feature_names)-1), feature_names[1:])
+        print groups
         model = fm.build_model(10,
                                dropout_layer=0.5,
                                deep_out=True,
                                deep_out_bias=False,
-                               deep_weight_groups=[0] + ([1] * (len(feature_names) - 1)),
+                               deep_weight_groups=[groups],
                                deep_kernel_constraint=non_neg())
 
         try:
@@ -409,6 +421,12 @@ class TestDeepFM(TestCase):
         print difm.summary()
         earlyend = EarlyStopping(monitor='val_loss')
         difm.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
+
+        try:
+            from keras.utils import plot_model
+            plot_model(difm, to_file="difm.png")
+        except:
+            pass
 
         difm.fit(x=inputs, y=textdata['y'], batch_size=100, epochs=2,
                  verbose=1, callbacks=[earlyend], validation_split=.1, shuffle=True)
