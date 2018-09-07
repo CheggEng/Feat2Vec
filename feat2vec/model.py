@@ -9,7 +9,7 @@ from keras.models import Model
 from keras.utils.generic_utils import Progbar
 from keras.layers.merge import Add,Multiply,Concatenate,Dot
 from keras.constraints import non_neg
-
+from scaler import Scaler
 import keras.backend as K
 import itertools
 
@@ -237,11 +237,11 @@ class DeepFM():
         return feature, factor, bias
 
 
-    def get_terms(self, l2_bias):
-        features, biases, factors = [], [], []
+    def build_variables(self, i,  inputs, biases, factors):
 
-        for i in xrange(len(self.feature_names)):
+        if inputs[i] is None: # The input hasn't been created, so we must do so:
             #create bias/embeddings for each feature
+
             if self.deepin_feature[i]:
                 feature, factor, bias = None, None, None
 
@@ -250,7 +250,6 @@ class DeepFM():
                 if not self.embeddings_only[i]:
                     bias = Dense(units=1,
                             use_bias=False,
-                            kernel_regularizer=l2(l2_bias),
                             kernel_initializer='normal',
                             name="bias_{}".format(self.feature_names[i]))(factor)
 
@@ -260,25 +259,58 @@ class DeepFM():
             else:
                 feature, factor, bias = self.build_discrete_feature_layers(i)
 
+            # Save layers:
+            inputs[i] = feature
+            factors[i] = factor
+            biases[i] = bias
 
-            features.append(feature)
-            factors.append(factor)
-            if bias is not None:
-                biases.append(bias)
+        else: # We've created the input, so no need to do anything:
+            factor = factors[i]
 
-        return features,  biases,  factors
+        return factor
 
 
-    def two_way_interactions(self, factors, deep_out, deep_kernel_constraint):
+
+    def two_way_interactions(self, collapsed, deep_out, deep_kernel_constraint):
         # Calculate interactions with a dot product
-        interactions = []
-        for groups in self.deep_weight_groups:
-            subinteractions = []
-            for feature_i, feature_j in groups:
 
-                dot_product = Dot(axes=-1, name="interaction_{}X{}".format(feature_i,feature_j))
-                factor_i = factors[ self.feature_names.index(feature_i) ]
-                factor_j = factors[ self.feature_names.index(feature_j) ]
+        inputs =  [None] * len(self.feature_names)
+        biases =  [None] * len(self.feature_names)
+        factors = [None] * len(self.feature_names)
+        interactions = []
+
+        for i, groups in enumerate(self.deep_weight_groups):
+
+            for grp, (feature_i, feature_j) in enumerate(groups):
+                #factor_i = factors[self.feature_names.index(feature_i)]
+                index_i = self.feature_names.index(feature_i)
+                factor_i = self.build_variables(index_i, inputs, biases, factors)
+                if isinstance(feature_j, str) or isinstance(feature_j, unicode):
+                    #factor_j = factors[ self.feature_names.index(feature_j) ]
+                    index_j = self.feature_names.index(feature_j)
+                    factor_j = self.build_variables(index_j, inputs, biases, factors)
+                    name_j = feature_j
+                elif isinstance(feature_j, list):
+                    name_j = "grp_{}_{}".format(i, grp)
+
+                    if collapsed:
+                        collapsed_input = Input(batch_shape=(None, self.embedding_dimensions), name="input_{}".format(name_j))
+                        inputs.append (collapsed_input)
+                        factor_j = collapsed_input
+                    else:
+                        factors_j = []
+                        for feature_j_n in feature_j:
+                            #factor =  factors[ self.feature_names.index(feature_j_n) ]
+                            index_j_n = self.feature_names.index(feature_j_n)
+                            factor = self.build_variables(index_j_n, inputs, biases, factors)
+
+                            if deep_out:
+                                if self.dropout_layer > 0:
+                                    factor = Dropout(self.dropout_layer, name="dropout_terms_{}_{}".format(feature_j_n, i))(factor)
+                                factor = Scaler(name="scaler_{}_{}".format(feature_j_n, i), constraint=deep_kernel_constraint)(factor)
+                            factors_j.append(factor)
+
+                        factor_j = Add(name=name_j)(factors_j) # collapse them
 
                 if factor_i is None:
                     print "Warning... {} does not have an embedding".format(feature_i)
@@ -287,55 +319,24 @@ class DeepFM():
                     print "Warning... {} does not have an embedding".format(feature_j)
                     continue
 
-                interaction_applied = dot_product([factor_i,factor_j])
-                subinteractions.append(interaction_applied)
-
-            interactions.append(subinteractions)
-
-
-        # Figure out how to merge interactions:
-        if len(interactions) ==  0:
-            return None
-
-        interactions_processed = []
-        if deep_out:
-            #adds additional layer on top of embeddings that weights the interactions by feature group,.
-            for i, group in enumerate(interactions):
-
-                if len(group) > 1:
-                    factors_term = Concatenate(name="factors_term_{}".format(i))(group)
-                    if self.dropout_layer > 0:
-                        factors_term  = Dropout(self.dropout_layer, name="dropout_terms_{}".format(i))(factors_term)
-                    dense_layer = Dense(units=1,
-                                            name="factor_weights_{}".format(i),
-                                            use_bias=self.deep_out_bias,
-                                            activation=self.deep_out_activation,
-                                            kernel_initializer='normal',
-                                            bias_initializer='normal',
-                                            kernel_regularizer=l2(self.l2_deep),
-                                            bias_regularizer=l2(self.l2_deep),
-                                            kernel_constraint=deep_kernel_constraint
-                                            )(factors_term)
-                    interactions_processed.append(dense_layer)
-                else:
-                    interactions_processed.append(group[0])
-
-        else:
-            # Flatten the groups:
-            for group in interactions:
-                for subgroup in group:
-                    interactions_processed.append(subgroup)
+                dot_product = Dot(axes=-1, name="interaction_{}X{}".format(feature_i, name_j))
+                interactions.append(dot_product([factor_i,factor_j]))
 
         # Add whatever you have now:
-        if len(interactions_processed)==1:
-            return interactions_processed[0]
+        if len(interactions)==0:
+            two_way = None
+        elif len(interactions)==1:
+            two_way =  interactions[0:]
         else:
-            return Add(name="factors_term")(interactions_processed)
+            two_way = Add(name="factors_term")(interactions)
+
+        return inputs, biases, two_way
 
 
 
     def build_model(self,
                     embedding_dimensions,
+                    collapsed=False,
                     l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
                     bias_only=None,embeddings_only=None,deep_weight_groups=None,
                     deep_out_bias=True, deep_out_activation = 'linear', deep_kernel_constraint=None,
@@ -373,8 +374,10 @@ class DeepFM():
                     dropout_input,
                     dropout_layer)
 
-        features, biases, factors = self.get_terms(l2_bias)
+        features, biases,factors =  self.two_way_interactions(collapsed, deep_out, deep_kernel_constraint)
 
+        features = [f for f in features if f is not None]
+        biases   = [f for f in biases if f is not None]
 
         #1-way interactions:
         if len(biases) == 0:
@@ -386,11 +389,7 @@ class DeepFM():
 
         #2-way interactions
         # interact embedding layers corresponding to indiv. features together via dot-product
-        non_null_factors = [f for f in factors if f is not None]
-        if len(non_null_factors) > 0:
-            factors = self.two_way_interactions(factors, deep_out, deep_kernel_constraint)
-        else:
-            factors = None
+
 
         # Combine 1-way and 2-way interactions:
         if (bias_term is not None) and (factors is not None):
@@ -399,6 +398,8 @@ class DeepFM():
             output_layer = factors
         else:
             output_layer = bias_term  # Lambda(lambda x: K.sum(x, axis=-1, keepdims=True), name="output_layer")(biases)
+
+        assert output_layer is not None
 
         if self.obj=='ns':
             output = Reshape((1,),name='final_output')(Activation('sigmoid', name="sigmoid")(output_layer))
