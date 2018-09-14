@@ -12,7 +12,7 @@ class Scaler(Layer):
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         self.scale = self.add_weight(name='scale',
-                                     shape=(1,1),
+                                     shape=(1,),
                                      initializer='uniform',
                                      constraint=self.constraint,
                                      trainable=True)

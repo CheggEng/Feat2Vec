@@ -92,7 +92,7 @@ class TestDeepFM(TestCase):
         groups.append( [("f1", "principal")] )
         print groups
         keras_model_collapsed = fm.build_model(dimensions,
-                                               collapsed=True,
+                                               collapsed_type=True,
                                                deep_out=True,
                                                deep_out_bias=False,
                                                deep_weight_groups=groups,
@@ -101,13 +101,13 @@ class TestDeepFM(TestCase):
                                                )
 
         keras_model_notcollapsed = fm.build_model(dimensions,
-                                               collapsed=False,
-                                               deep_out=True,
-                                               deep_out_bias=False,
-                                               deep_weight_groups=groups,
-                                               dropout_layer=0.5,
-                                               dropout_input=0.1
-                                               )
+                                                  collapsed_type=False,
+                                                  deep_out=True,
+                                                  deep_out_bias=False,
+                                                  deep_weight_groups=groups,
+                                                  dropout_layer=0.5,
+                                                  dropout_input=0.1
+                                                  )
 
 
         f5 = keras_model_notcollapsed.get_layer("dropout_embedding_f5")

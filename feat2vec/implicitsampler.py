@@ -19,7 +19,6 @@ import pandas as pd
 import numpy as np
 import gc
 import cProfile
-from keras.engine.training import GeneratorEnqueuer
 from keras.utils.generic_utils import Progbar
 import keras.preprocessing.sequence as sequence
 

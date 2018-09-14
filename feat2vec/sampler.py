@@ -5,7 +5,7 @@ import scipy
 
 class FMData(Sequence):
 
-    def __init__(self, inputs, output, batch_size, implicit_samples=0, splits=None, feature_extraction=None, sample_probabilities={},  mask=None, shuffle=True, nce=None):        
+    def __init__(self, inputs, output, batch_size, implicit_samples=0,splits=None, feature_extraction=None, sample_probabilities={},  mask=None, shuffle=True, nce=None):
         #validate inputs:
         check_length = -1
         for feature in inputs:

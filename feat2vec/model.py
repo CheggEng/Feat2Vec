@@ -271,7 +271,7 @@ class DeepFM():
 
 
 
-    def two_way_interactions(self, collapsed, deep_out, deep_kernel_constraint):
+    def two_way_interactions(self, collapsed_type, deep_out, deep_kernel_constraint):
         # Calculate interactions with a dot product
 
         inputs =  [None] * len(self.feature_names)
@@ -291,12 +291,19 @@ class DeepFM():
                     factor_j = self.build_variables(index_j, inputs, biases, factors)
                     name_j = feature_j
                 elif isinstance(feature_j, list):
-                    name_j = "grp_{}_{}".format(i, grp)
+                    name_j = "grp_{}".format("{:03d}".format(i))
 
-                    if collapsed:
-                        collapsed_input = Input(batch_shape=(None, self.embedding_dimensions), name="input_{}".format(name_j))
+                    if collapsed_type is not None:
+                        #constant = np.zeros( (self.embedding_dimensions,) )
+                        #k_constant = K.constant(constant, shape=(self.embedding_dimensions,))
+
+                        collapsed_input = Input( shape=(1, ), name="input_{}".format(name_j))
+                        embedding = Embedding(input_dim=collapsed_type,
+                                              name = "embedding_{}".format(name_j),
+                                              output_dim=self.embedding_dimensions)(collapsed_input)
+
                         inputs.append (collapsed_input)
-                        factor_j = collapsed_input
+                        factor_j = embedding
                     else:
                         factors_j = []
                         for feature_j_n in feature_j:
@@ -336,9 +343,9 @@ class DeepFM():
 
     def build_model(self,
                     embedding_dimensions,
-                    collapsed=False,
+                    collapsed_type=None,
                     l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
-                    bias_only=None,embeddings_only=None,deep_weight_groups=None,
+                    bias_only=None, embeddings_only=None, deep_weight_groups=None,
                     deep_out_bias=True, deep_out_activation = 'linear', deep_kernel_constraint=None,
                     dropout_input=0.,
                     dropout_layer=0.,
@@ -347,6 +354,7 @@ class DeepFM():
         """
         Builds the FM model in Keras Network
         :param embedding_dimensions: The number of dimensions of the embeddings
+        :param collapsed_type: None if the model shouldn't collapsed, or # of embedding types if it should
         :param l2_bias: L2 regularization for bias terms
         :param l2_factors: L2 regularization for interaction terms
         :param l2_deep: L2 regularization for the deep layer
@@ -374,7 +382,7 @@ class DeepFM():
                     dropout_input,
                     dropout_layer)
 
-        features, biases,factors =  self.two_way_interactions(collapsed, deep_out, deep_kernel_constraint)
+        features, biases,factors =  self.two_way_interactions(collapsed_type, deep_out, deep_kernel_constraint)
 
         features = [f for f in features if f is not None]
         biases   = [f for f in biases if f is not None]
