@@ -25,10 +25,12 @@ dim = 50
 text_embedding_size=100
 text_max_len = 250
 
+print model.summary()
 ### Load DF
 print "Loading DF..."
 with open(os.path.join(datadir,'yelp_train_data.p'),'r') as f:
     traindf=cPickle.load(f)
+
 #with open(os.path.join(datadir,'yelp_train_mini.p'),'w') as f:
 #    cPickle.dump(traindf.iloc[0:10000],f)
 # with open(os.path.join(datadir,'yelp_train_mini.p'),'r') as f:

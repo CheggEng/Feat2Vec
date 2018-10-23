@@ -14,8 +14,9 @@ datadir =constants['datadir']
 
 max_vocab = 100000 #max vocab size
 
-with open(os.path.join(datadir,'yelp_data.p'),'r') as f:
-    reviews= cPickle.load(f)
+reviews = pd.read_csv(os.path.join(datadir,'yelp_data.csv.gz'),compression='gzip',encoding='utf-8')
+#with open(os.path.join(datadir,'yelp_data.p'),'r') as f:
+#    reviews= cPickle.load(f)
 #
 
 ### Transform discrete vars to OHE
@@ -28,6 +29,7 @@ for c in ['business_id','user_id','stars','funny']:
 
 ### Filter text
 print "removing whitespace "
+reviews.loc[reviews['text'].isnull(),'text'] = ''
 reviews['text'] = reviews['text'].map(lambda x: re.sub( '\s+', ' ', x)) #change all whitespace to spaces
 print "Fitting review text data"
 review_filter = Tokenizer(num_words = max_vocab)

@@ -1,2 +1,2 @@
-datadir: '/media/luis/hdd3/Data/Yelp/dataset/' #'/home/luis/Data/Yelp/dataset/'
+yelpdir: '/media/luis/hdd3/Data/Yelp/' #'/home/luis/Data/Yelp/dataset/'
 wordembeddir: '/media/luis/hdd3/Data/WordEmbeddings/'

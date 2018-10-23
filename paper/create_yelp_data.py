@@ -31,13 +31,12 @@ for i in review_jsons:
 print "Concatenating..."
 reviews=pd.DataFrame(reviews)
 print reviews.head()
-del review_jsons
 #remove ambience indicators (except funny which we keep)
 reviews.drop(['cool','useful','date',],axis=1,inplace=True)
 reviews.drop(['review_id'],axis=1,inplace=True)
 gc.collect()
-reviews.head()
 print "Dumping..."
-with open(os.path.join(datadir,'yelp_data.p'),'w') as f:
-    cPickle.dump(reviews,f)
+reviews.to_csv(os.path.join(datadir,'yelp_data.csv.gz'),compression='gzip',index=False,encoding='utf-8')
+#with open(os.path.join(datadir,'yelp_data.p'),'w') as f:
+#    cPickle.dump(reviews,f)
 #
