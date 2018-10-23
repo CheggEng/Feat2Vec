@@ -171,8 +171,8 @@ for i,doc in enumerate(testdf['textseq'].values):
 
 context_vecs =  np.concatenate(context_vecs,axis=0)
 
-context_vecs += w2v_testvecs['business_id'] + w2v_testvecs['funny'] + w2v_testvecs['user_id']
-context_vecs/=7.
+context_vecs += w2v_testvecs['business_id'] + w2v_testvecs['funny'] + w2v_testvecs['user_id'] + w2v_testvecs['funny']
+context_vecs/=8.
 w2v_testvecs['context_mean'] =context_vecs
 
 
@@ -192,7 +192,7 @@ def pred_by_feature(feat_embeddings,star_embeddings,batch_size=1000):
     predicted_ratings = np.concatenate(predicted_ratings,axis=0)
     return predicted_ratings
 
-def pred_by_all(text_embeddings,biz_embeddings,user_embeddings,star_embeddings,batch_size=1000):
+def pred_by_all(text_embeddings,funny_embeddings,biz_embeddings,user_embeddings,star_embeddings,batch_size=1000):
     predicted_ratings = []
     index=0
     for pos in xrange(0, len(text_embeddings), batch_size):
@@ -200,9 +200,10 @@ def pred_by_all(text_embeddings,biz_embeddings,user_embeddings,star_embeddings,b
         text_vecs = text_embeddings[pos:(pos + batch_size),:]
         biz_vecs = biz_embeddings[pos:(pos + batch_size),:]
         user_vecs = user_embeddings[pos:(pos + batch_size),:]
-        avg_vecs = (text_vecs + biz_vecs + user_vecs) / 3
-        if np.isnan(biz_vecs).sum()>0:
-            avg_vecs = (text_vecs + user_vecs) / 2
+        funny_vecs = funny_embeddings[pos:(pos + batch_size),:]
+        avg_vecs = (text_vecs + biz_vecs + funny_vecs + user_vecs) / 4
+        #if np.isnan(biz_vecs).sum()>0:
+        #    avg_vecs = (text_vecs + user_vecs+ funny_vecs) / 2
         #avg_vecs = biz_vecs
         scores = cosine_similarity(avg_vecs,star_embeddings)
         #print scores
@@ -218,9 +219,9 @@ def pred_by_all(text_embeddings,biz_embeddings,user_embeddings,star_embeddings,b
 testdf['stars'] = testdf['stars'].map(lambda x: float(str(x))).astype(int)
 testdf['stars'].value_counts()
 
-evalmodes=['text','business_id','user_id','all']
+evalmodes=['funny','text','business_id','user_id','all']
 evals={}
-models = ['d2v','f2v','w2v']
+models = ['f2v','d2v','w2v']
 for v in models:
     print '\n',v
     evals[v]={}
@@ -235,7 +236,7 @@ for v in models:
         edict = w2v_testvecs
     for m in evalmodes:
         if m=='all' and v!='w2v':
-            pred_ratings = pred_by_all(edict['text'],edict['business_id'],edict['user_id'],star_embeddings)
+            pred_ratings = pred_by_all(edict['text'],edict['funny'],edict['business_id'],edict['user_id'],star_embeddings)
         elif m=='all' and v=='w2v':
             pred_ratings = pred_by_feature(edict['context_mean'],star_embeddings)
         else:
@@ -244,7 +245,7 @@ for v in models:
         MSE = np.mean( (pred_ratings - testdf['stars'])**2)
         conmat = pd.crosstab(testdf['stars'],pred_ratings)
         evals[v][m] = {'error':error_rate,'mse':MSE,'confusion':conmat}
-
+        
 
 evaldf=pd.DataFrame(index=pd.MultiIndex.from_product([models,evalmodes ] ),columns=['error','mse'])
 
@@ -272,6 +273,8 @@ for t in evalmodes:
         sub='Business Nearest Neighbor'
     elif t=='user_id':
         sub='User Nearest Neighbor'
+    elif t=='funny':
+        sub='Funny Nearest Neighbor'
     for m in models:
         mat = np.copy(evals[m][t]['confusion'])
         mat
@@ -315,12 +318,12 @@ for s in range(1,6):
 emperate = 1.-empaccrate
 print empmse,emperate
 
-
+evals[]
 
 mse
-plotevals=['user_id','business_id','text','all']
-labels=['User','Business','Text','Context']
-colors=['r','b','g','black']
+plotevals=['user_id','business_id','funny','text','all']
+labels=['User','Business','Funny','Text','Context']
+colors=['r','b','g','purple']
 for s in ['error','mse']:
     for i,m in enumerate(models):
         metrics = [evals[m][e][s] for e in plotevals]
