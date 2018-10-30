@@ -1,0 +1,13 @@
+#Outstanding questions to consider
+- CV for # epochs, or simply set the w2v and f2v epochs to be equal?
+- things to try with w2v
+  -try with "natural" document lengths
+  -try with SG
+  -try without null keys  (would have to do same for F2V)
+
+
+for both ranking schemes, do with "natural data structure" rather than artificial censoring
+
+#Outstanding Issues
+- masking zero cats in the F2v Lib; this is pretty important
+-
