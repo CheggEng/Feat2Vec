@@ -92,7 +92,7 @@ class TestDeepFM(TestCase):
         groups.append( [("f1", "principal")] )
         print groups
         keras_model_collapsed = fm.build_model(dimensions,
-                                               collapsed_type=True,
+                                               collapsed_type=2,
                                                deep_out=True,
                                                deep_out_bias=False,
                                                deep_weight_groups=groups,
@@ -101,7 +101,7 @@ class TestDeepFM(TestCase):
                                                )
 
         keras_model_notcollapsed = fm.build_model(dimensions,
-                                                  collapsed_type=False,
+                                                  collapsed_type=None,
                                                   deep_out=True,
                                                   deep_out_bias=False,
                                                   deep_weight_groups=groups,
@@ -110,7 +110,7 @@ class TestDeepFM(TestCase):
                                                   )
 
 
-        f5 = keras_model_notcollapsed.get_layer("dropout_embedding_f5")
+        f5 = keras_model_notcollapsed.get_layer("dropout_terms_f5_0")
         assert f5.rate > 0.
         f5.rate = 0.
         try:

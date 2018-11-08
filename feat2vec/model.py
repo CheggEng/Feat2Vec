@@ -317,6 +317,9 @@ class DeepFM():
                                 factor = Scaler(name="scaler_{}_{}".format(feature_j_n, i), constraint=deep_kernel_constraint)(factor)
                             factors_j.append(factor)
 
+                        #if len(factors_j) == 1:
+                        #    factor_j = factor_j[0]
+                        #else:
                         factor_j = Add(name=name_j)(factors_j) # collapse them
 
                 if factor_i is None:
