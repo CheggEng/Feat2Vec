@@ -318,7 +318,7 @@ class DeepFM():
                             factors_j.append(factor)
 
                         if len(factors_j) == 1:
-                            factor_j = factor_j[0]
+                            factor_j = factors_j[0]
                         else:
                             factor_j = Add(name=name_j)(factors_j) # collapse them
 
