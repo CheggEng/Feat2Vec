@@ -177,7 +177,8 @@ class DeepFM():
             if feature_cols > 1:
                 ftemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_embedding_{}".format(self.feature_names[feature_index]))(ftemp_filtered)
                 #if self.mask_zero ==True:
-            ftemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
+            if self.mask_zero:
+                ftemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
             factor = Reshape((self.embedding_dimensions,),
                 name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
