@@ -45,7 +45,7 @@
 \DeclareMathOperator{\Word2Vec}{Word2Vec}
 \DeclareMathOperator{\q}{{\mathcal{Q}}}
 \newcommand{\dotp}{\boldsymbol{\cdot} }
-%\renewcommand{\cite}[1]{\citep{#1}}
+\renewcommand{\cite}[1]{\citep{#1}}
 \usepackage{amsthm}
 \usepackage{subcaption}
 \usepackage{thmtools,thm-restate}
@@ -119,7 +119,7 @@ $\Feat2Vec$ calculates embeddings for data with multiple feature types enforcing
 In the supervised case, we show that our method has advantages over recently proposed methods;
 %extensions of factorization machines;
 such as enabling higher prediction accuracy, and providing a way to avoid the cold-start problem.
-In the self-supervised case, our experiments suggest that $\Feat2Vec$ better expresses the information content in datasets than existing algorithms that do not leverage the structure of the data.
+In the self-supervised case, our experiments suggest that $\Feat2Vec$ better compresses data.
 We believe that we are the first to propose a method for learning self-supervised embeddings that leverage the structure of multiple feature types.
 \end{abstract}
 
@@ -127,36 +127,37 @@ We believe that we are the first to propose a method for learning self-supervise
 
 \section{Introduction}
 
-Informally, in machine learning a \textit{dense representation}, or \textit{embedding}  of a vector   $\vect{x} \in \mathbb{R}^n$  is another vector $\vect{y} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation, and can be used to replace the original vector  in downstream prediction tasks.
+Informally, in machine learning a \textit{dense representation}, or \textit{embedding}  of a vector   $\vect{x} \in \mathbb{R}^n$  is another vector $\vect{y} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation.
+%, and can be used to replace the original vector  in downstream prediction tasks.
 %Embeddings are often used to compress sparse categorical variables, and they result into continuous representation of them.
-Embeddings  have multiple advantages, as they enable more efficient training~\cite{mikolov2013distributed}, and are often used for general-purpose reasoning..
-
-We consider two kind of algorithms that use embeddings:
-\textbf{supervised methods}, like matrix factorization, produce embeddings that are highly tuned to a prediction task.
-These embeddings may be interpretable but do not usually generalize to other tasks.
-We refer to these embeddings as \textit{task-specific}.
-For example, an embedding of a movie learned to predict ratings is unlikely to be extremely helpful for an unrelated prediction task.
+In general, we consider two kind of models that produce embeddings:
+\textbf{(i)~supervised methods}, like matrix factorization, calculate embeddings that are highly tuned to a prediction task.
+%These embeddings may be interpretable but do not usually generalize to other tasks.
+%We refer to these embeddings as \textit{task-specific}.
+For example, in the Nextflix challenge, movie identifiers  are embedded to predict user ratings.
 %Matrix factorization and Word2Vec are unable to calculate embeddings for items that are not available during training (``cold-start'' problem).
 %While recent work using n-gram features~\cite{bojanowski2016enriching} have addressed this limitation for supervised and unsupervised tasks,  it can only be used for a single feature type---words.
-On the other hand, \textbf{self-supervised methods} (sometimes less precisely referred as unsupervised methods) like the $\Word2Vec$ models~\cite{mikolov2013distributed}, are designed to provide embeddings that are useful for a wide-array of downstream predictions tasks.
+On the other hand, \textbf{(ii)~self-supervised methods} (sometimes less precisely referred as unsupervised methods) like the $\Word2Vec$ models~\cite{mikolov2013distributed}, are often used for transfer learning.
+In this context, transfer learning uses  self-supervised embeddings for predicting an unrelated task.
 For example,
 %the loss function of the continuous bag of words (CBOW) algorithm of Word2Vec is tuned to predict the next word of a sequence;
 %however,  in practice,
-the embeddings  may be used in analogy solving~\cite{mikolov2013distributed}, or sentiment analysis~\cite{le2014distributed}.
+$\Word2Vec$ embeddings  may be used for analogy solving, or for sentiment analysis~\cite{le2014distributed}.
 %\textit{general-purpose} In the context of this paper, we refer to the embeddings of an self-supervised method that can be used for a variety of auxiliary prediction tasks as .
 
-In this paper we propose $\Feat2Vec$ as a novel method that allows calculating embeddings of arbitrary feature types, such as text, images, categorical, or categorical data, in a common vector space, for both supervised and self-supervised scenarios.
+In this paper we propose $\Feat2Vec$ as a novel method that  embeds arbitrary feature types, such as text, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
 The contributions of this paper are two-fold.
-First, Feat2Vec is the first algorithm that is able to calculate general-purpose embeddings with self-supervision.
+First, Feat2Vec is the first algorithm that is able to calculate general-purpose embeddings with self-supervision that are useful for transfer learning.
 Second, we allow calculating embeddings of arbitrary features.
-For example, consider the non-trivial work that an engineer needs to do to extend a model like Word2Vec to support  additional features:
-the authors of the seminal Doc2Vec~\cite{le2014distributed} paper needed to design a new neural network and a new sampling strategy  to simply add a single feature (Document ID).
+The advantage of arbitrary features in the self-supervised scenario is that it a more general approach.
+Consider the non-trivial work that an engineer needs to do to extend a model like Word2Vec to support  additional features.
+The authors of the seminal Doc2Vec~\cite{le2014distributed} paper needed to design both a new neural network and a new sampling strategy  to simply add a single feature (Document ID).
 %In the case of the researchers that created the famous
 %$\Feat2Vec$ allows calculating embeddings for arbitrary features.
 %We demonstrate that this is not just useful for the self-supervised scenario.
-We are optimistic that our work would be useful for researchers interested in general-purpose embeddings.
-We believe this is not only relevant for the self-supervised scenario.
-For example, in supervised tasks, an item with a description (e.g., text features) can be used avoid the cold-start problem by replacing  item embeddings with a description embedding.
+%We are optimistic that our work would be useful for researchers interested in general-purpose embeddings.
+%We believe this is not only relevant for the self-supervised scenario.
+In the supervised scenario, the advantage of arbitrary features is that our experiments show that the cold-start problem can be avoided by instead of embedding  a single categorical identifier, we can embed a description of the item with words.
 %
 %
 %, while sometimes higher-level of abstractions may be desirable---for example, we may want to have embeddings of documents instead of simply words.
