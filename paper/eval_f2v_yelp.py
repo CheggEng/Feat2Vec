@@ -219,9 +219,11 @@ def pred_by_all(text_embeddings,funny_embeddings,biz_embeddings,user_embeddings,
 testdf['stars'] = testdf['stars'].map(lambda x: float(str(x))).astype(int)
 testdf['stars'].value_counts()
 
-evalmodes=['funny','text','business_id','user_id','all']
+#evalmodes=['funny','text','business_id','user_id','all']
+evalmodes=['text']
 evals={}
-models = ['f2v','d2v','w2v']
+#models = ['f2v','d2v','w2v']
+models = ['d2v']
 for v in models:
     print '\n',v
     evals[v]={}
@@ -245,7 +247,7 @@ for v in models:
         MSE = np.mean( (pred_ratings - testdf['stars'])**2)
         conmat = pd.crosstab(testdf['stars'],pred_ratings)
         evals[v][m] = {'error':error_rate,'mse':MSE,'confusion':conmat}
-        
+
 
 evaldf=pd.DataFrame(index=pd.MultiIndex.from_product([models,evalmodes ] ),columns=['error','mse'])
 
@@ -316,8 +318,8 @@ empaccrate = 0.
 for s in range(1,6):
     empaccrate+= ecdf.loc[s]*np.mean(testdf['stars']==s)
 emperate = 1.-empaccrate
-print empmse,emperate
-
+#print empmse,emperate
+#3.6520727302729012 0.7341351361054282
 evals[]
 
 mse
