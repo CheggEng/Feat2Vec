@@ -407,7 +407,7 @@ More, formally:
  \label{eq:deepfm}
 \end{align}
 
-Here $\omega$ is an activation function. 
+Here $\omega$ is an activation function.
 Intuitively, the dot product ($\dotp$) returns a scalar that measures the (dis)similarity between the embeddings of the feature groups.
 The structure of this model extends Factorization Machine~\cite{rendle2010factorization}, in that we allow grouping of features,
 and extends StarSpace~\cite{wu2017starspace}, in that we do not constraint the feature groups to be  a ``bag of features'' and allow an arbitrary number of features.
@@ -844,7 +844,7 @@ In order to test the relative performance of our learned embeddings, we train ou
 In our evaluation approach, we compare the cosine similarity of the embeddings of two entities where these entities are known to be associated with each other since they appear in the same observation in a test dataset.
 %In particular, in the movie dataset we  compare the similarity of movie directors to those of actors who were cast in the same film for a left-out set of films.
 %For our educational dataset, we compare rankings of textbooks by evaluating the similarity of textbook and user embeddings.
-We evaluate the rankings according to  their  mean percentile rank (MPR). $MPR = \frac{1}{N}\sum_{i=1}^N \frac{R_i}{\max R}$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
+We evaluate the rankings according to  their  mean percentile rank (MPR). $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
  This measures on average how well we rank actual entities.
  A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric. %See the appendix \S\ref{sec:imdbexp} for further details on the experimental setup.
 
@@ -921,31 +921,37 @@ Educational & 25.2\% & 29.2\% \\
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
 %We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
 We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$, since our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close , while $\Word2Vec$ will treat two differing ratings tokens as completely different entities.
-We evaluate the prediction of the real-valued rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the Root Mean Squared Error (RMSE) of the predicted rating in the test dataset.
- $\Feat2Vec$ scores an RMSE of 2.6, while  $\Word2Vec$  scores 3.0.
+We evaluate the prediction of the real-valued rating of movies in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
+ $\Feat2Vec$ scores an MSE of 6.7, while  $\Word2Vec$  scores 9.0.
 
 We also use the Yelp dataset, predicting the most similar rating embedding to the review text embedding produced by Feat2Vec, Word2Vec (CBOW), and Doc2Vec (DM).
 %Doc2Vec is only used for the Yelp dataset because there is no clear ``document'' in the IMDB dataset, while in the Yelp dataset the review text is a natural candidate.
-For Word2Vec and Doc2Vec, the review text embedding is the average of word embeddings, analogous to the context vector used for learning in these algorithms. Table \ref{ratingselfsup} reports the results. As a baseline, we compare our metrics to random predictions using the empirical distribution of ratings in the data. %, the best feasible non-personalized prediction.
-Feat2Vec and Doc2Vec yield comparable MSE, but Feat2Vec outperforms Doc2Vec and Word2Vec by a substantial margin in error rate. In fact, Doc2Vec does no better than a random prediction in terms of error rate.
+For Word2Vec and Doc2Vec, the review text embedding is the average of word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
+%As a baseline, we compare our metrics to random predictions using the empirical distribution of ratings in the data. %, the best feasible non-personalized prediction.
+In general, Word2Vec is poor in its predictive power, predicting 5 stars for 97\% of the test sample. Though Feat2Vec and Doc2Vec yield comparable MSE (2.94 vs. 2.92, respectively), Feat2Vec outperforms Doc2Vec by a substantial margin in classification error rate (55\% vs. 73\%) and mean absolute error (1.13 vs. 1.31). As made evident by the figure, Doc2Vec is unable to identify low rating reviews: only 0.4\% of Doc2vec predictions are $\leq$ 2 stars, despite this comprising 20\% of the data. In contrast, Feat2Vec is more diverse in its predictions, and better able to identify extreme reviews.
 %This occurs because Doc2Vec only learns to predict the modal outcome; XX\% of Doc2Vec's predictions are 5 stars, compared to YY\% of Feat2Vec's, despite the fact that only ZZ\% of the test datasets ratings are 5 stars.
-Only Feat2Vec performs well along both metrics. %, relative to other self-supervised methods.
+%Only Feat2Vec performs well along both metrics. %, relative to other self-supervised methods.
 
-
- \begin{table}
- \centering
- \caption{Self-Supervised Yelp rating prediction}
- \label{ratingselfsup}
- \begin{tabular}{lcc}
- \toprule
-                      & MSE   & Error Rate \\ \midrule
- Random Rating     & 3.65 & 73\% \\
- Feat2Vec             & 2.94 &  \textbf{55}\%       \\
- Word2Vec            & 3.42 & 61\%                          \\
- Doc2Vec              & \textbf{2.92}      & 73\% \\
- \bottomrule
- \end{tabular}
- \end{table}
+\begin{figure}
+\includegraphics[width=.5\textwidth]{../paper/output/yelp/text_rating_confusionmat_numbers}
+\caption{Confusion Matrices of Self-Supervised Yelp Ratings Predictions}
+\label{fig:confmat}
+\end{figure}
+ %
+ % \begin{table}
+ % \centering
+ % \caption{Self-Supervised Yelp rating prediction}
+ % \label{ratingselfsup}
+ % \begin{tabular}{lcc}
+ % \toprule
+ %                      & MSE   & Error Rate \\ \midrule
+ % Random Rating     & 3.65 & 73\% \\
+ % Feat2Vec             & 2.94 &  \textbf{55}\%       \\
+ % Word2Vec            & 3.42 & 61\%                          \\
+ % Doc2Vec              & \textbf{2.92}      & 73\% \\
+ % \bottomrule
+ % \end{tabular}
+ % \end{table}
 
  \begin{comment}
 We also vary $\alpha_1$, the flattening hyperparameter for feature group sampling, to see what effect this hyperparameter has on our performance. Intuitively, a low $\alpha_1$ will greatly improve the quality of the ratings embeddings learned, since it has relatively few parameters and is otherwise sampled infrequently. At the same time, with low $\alpha_1$ the director feature will be sampled less since it is one of the most complex features to learn, so the learned director embeddings may be of poorer quality. Figure \ref{fig:ratings} displays the results of our experiment, benchmarked against the performance of  $\Word2Vec$'s CBOW algorithm in the prediction task. We also show as a baseline the RMSE of a random uniform variable over the range of possible ratings (0 to 10). As is evident from the plot, CBOW performs a bit better than a random prediction, but is also handily outperformed by $\Feat2Vec$ across all hyper-parameter settings.

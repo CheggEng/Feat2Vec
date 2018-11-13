@@ -313,8 +313,26 @@ for t in evalmodes:
 
 #confusion matrix shared between plots
 t='text'
-evals[m][t]['confusion']
+textpredictions={}
+for v in models:
+    if v=='d2v':
+        star_embeddings = d2v_vecs.loc['stars']
+        edict = d2v_testvecs
+    elif v=='f2v':
+        star_embeddings = f2v.loc['stars']
+        edict = f2v_testvecs
+    elif v=='w2v':
+        star_embeddings = w2v_vecs.loc['stars']
+        edict = w2v_testvecs
+    textpredictions[v] = pred_by_feature(edict['text'],star_embeddings)
 
+pd.Series(textpredictions['f2v']).value_counts(normalize=True)
+pd.Series(textpredictions['d2v']).value_counts(normalize=True)
+pd.Series(textpredictions['w2v']).value_counts(normalize=True)
+testdf['stars'].value_counts(normalize=True)
+pd.Series(textpredictions['f2v']).value_counts(normalize=True)
+
+#get_prediction
 for i,m in enumerate(models):
     plt.subplot(1,3,i+1,sharex=True,sharey=True)
     mat = np.copy(evals[m][t]['confusion'])
@@ -326,8 +344,8 @@ plt.colorbar()
 plt.show()
 
 import matplotlib as mpl
-
-cmap = plt.cm.plasma
+normalize=True
+cmap = plt.cm.Blues
 fig,axes = plt.subplots(1,3)
 mnames={'f2v':'Feat2Vec','d2v':'Doc2Vec','w2v':'Word2Vec'}
 for idx,ax in enumerate(axes.flat):
@@ -335,6 +353,12 @@ for idx,ax in enumerate(axes.flat):
     mat = np.copy(evals[m][t]['confusion'])
     mat = mat.astype(float)/mat.sum(axis=1,keepdims=True)
     im = ax.imshow(mat, interpolation='nearest',vmin=0.,vmax=1.0, cmap=cmap)
+    fmt = '.2f' if normalize else 'd'
+    thresh = mat.max() *3/ 4.
+    for i, j in itertools.product(range(mat.shape[0]), range(mat.shape[1])):
+        ax.text(j, i, format(mat[i, j], fmt),
+                 horizontalalignment="center",size=6,
+                 color="white" if mat[i, j] > thresh else "black")
     ax.set_yticks(range(5))
     ax.set_yticklabels([(i+1) for i in range(5)])
     ax.set_xticks(range(5))
@@ -357,8 +381,8 @@ cbar = plt.colorbar(im,fraction=.05,cax=cbar_ax)
 #cbar.ax.labelpad = 2.0
 #cbar.set_clim([0.,1.00])
 cbar.set_ticks([0,.20,.40,.60,.80,1.00])
-cbar.set_label(r'Fraction of True Ratings',rotation=270,labelpad=10)
-plt.savefig('paper/output/yelp/text_rating_confusionmat.pdf')
+cbar.set_label(r'Fraction of True Ratings',rotation=270,labelpad=15)
+plt.savefig('paper/output/yelp/text_rating_confusionmat_numbers.pdf',bbox_inches='tight')
 plt.show()
 
 help(plt.colorbar)
