@@ -100,9 +100,9 @@ for a in alphas:
     f2v_directors['matchedRating'] = f2v_ratings.index.values[bestRatings]
     avgRatings['PredictedRating'] = avgRatings.index.map(lambda x: eval(f2v_directors.loc[x,'matchedRating'])[0])
     testdf['PredictedRating'] = testdf['firstDirector'].map(lambda x: avgRatings.loc[x,'PredictedRating'])
-    RMSE= np.sqrt( np.mean( (testdf['PredictedRating'] - testdf['averageRating'])**2) )
-    testerrs.append(RMSE)
-    print RMSE, #WRMSE
+    MSE= np.mean( (testdf['PredictedRating'] - testdf['averageRating'])**2)
+    testerrs.append(MSE)
+    print MSE, #WRMSE
 
 #W2V as a comparison
 directortokens = [w for w in w2v.vocab if w.startswith('directors_')]
@@ -121,8 +121,8 @@ w2v_directors['matchedRating'] = w2v_directors['matchedRating'].map(lambda x: fl
 w2v_directors.index = w2v_directors.index.map(lambda x: x[len('directors_'):])
 avgRatings['W2VPredictedRating'] = avgRatings.index.map(lambda x: w2v_directors.loc[x,'matchedRating'])
 testdf['W2VPredictedRating'] = testdf['firstDirector'].map(lambda x: avgRatings.loc[x,'W2VPredictedRating'])
-W2V_RMSE= np.sqrt( np.mean( (testdf.loc[testdf['mi_rating']==0,'W2VPredictedRating'] - testdf.loc[testdf['mi_rating']==0,'averageRating'])**2) )
-print W2V_RMSE
+W2V_MSE= np.mean( (testdf.loc[testdf['mi_rating']==0,'W2VPredictedRating'] - testdf.loc[testdf['mi_rating']==0,'averageRating'])**2)
+print W2V_MSE
 
 #create uniform RMSE
 unif_RMSE = np.sqrt( np.mean( (testdf['averageRating'] - 5.)**2 + 100./12.) )
