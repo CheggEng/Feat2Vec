@@ -218,12 +218,20 @@ def pred_by_all(text_embeddings,funny_embeddings,biz_embeddings,user_embeddings,
 
 testdf['stars'] = testdf['stars'].map(lambda x: float(str(x))).astype(int)
 testdf['stars'].value_counts()
-
-#evalmodes=['funny','text','business_id','user_id','all']
-evalmodes=['text']
 evals={}
-#models = ['f2v','d2v','w2v']
-models = ['d2v']
+evalmodes=['funny','text','business_id','user_id','all']
+models = ['f2v','d2v','w2v']
+#evalmodes=['text']
+#models = ['d2v']
+edict =
+pred_ratings = pred_by_all(edict['text'],edict['funny'],edict['business_id'],edict['user_id'],star_embeddings)
+
+conmat = pd.crosstab(testdf['stars'],pred_ratings)
+pd.Series(pred_ratings).value_counts(normalize=True)
+testdf['stars'].value_counts(normalize=True)
+
+pd.crosstab(testdf['stars'],pred_ratings)
+
 for v in models:
     print '\n',v
     evals[v]={}
@@ -243,22 +251,26 @@ for v in models:
             pred_ratings = pred_by_feature(edict['context_mean'],star_embeddings)
         else:
             pred_ratings = pred_by_feature(edict[m],star_embeddings)
+
         error_rate = (pred_ratings!=testdf['stars']).mean()
         MSE = np.mean( (pred_ratings - testdf['stars'])**2)
+        MAE = np.mean(np.abs(pred_ratings - testdf['stars']))
         conmat = pd.crosstab(testdf['stars'],pred_ratings)
-        evals[v][m] = {'error':error_rate,'mse':MSE,'confusion':conmat}
+        evals[v][m] = {'error':error_rate,'mse':MSE,'mae':MAE,'confusion':conmat}
 
 
-evaldf=pd.DataFrame(index=pd.MultiIndex.from_product([models,evalmodes ] ),columns=['error','mse'])
 
-for s in ['error','mse']:
+
+evaldf=pd.DataFrame(index=pd.MultiIndex.from_product([models,evalmodes ] ),columns=['error','mae','mse'])
+
+for s in ['error','mae','mse']:
     print '*'*20,s,'*'*20
     for e in evalmodes:
         for m in models:
             sv= evals[m][e][s]
             evaldf[s].loc[m].loc[e] = sv
             print m,e,sv
-
+testdf['stars'].describe()
 evaldf.to_csv('paper/output/yelp/eval_stats.csv')
 
 import matplotlib.pyplot as plt
@@ -296,9 +308,64 @@ for t in evalmodes:
         plt.ylabel('True Rating')
         plt.xlabel('Predicted Rating')
         #plt.tight_layout()
-        plt.savefig('paper/output/yelp/confusionmat_%s_%s.pdf' % (m,t))
+        #plt.savefig('paper/output/yelp/confusionmat_%s_%s.pdf' % (m,t))
         plt.show()
 
+#confusion matrix shared between plots
+t='text'
+evals[m][t]['confusion']
+
+for i,m in enumerate(models):
+    plt.subplot(1,3,i+1,sharex=True,sharey=True)
+    mat = np.copy(evals[m][t]['confusion'])
+    mat = mat.astype(float)/mat.sum(axis=1,keepdims=True)*100.
+    plt.imshow(mat, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title(m)
+    plt.xtitle
+plt.colorbar()
+plt.show()
+
+import matplotlib as mpl
+
+cmap = plt.cm.plasma
+fig,axes = plt.subplots(1,3)
+mnames={'f2v':'Feat2Vec','d2v':'Doc2Vec','w2v':'Word2Vec'}
+for idx,ax in enumerate(axes.flat):
+    m=models[idx]
+    mat = np.copy(evals[m][t]['confusion'])
+    mat = mat.astype(float)/mat.sum(axis=1,keepdims=True)
+    im = ax.imshow(mat, interpolation='nearest',vmin=0.,vmax=1.0, cmap=cmap)
+    ax.set_yticks(range(5))
+    ax.set_yticklabels([(i+1) for i in range(5)])
+    ax.set_xticks(range(5))
+    ax.set_xticklabels([(i+1) for i in range(5)])
+
+    if idx==0:
+        ax.set_ylabel('True Rating')
+    elif idx==1:
+        ax.set_xlabel('Predicted Rating')
+    #else:
+    #    ax.set_xticklabels(range(5),[str(i) for i in range(1,6)])
+    ax.set_title(mnames[m])
+
+fig.subplots_adjust(right=.8)
+cbar_ax = fig.add_axes([.85, 0.3, 0.02, 0.4])
+cbar = plt.colorbar(im,fraction=.05,cax=cbar_ax)
+
+#cbar.values=[0.,1.]
+#cbar = plt.colorbar(im,fraction=.05,ax=axes.ravel().tolist())
+#cbar.ax.labelpad = 2.0
+#cbar.set_clim([0.,1.00])
+cbar.set_ticks([0,.20,.40,.60,.80,1.00])
+cbar.set_label(r'Fraction of True Ratings',rotation=270,labelpad=10)
+plt.savefig('paper/output/yelp/text_rating_confusionmat.pdf')
+plt.show()
+
+help(plt.colorbar)
+
+
+
+testdf['stars'].value_counts()
 
 #calc MSE
 mse =0.
@@ -318,15 +385,18 @@ empaccrate = 0.
 for s in range(1,6):
     empaccrate+= ecdf.loc[s]*np.mean(testdf['stars']==s)
 emperate = 1.-empaccrate
-#print empmse,emperate
+np.mean(testdf['stars'])
+mse_avg = np.mean((testdf['stars']-np.mean(testdf['stars']))**2)
+mse_avg
+print empmse,emperate
 #3.6520727302729012 0.7341351361054282
 evals[]
-
+np.mean(np.abs(testdf['stars']-np.mean(testdf['stars'])))
 mse
 plotevals=['user_id','business_id','funny','text','all']
 labels=['User','Business','Funny','Text','Context']
 colors=['r','b','g','purple']
-for s in ['error','mse']:
+for s in ['error','mse','mae']:
     for i,m in enumerate(models):
         metrics = [evals[m][e][s] for e in plotevals]
         plt.scatter(range(len(evalmodes)),metrics,s=12,color=colors[i])
@@ -336,6 +406,10 @@ for s in ['error','mse']:
         plt.plot(range(len(evalmodes)),[emperate]*len(evalmodes),'--',color='brown',label='Random Empirical')
         plt.ylabel('Error Rate')
     elif s=='mse':
+        plt.plot(range(len(evalmodes)),[mse]*len(evalmodes),'--',color='black',label='Random Uniform')
+        plt.plot(range(len(evalmodes)),[empmse]*len(evalmodes),'--',color='brown',label='Random Empirical')
+        plt.ylabel('MSE')
+    elif s=='mae':
         plt.plot(range(len(evalmodes)),[mse]*len(evalmodes),'--',color='black',label='Random Uniform')
         plt.plot(range(len(evalmodes)),[empmse]*len(evalmodes),'--',color='brown',label='Random Empirical')
         plt.ylabel('MSE')
