@@ -149,11 +149,12 @@ $\Word2Vec$ embeddings  may be used for analogy solving, or for sentiment analys
 
 In this paper we propose $\Feat2Vec$ as a novel method that  embeds arbitrary feature types, such as text, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
 The contributions of this paper are two-fold.
-First, Feat2Vec is the first algorithm that is able to calculate general-purpose embeddings with self-supervision that are useful for transfer learning.
+First, Feat2Vec is the first algorithm that is able to calculate embeddings from data with multiple feature types that are useful for transfer learning.
+While a recently proposed algorithm, StarSpace~\cite{wu2017starspace}, enables embedding feature types beyond words, it is limited to two features, where one feature is treated as the label.
 Second, we allow calculating embeddings of arbitrary features.
 The advantage of arbitrary features in the self-supervised scenario is that it a more general approach.
-Consider the non-trivial work that an engineer needs to do to extend a model like Word2Vec to support  additional features.
-The authors of the seminal Doc2Vec~\cite{le2014distributed} paper needed to design both a new neural network and a new sampling strategy  to simply add a single feature (Document ID).
+Consider the non-trivial work that is required to extend a model like Word2Vec to support  additional features.
+The authors of the seminal Doc2Vec~\cite{le2014distributed} paper needed to design both a new neural network and a new sampling strategy  to simply add a single feature (document ID).
 %In the case of the researchers that created the famous
 %$\Feat2Vec$ allows calculating embeddings for arbitrary features.
 %We demonstrate that this is not just useful for the self-supervised scenario.
@@ -409,7 +410,7 @@ More, formally:
 Here $\omega$ is an activation function. 
 Intuitively, the dot product ($\dotp$) returns a scalar that measures the (dis)similarity between the embeddings of the feature groups.
 The structure of this model extends Factorization Machine~\cite{rendle2010factorization}, in that we allow grouping of features,
-and extends StarSpace~\cite{wu2017starspace}, in that we do not constraint the feature groups to be  a ``bag of features''.
+and extends StarSpace~\cite{wu2017starspace}, in that we do not constraint the feature groups to be  a ``bag of features'' and allow an arbitrary number of features.
 %$\phi_i$ is a feature extraction that inputs the $i$-th feature group of the instance, and returns an $r$-dimensional embedding.
 %The feature extraction function $\phi_i$ can allow for an arbitrary processing of its subfeatures $\vect{x}_{\vect{\upkappa}_i}$.
 %Instead of individual sub-features interacting among each other, as in Factorization Machine, the embeddings of feature groups interact with those of other groups.
