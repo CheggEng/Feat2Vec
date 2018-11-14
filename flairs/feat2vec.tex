@@ -114,22 +114,24 @@
 \maketitle
 
 \begin{abstract}
-Methods that calculate dense vector representations for features in unstructured data---such as words in a document---have proven to be very successful for knowledge representation.
+Methods that calculate dense vector representations for text have proven to be very successful for knowledge representation.
 %Surprisingly, very little work has focused on methods for structured datasets where there is more than one type of feature---that is, datasets that have arbitrary features beyond words or images.
-We study how to estimate  dense representations when multiple feature types exist within a dataset, both for  supervised learning where explicit labels are available, and self-supervised learning where there are no labels.
+We study how to estimate  dense representations when multiple feature types exist (e.g., text, continuous, categorical) within a dataset.
+We propose  $\Feat2Vec$  as a novel model that supports  supervised learning when explicit labels are available, and self-supervised learning when there are no labels.
 $\Feat2Vec$ calculates embeddings for data with multiple feature types enforcing that all different feature types exist in a common space.
-In the supervised case, we show that our method has advantages over recently proposed methods;
+%In the supervised case, we show that our method has advantages over recently proposed methods;
 %extensions of factorization machines;
-such as enabling higher prediction accuracy, and providing a way to avoid the cold-start problem.
-In the self-supervised case, our experiments suggest that $\Feat2Vec$ better compresses data.
+%such as enabling higher prediction accuracy, and providing a way to avoid the cold-start problem.
+%In the self-supervised case, our experiments suggest that $\Feat2Vec$ better compresses data.
 We believe that we are the first to propose a method for learning self-supervised embeddings that leverage the structure of multiple feature types.
+Our experiments suggest that $\Feat2Vec$ outperforms previously published methods, and that it may be useful for avoiding the cold-start problem.
 \end{abstract}
 
 
 
 \section{Introduction}
 
-Informally, in machine learning a \textit{dense representation}, or \textit{embedding}  of a vector   $\vect{x} \in \mathbb{R}^n$  is another vector $\vect{y} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation.
+Informally, in machine learning a \textit{dense representation}, or \textit{embedding}  of a vector   $\vect{x} \in \mathbb{R}^n$  is another vector $\vect{\beta} \in \mathbb{R}^r$ that has much lower dimensionality ($r \ll n$) than the original representation.
 %, and can be used to replace the original vector  in downstream prediction tasks.
 %Embeddings are often used to compress sparse categorical variables, and they result into continuous representation of them.
 In general, we consider two kind of models that produce embeddings:
@@ -139,30 +141,27 @@ In general, we consider two kind of models that produce embeddings:
 For example, in the Nextflix challenge, movie identifiers  are embedded to predict user ratings.
 %Matrix factorization and Word2Vec are unable to calculate embeddings for items that are not available during training (``cold-start'' problem).
 %While recent work using n-gram features~\cite{bojanowski2016enriching} have addressed this limitation for supervised and unsupervised tasks,  it can only be used for a single feature type---words.
-On the other hand, \textbf{(ii)~self-supervised methods} (sometimes referred to as unsupervised methods) like $\Word2Vec$ ~\cite{mikolov2013distributed}, are often used for transfer learning.
-In this context, transfer learning involves using self-supervised embeddings for predicting an unrelated task.
-For example,
+On the other hand, \textbf{(ii)~self-supervised methods} (sometimes referred to as unsupervised methods) are not tuned for the prediction task that they are ultimately used for.
+For example, $\Word2Vec$ ~\cite{mikolov2013distributed} methods are self-supervised and are often used for transfer learning.
 %the loss function of the continuous bag of words (CBOW) algorithm of Word2Vec is tuned to predict the next word of a sequence;
 %however,  in practice,
-$\Word2Vec$ embeddings  may be used for analogy solving, or sentiment analysis~\cite{le2014distributed}.
+Self-supervised embeddings  are evaluated in how useful they are for analogy solving, or sentiment analysis~\cite{le2014distributed} eventhough the loss function is not tuned for either of these tasks.
 %\textit{general-purpose} In the context of this paper, we refer to the embeddings of an self-supervised method that can be used for a variety of auxiliary prediction tasks as .
 
 In this paper we propose $\Feat2Vec$ as a novel method that  embeds arbitrary feature types, such as text, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
-The contributions of this paper are two-fold.
-First, Feat2Vec is the first algorithm that is able to calculate embeddings from data with multiple feature types that are useful for transfer learning.
-Though a recently proposed algorithm, StarSpace~\cite{wu2017starspace}, enables embedding feature types beyond words, it is limited to two features, where one feature is treated as a label.
-In contrast, our self-supervised method does not require the user to assign a feature as a label.
-Second, we allow calculating embeddings of arbitrary features.
-This generalizes many existing algorithms in the self-supervised scenario.
+We believe that this is the first general-purpose self-supervised algorithm that is able to calculate embeddings from data with multiple feature types.
+%Additionally, we allow calculating embeddings for arbitrary features.
+%This generalizes many existing algorithms in the self-supervised scenario.
 Consider the non-trivial work that was required to extend a model like Word2Vec to support  additional features.
 The authors of the seminal Doc2Vec~\cite{le2014distributed} paper needed to design both a new neural network and a new sampling strategy  to add a single feature (document ID).
+$\Feat2Vec$ is a general method that allows calculating embeddings for any number of features.
 %In the case of the researchers that created the famous
 %$\Feat2Vec$ allows calculating embeddings for arbitrary features.
 %We demonstrate that this is not just useful for the self-supervised scenario.
 %We are optimistic that our work would be useful for researchers interested in general-purpose embeddings.
 %We believe this is not only relevant for the self-supervised scenario.
-In the supervised scenario, one advantage of arbitrary features is that the cold-start problem can be avoided.
-For example, instead of embedding a single categorical identifier for a document, we can embed a description of the item using known word embeddings.
+%In the supervised scenario, one advantage of arbitrary features is that the cold-start problem can be avoided.
+%For example, instead of embedding a single categorical identifier for a document, we can embed a description of the item using known word embeddings.
 %
 %
 %, while sometimes higher-level of abstractions may be desirable---for example, we may want to have embeddings of documents instead of simply words.
@@ -411,25 +410,18 @@ More, formally:
 
 Here $\omega$ is an activation function.
 Intuitively, the dot product ($\dotp$) returns a scalar that measures the (dis)similarity between the embeddings of the feature groups.
-The structure of this model extends both Factorization Machine~\cite{rendle2010factorization}, in that we allow grouping of features,
-and StarSpace~\cite{wu2017starspace}, in that we do not constrain the feature groups to be  a ``bag of features'' and allow an arbitrary number of features.
 %$\phi_i$ is a feature extraction that inputs the $i$-th feature group of the instance, and returns an $r$-dimensional embedding.
 %The feature extraction function $\phi_i$ can allow for an arbitrary processing of its subfeatures $\vect{x}_{\vect{\upkappa}_i}$.
 %Instead of individual sub-features interacting among each other, as in Factorization Machine, the embeddings of feature groups interact with those of other groups.
 %Thus, $x_{\vect{\upkappa}_i} =  [ x_j : j \in \vect{\upkappa}_i ]$.
 %The intuition is that by grouping features as a single entity, we can can reason on a higher level of abstraction.
-
 %Individual pixels may yield little information about other features in a dataset, such as a review rating, while a single embedding for an entire image may be informative.
-
 %Across groups,  entities interact with  each other via the output of $\phi$ only.
-
 %As a concrete example of an application of this grouping/feature extraction, we might group the individual words of a document into a ``document'' feature group, and allow this document embedding to then interact with learned embeddings of other document metadata (such as author id). We might expect the extraction function $\phi$ for the words in a document to extract features that characterize the attributes of the document taken as a whole, rather than simply the sum of its individual words.
-
-
-The simplest   implementation of $\phi_i$ is a linear fully-connected layer, where the output of the $r$-th entry is:
+A simple  implementation of $\phi_i$ is a linear fully-connected layer, where the output of the $r$-th entry is:
 \begin{equation}
 \label{eq:fully_connected}
-\phi_i\bigl( \vect{x\vphantom{\beta}}_i; \vect{\beta}\bigr )_r= \sum_{a=1}^{d_i}  \beta_{r_a} x_{i_a}
+\phi_{i,r}\bigl( \vect{x\vphantom{\theta}}_i; \vect{\uptheta}_r\bigr )_r= \sum_{a=1}^{d_i}  \theta_{r_a} x_{i_a}
 \end{equation}
 
 In traditional factorization methods, like Matrix Factorization, each item identifier is embedded.
@@ -454,6 +446,9 @@ Figure~\ref{fig:architecture} compares existing factorization methods  with our 
 In this example,  $\Feat2Vec$ is using two feature groups:
 the first group only has a single feature which is projected to an embedding (just like a regular Factorization Machine);
 the second group has multiple features, which are together projected to a single embedding.
+Figure~\ref{fig:neural} shows an approach of using neural networks within factorization machines  that has been proposed multiple times~\cite{DBLP:journals/corr/DziugaiteR15,guo2017deepfm}.
+It replaces the dot product of factors with a learned neural function, which has been shown to improve predictive accuracy for various tasks.
+The caveat of this architecture is that is no longer  possible to interpret the embeddings as latent factors related to the target task.
 
 %Notice that this implies we can precompute and store the latent factors of the target task seen during training, so that predictions  during inference can be sped-up.
 %For example if we have two feature groups (e.g, a label and an item),
@@ -510,9 +505,13 @@ the second group has multiple features, which are together projected to a single
     }
 \end{figure*}
 
-Figure~\ref{fig:neural} shows an approach of using neural networks within factorization machines  that has been proposed multiple times~\cite{DBLP:journals/corr/DziugaiteR15,guo2017deepfm}.
-It replaces the dot product of factors with a learned neural function, which has been shown to improve predictive accuracy for various tasks.
-In this case, fast inference for cold-start documents using pre-computed label embeddings is no longer possible. It  needs to store the entire neural function that takes the embeddings as inputs. Another shortcoming of replacing the dot product with a neural function is that it would no longer be possible to interpret the embeddings as latent factors related to the target task; There may be highly complex mappings from the embeddings to the final output via this neural function.
+
+The structure of $\Feat2Vec$ model significantly expands previously published models.
+For example, it improves Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and feature extraction functions.
+StarSpace~\cite{wu2017starspace}  introduces feature groups (they call entities), but are constrained  to be  a ``bag of features''. $\Feat2Vec$ allows continuous features.
+StarSpace is limited to only two feature types-- where one feature is treated as a label, and the other is a bag of features, and there is no know self-supervised training method.
+In contrast, our model does not require the user to assign a feature as a label, and we propose a self-supervised learning algorithm.
+
 %However, it would be straightforward to combine this approach with  \algoralph{}. This is not explored in this work.
 
 
@@ -527,7 +526,7 @@ We can learn the the parameters of a Feat2Vec model $ \bm\uptheta$ using trainin
 \label{eq:learning}
 \end{equation}
 Here, $y(x)$  is the true target value for $x$ obtained from training data, and $\hat{y}(x)$ is the one estimated by the model (Equation \ref{eq:deepfm});
-$\bm\uptheta$ represents the parameters learned in during training (i.e. the parameters associated with the extraction functions $\phi_i$ in Equation \ref{eq:deepfm}).
+$\bm\uptheta$ represents the parameters learned in during training (i.e. the parameters associated with the extraction functions $\phi_i$  (for example Equation~\ref{eq:fully_connected}).
 The hyperparameter $\gamma$ controls the amount of regularization.
 For labeling and classification tasks, we optimize the binary cross-entropy.
 
