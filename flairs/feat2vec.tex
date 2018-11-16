@@ -64,7 +64,7 @@
 \setcounter{secnumdepth}{2}
 
 
-\title{Feat2Vec: Supervised and Self-Supervised Embeddings of Data}
+\title{Feat2Vec for Embedding Data with Multiple Features Types}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -118,7 +118,7 @@ Methods that calculate dense vector representations for text have proven to be v
 %Surprisingly, very little work has focused on methods for structured datasets where there is more than one type of feature---that is, datasets that have arbitrary features beyond words or images.
 We study how to estimate  dense representations when multiple feature types (e.g., text, continuous, categorical) exist within a dataset.
 We propose  $\Feat2Vec$  as a novel model that supports  supervised learning when explicit labels are available, and self-supervised learning when there are no labels.
-$\Feat2Vec$ calculates embeddings for data with multiple feature types enforcing that all different feature types exist in a common space.
+$\Feat2Vec$ calculates embeddings for data with multiple feature types enforcing that all embeddings exist in a common space.
 %In the supervised case, we show that our method has advantages over recently proposed methods;
 %extensions of factorization machines;
 %such as enabling higher prediction accuracy, and providing a way to avoid the cold-start problem.
@@ -427,15 +427,8 @@ Other, more sophisticated functional forms of $\phi_i$ we have explored in our e
 \item A convolutional neural network that transforms a text sequence into a $r$-dimensional embedding. This function is able to preserve information in the order of a text sequence, unlike other methods for transforming text to numerical values such as bag-of-words.
 \item A deep, fully connected neural network that projects a scalar, such as average rating, into a $r$-dimensional embedding space. This extraction function, by treating the input as numerical, will require scalars close in value to have similar embeddings.
 \end{itemize}
-In theory, any neural function that outputs a $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
+Any neural function that outputs a $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
 
-In traditional factorization methods, like Matrix Factorization, each item identifier is embedded.
-Thus, all of the items need to be observed during training (i.e., cold-start problem).
-%Consider how we can use $\Feat2Vec$ to overcome the cold-start problem.
-Feat2Vec could be used to predict on unseen items, by learning an embedding from an alternative characterization of the item---for example, an item's textual description.
-For this, we  can treat the entire textual description as a feature group $\upkappa_i$. %the group of word features.
-A feature extraction function $\phi$ acts on the features in $\upkappa_i$, and the other features interact with the words only via the output of $\phi$.
-However, $\Feat2Vec$ is not limited to bag of words features, and we  demonstrate this with continuous features.
 
 
 % As a concrete example of feature grouping, consider a user-level dataset with information on past purchases of 2 products ($p_1,p_2$) and 2 shipping locations ($l_1,l_2$). A data scientist may want interactions to occur exclusively between locations and purchases, because they believe interactions between purchases or between locations are non-informative. There would then be 2 feature groups: all recorded purchases, and all recorded shipping locations:
@@ -448,12 +441,21 @@ However, $\Feat2Vec$ is not limited to bag of words features, and we  demonstrat
 
 Figure~\ref{fig:architecture} compares existing factorization methods  with our novel model.
 %To graphically demonstrate the difference between Factorization Machine and
-In this example,  $\Feat2Vec$ is using two feature groups:
-the first group only has a single feature which is projected to an embedding (just like a regular Factorization Machine);
-the second group has multiple features, which are together projected to a single embedding.
+Figure~\ref{fig:factorization_machine} shows a Factorization Machine~\cite{rendle2010factorization} that embeds each feature .
+In this example, Figure~\ref{fig:feat2vec}  shows $\Feat2Vec$ with two feature groups:
+the first group only has a single feature which is projected to an embedding (just like matrix factorization);
+but the second group has multiple features, which are together projected to a single embedding.
+%Consider how we can use $\Feat2Vec$ to overcome the cold-start problem.
 Figure~\ref{fig:neural} shows an approach of using neural networks within factorization machines  that has been proposed multiple times~\cite{DBLP:journals/corr/DziugaiteR15,guo2017deepfm}.
 It replaces the dot product of factors with a learned neural function, which has been shown to improve predictive accuracy.
 The caveat of this architecture is that is no longer  possible to interpret the embeddings as latent factors related to the target task.
+
+In traditional factorization methods, individual item identifier are embedded and thus need to be observed during training (i.e., cold-start problem).
+ $\Feat2Vec$ can learn an embedding from an alternative characterization of the item---for example, an item's textual description.
+For this, we  can treat the entire textual description as a feature group $\upkappa_i$. %the group of word features.
+A feature extraction function $\phi$ acts on the features in $\upkappa_i$, and the other features interact with the words only via the output of $\phi$.
+However, $\Feat2Vec$ is not limited to bag of words features, and we  demonstrate this with continuous features.
+
 
 %Notice that this implies we can precompute and store the latent factors of the target task seen during training, so that predictions  during inference can be sped-up.
 %For example if we have two feature groups (e.g, a label and an item),
@@ -490,13 +492,13 @@ The caveat of this architecture is that is no longer  possible to interpret the 
     \begin{subfigure}[t]{0.26\textwidth}
         \centering
         \includegraphics[height=1in]{img/diagram_mf.pdf}
-        \caption{\textbf{Shallow}}
+        \caption{\textbf{Factorization Machine}\label{fig:factorization_machine}}
     \end{subfigure}%
     ~
     \begin{subfigure}[t]{0.26\textwidth}
         \centering
         \includegraphics[height=1in]{img/diagram_in.pdf}
-        \caption{\textbf{Feat2Vec}}
+        \caption{\textbf{Feat2Vec} \label{fig:feat2vec}}
     \end{subfigure}
     ~
     \begin{subfigure}[t]{0.22\textwidth}
@@ -556,9 +558,9 @@ It is straightforward to optimize Equation~\ref{eq:learning} directly.
 In the multi-class scenario, if the number of labels is very large, it is common practice to use a binary classifier with implicit sampling~\cite{samplingnotes}.
 %For the multi-label classification tasks, we use $\Feat2Vec$ with a binary output.
 In this case, we would have at least two feature groups---one of the feature groups is the target label that we want to predict, such as rating, and the other group(s) is the input from which we want to make the prediction, such as review text.
-The output indicates whether the label is associated in the data with the input ($y=1$), or not ($y=0$).
-The datasets we use for our labeling experiments only contains positive labels, thus for each training example we sample $k$ negative labels for each positive label.
-It is typical to use one of the following negative sampling strategies according to the best validation error, in each case excluding the actual positive labels for each training example -- (i) uniformly from all possible labels, or (ii)  from the empirical distributions of positive labels~\cite{improving_pairwise_learning}.
+%The output indicates whether the label is associated in the data with the input ($y=1$), or not ($y=0$).
+%The datasets we use for our labeling experiments only contains positive labels, thus for each training example we sample $k$ negative labels for each positive label.
+%It is typical to use one of the following negative sampling strategies according to the best validation error, in each case excluding the actual positive labels for each training example -- (i) uniformly from all possible labels, or (ii)  from the empirical distributions of positive labels~\cite{improving_pairwise_learning}.
 %EXCLUDED bayesian_pairwise_ranking,; duplicitous reference.
 
 
@@ -651,7 +653,7 @@ Here, $\operatorname{count}(x)$ is the number of times a value $x$ of feature gr
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
 The literature offers two solutions:
 in the Negative Sampling of $\Word2Vec$, duplicate negative samples are ignored~\cite{samplingnotes}.
-Instead, we account for the probability of random negative labels being identical to positively labeled data using Noise Contrastive Estimation (NCE)~\cite{nce}.
+Instead, we account for the probability of random negative labels being identical to positively labeled data using \textit{Noise Contrastive Estimation} (NCE)~\cite{nce}.
 
 %%%%%%%%%%%%%%%%
 \subsubsection{The Loss Function for Self-Supervised Learning}
@@ -922,7 +924,7 @@ Educational & 25.2\% & 29.2\% \\
 %^We can probably wordsmith this
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
 %We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
-We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$, since our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close , while $\Word2Vec$ will treat two differing ratings tokens as completely different entities.
+We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$, since our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close, while $\Word2Vec$ will treat two differing ratings tokens as completely different entities.
 We evaluate the prediction of the real-valued rating of movies (scale is 0 to 10) in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
  $\Feat2Vec$ scores an MSE of 6.6, while  $\Word2Vec$  scores 9.3.
 
