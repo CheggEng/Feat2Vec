@@ -843,14 +843,17 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 \subsection{Self-Supervised Embeddings}
 \label{sec:unsupexp}
 \subsubsection{Does $\Feat2Vec$ enable better embeddings?}
- Ex ante, it is unclear to us how to evaluate the performance of an self-supervised embedding algorithm, but we felt that a reasonable task would be a ranking task one might practically attempt using our datasets. This task will assess the similarity of trained embeddings using unseen records in a left-out dataset.
-In order to test the relative performance of our learned embeddings, we train our self-supervised $\Feat2Vec$ algorithm and compare its performance in a targeted ranking task to $\Word2Vec$'s CBOW algorithm for learning embeddings.
-In our evaluation approach, we compare the cosine similarity of the embeddings of two entities where these entities are known to be associated with each other since they appear in the same observation in a test dataset.
+The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
+Since our algorithm is designed for multi-modal data, we generalize this task for multiple feature types as follows.
+Given a dataset with $k$ feature groups $x_1,x_2\dots x_k$, we choose a single categorical feature as the `target'. 
+Given a held-out instance, we compute the average of the embeddings vectors $\vec{\phi}$ of all the features except the target $\sum^{k-1}_{i=0}\vec{\phi}_i$ and rank all possible values of the target feature by cosine similarity. 
+The rankings are evaluated with according to  their  mean percentile rank (MPR).
+$MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
+A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric.
+We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings.
 %In particular, in the movie dataset we  compare the similarity of movie directors to those of actors who were cast in the same film for a left-out set of films.
 %For our educational dataset, we compare rankings of textbooks by evaluating the similarity of textbook and user embeddings.
-We evaluate the rankings according to  their  mean percentile rank (MPR). $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
- This measures on average how well we rank actual entities.
- A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric. %See the appendix \S\ref{sec:imdbexp} for further details on the experimental setup.
+ %See the appendix \S\ref{sec:imdbexp} for further details on the experimental setup.
 
 %\item The next is mean reciprocal rank (MRR), which is similar to mean percentile rank, but weights rankings that are closer to rank 0 (the best rank possible) more:
 %\begin{align*}
