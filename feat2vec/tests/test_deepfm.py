@@ -20,43 +20,19 @@ from unittest import TestCase
 class TestDeepFM(TestCase):
     def test_rai_faster(self):
         dimensions = 10
-        dup_dimension = 20
         EMBEDING_DIM = 5
-        SEC_EMBEDDING = 5
+
 
 
         feature_names = ["principal", "f1", "f2", "f3", "f4", "f5"]
 
-        # DEFINE CUSTOM LAYERS
-        skream_rotator = Dense(units=dimensions, activation="linear", use_bias=False,name="rotator")
 
-        # Popularity
-        f1_input = Input(batch_shape=(None, 1), name="f1")
-        popularity_embed_inter = Embedding(input_dim=EMBEDING_DIM, output_dim=dup_dimension, name="embedding_dup",
-                                           mask_zero=True)(f1_input)
-        popularity_unmasker = Lambda(lambda x: x, name='unmasker_dup')(popularity_embed_inter)
-        popularity_embed1 = Dense(units=dimensions, activation="linear", use_bias=False, name="resized_embedding")(
-            popularity_unmasker)
-        f1_embed = Reshape((dimensions,))(popularity_embed1)
 
         # Principal id
 
         principal_input = Input(batch_shape=(None, 1), name="principal")
-        principal_embedding = Embedding(input_dim=EMBEDING_DIM, output_dim=SEC_EMBEDDING, name="embedding_principal",
-                                    mask_zero=True)(principal_input)
-        principal_makser = Lambda(lambda x: x, name='unmasker_principal')(principal_embedding)
-        principal_reshape = Reshape((SEC_EMBEDDING,))(principal_makser)
-
-        merged_principal = concatenate([principal_reshape, f1_embed])
-        rotated_principal = Reshape((dimensions,), name="rotated_principal")(skream_rotator(merged_principal))
-
-        # F2
-        f2_input = Input(batch_shape=(None, 20), name="f2")
-        f2_temp = Embedding(input_dim=5, input_length=20,output_dim=SEC_EMBEDDING, mask_zero=True, name="embedding_f2")(f2_input)
-        avg_f2 = Reshape((SEC_EMBEDDING,))(Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_f2_embedding")(f2_temp))
-
-        merged_f2 = concatenate([avg_f2, f1_embed])
-        f2_embed = Reshape((dimensions,), name="rotated_f2")(skream_rotator(merged_f2))
+        int = Embedding(input_dim=EMBEDING_DIM, output_dim=dimensions, name="embedding_principal" )(principal_input)
+        principal_embedding = int # Reshape((dimensions,1))(int)
 
         # DEFINE FM MACHINE:
         feature_specification = []
@@ -64,16 +40,9 @@ class TestDeepFM(TestCase):
             if feat == "principal":
                 feature_specification.append({"name": "principal",
                                               "type": {"input": principal_input,
-                                                       "output": rotated_principal}})
+                                                       "output": principal_embedding}})
+
             elif feat == "f1":
-                feature_specification.append({"name": "f1",
-                                              "type": {"input": f1_input,
-                                                       "output": f1_embed}})
-            elif feat == "f2":
-                feature_specification.append({"name": feat,
-                                              "type": {"input": f2_input,
-                                                       "output": f2_embed}})
-            elif feat == "f3":
                 feature_specification.append({"name": feat,
                                               "type": "real"})
             else:
@@ -87,10 +56,10 @@ class TestDeepFM(TestCase):
                            obj='ns')
 
         groups = []
-        groups.append( [("principal", feature_names[1:])] )
-        groups.append( [("f1" , feature_names[2:])] )
-        groups.append( [("f1", "principal")] )
+        groups.append( [("principal", feature_names)] )
+        groups.append( [("f1" , feature_names)] )
         print groups
+
         keras_model_collapsed = fm.build_model(dimensions,
                                                collapsed_type=2,
                                                deep_out=True,
@@ -110,9 +79,9 @@ class TestDeepFM(TestCase):
                                                   )
 
 
-        f5 = keras_model_notcollapsed.get_layer("dropout_terms_f5_0")
-        assert f5.rate > 0.
-        f5.rate = 0.
+        #f5 = keras_model_notcollapsed.get_layer("dropout_grp_000")
+        #assert f5.rate > 0.
+        #f5.rate = 0.
         try:
             from keras.utils import plot_model
             plot_model(keras_model_collapsed, to_file="rai_faster_collapsed.png")
@@ -201,9 +170,9 @@ class TestDeepFM(TestCase):
                                      dropout_input=0.1
                                      )
 
-        f5 = keras_model.get_layer("dropout_embedding_f5")
-        assert f5.rate > 0.
-        f5.rate = 0.
+        #f5 = keras_model.get_layer("dropout_embedding_f5")
+        #assert f5.rate > 0.
+        #f5.rate = 0.
         try:
             from keras.utils import plot_model
             plot_model(keras_model, to_file="rai.png")
@@ -492,6 +461,7 @@ class TestDeepFM(TestCase):
         pooler = GlobalMaxPool1D()(word_conv)
         word_dense_layer = Dense(units=10, activation='relu')(pooler)
         word_final_layer = Dense(units=embed_dim, name='textfeats')(word_dense_layer)
+        word_final_layer = Reshape( (1, 10))(word_final_layer)
 
         # collect relevant valuesfor deepFM model
         features = [['cat1'], ['cat2'], ['real1'], ['offset_'], ['textseq']]

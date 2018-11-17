@@ -94,7 +94,6 @@ class DeepFM():
         if deepin_feature == None:
             self.deepin_feature = [False]*len(feature_dimensions) #default to all categoricals
         else:
-            print len(deepin_feature),len(feature_dimensions)
             assert len(deepin_feature) == len(feature_dimensions), "must provide boolean list w/ length=#features"
             self.deepin_feature = deepin_feature
 
@@ -169,18 +168,23 @@ class DeepFM():
                           embeddings_initializer='normal',
                           mask_zero = self.mask_zero,
                           name="embedding_{}".format(self.feature_names[feature_index]))(feature)
+
             if self.dropout_input > 0:
                 ftemp_filtered = SpatialDropout1D(self.dropout_input,
                     name='dropout_embedding_{}'.format(self.feature_names[feature_index]))(ftemp)
             else:
                 ftemp_filtered = ftemp
             if feature_cols > 1:
-                ftemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_embedding_{}".format(self.feature_names[feature_index]))(ftemp_filtered)
-                #if self.mask_zero ==True:
+                ftemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True),
+                                        #output_shape=(self.embedding_dimensions,),
+                                        name="avg_embedding_{}".format(self.feature_names[feature_index]))(ftemp_filtered)
             if self.mask_zero:
-                ftemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
-            factor = Reshape((self.embedding_dimensions,),
-                name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
+                ftemp_filtered = Lambda(lambda x: x,
+                                        #output_shape=(self.embedding_dimensions,),
+                                        name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
+            factor = ftemp_filtered
+            #factor = Reshape((self.embedding_dimensions,1),
+            #                 name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
             factor=None
         #bias term for categ. feature
@@ -200,7 +204,8 @@ class DeepFM():
             if feature_cols > 1:
                 btemp_filtered = Lambda(lambda x: K.sum(x, axis=1, keepdims=True), name="avg_bias_{}".format(self.feature_names[feature_index]))(btemp_filtered)
             if self.mask_zero ==True:
-                btemp_filtered = Lambda(lambda x: x, output_shape=lambda s:s,name='unmasker_bias_{}'.format(self.feature_names[feature_index]))(btemp_filtered)
+                btemp_filtered = Lambda(lambda x: x, name='unmasker_bias_{}'.format(self.feature_names[feature_index]))(btemp_filtered)
+
             bias = Reshape((1,),
                            name="bias_{}_reshaped".format(self.feature_names[feature_index]))(btemp_filtered)
         else:
@@ -224,6 +229,9 @@ class DeepFM():
                   kernel_regularizer=l2(self.l2_factors),
                   kernel_initializer='normal',
                   name="embedding_{}".format(self.feature_names[feature_index]))(feature_filtered)
+
+            factor = Reshape((1, self.embedding_dimensions),
+                             name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(factor)
 
         else:
             factor=None
@@ -278,68 +286,118 @@ class DeepFM():
         inputs =  [None] * len(self.feature_names)
         biases =  [None] * len(self.feature_names)
         factors = [None] * len(self.feature_names)
+
         interactions = []
-
         for i, groups in enumerate(self.deep_weight_groups):
-
+            dot_products = []
             for grp, (feature_i, feature_j) in enumerate(groups):
                 #factor_i = factors[self.feature_names.index(feature_i)]
                 index_i = self.feature_names.index(feature_i)
-                factor_i = self.build_variables(index_i, inputs, biases, factors)
+                factor_i = self.build_variables(index_i, inputs, biases, factors) # Does not create the variable if it already exists
+
                 if isinstance(feature_j, str) or isinstance(feature_j, unicode):
                     #factor_j = factors[ self.feature_names.index(feature_j) ]
                     index_j = self.feature_names.index(feature_j)
-                    factor_j = self.build_variables(index_j, inputs, biases, factors)
+                    factor_j = self.build_variables(index_j, inputs, biases, factors) # Does not create the variable if it already exists
                     name_j = feature_j
+
+                    if (factor_i  is not None) and (factor_j is not None): # Check for backwards compatibility
+                        dp = Dot(axes=-1, name="interaction_{}x{}".format(feature_i, name_j))
+                        dpa = dp([factor_i, factor_j])
+                        dot_products.append(dpa)
+
                 elif isinstance(feature_j, list):
+
                     name_j = "grp_{}".format("{:03d}".format(i))
-
                     if collapsed_type is not None:
-                        #constant = np.zeros( (self.embedding_dimensions,) )
-                        #k_constant = K.constant(constant, shape=(self.embedding_dimensions,))
-
+                        # Collapsed
                         collapsed_input = Input( shape=(1, ), name="input_{}".format(name_j))
                         embedding = Embedding(input_dim=collapsed_type,
                                               name = "embedding_{}".format(name_j),
                                               output_dim=self.embedding_dimensions)(collapsed_input)
-
+                        #reshaped_embedding = Reshape( (1,self.embedding_dimensions,1), name="reshape_{}".format(name_j) )(embedding)
                         inputs.append (collapsed_input)
                         factor_j = embedding
+
+                        dp = Dot(axes=-1, name="interaction_{}x{}".format(index_i, name_j))
+                        dpa = dp([factor_i, factor_j])
+                        dot_products.append(dpa)
                     else:
+                        #Not collapsed
+                        factors_names_j = []
                         factors_j = []
                         for feature_j_n in feature_j:
-                            #factor =  factors[ self.feature_names.index(feature_j_n) ]
                             index_j_n = self.feature_names.index(feature_j_n)
-                            factor = self.build_variables(index_j_n, inputs, biases, factors)
-
+                            factor = self.build_variables(index_j_n, inputs, biases, factors) # Does not create the variable if it already exists
                             if deep_out:
-                                if self.dropout_layer > 0:
-                                    factor = Dropout(self.dropout_layer, name="dropout_terms_{}_{}".format(feature_j_n, i))(factor)
                                 factor = Scaler(name="scaler_{}_{}".format(feature_j_n, i), constraint=deep_kernel_constraint)(factor)
-                            factors_j.append(factor)
+                            factor_j = factor
+                            factors_j.append(factor_j)
+                            factors_names_j.append(feature_j_n)
+                            """
+                            dp = Dot(axes=-1, name="interaction_{}x{}".format(feature_i, feature_j_n))
+                            dpa = dp([factor_i, factor_j])
+                            dot_products.append(dpa)
+                            """
+
 
                         if len(factors_j) == 1:
-                            factor_j = factors_j[0]
+                            dp = Dot(axes=-1, name="interaction_{}x{}".format(feature_i, factors_names_j[0]))
+                            dpa = dp([factor_i, factors_j[0]])
+                            dot_products.append(dpa)
                         else:
-                            factor_j = Add(name=name_j)(factors_j) # collapse them
+                            concatenated = Concatenate(name="concatenated_terms_{}".format(name_j), axis=1)(factors_j)
+                            if self.dropout_layer > 0:
+                                assert concatenated.shape[1] == len(factors_j)
+                                assert concatenated.shape[2] ==  self.embedding_dimensions
+                                concatenated = Dropout(self.dropout_layer, name="dropout_{}".format(name_j),
+                                                noise_shape=(None, len(factors_j), 1)
+                                                )(concatenated) #https://github.com/keras-team/keras/issues/7290
+                            added = Lambda(lambda x: K.sum(x, keepdims=True, axis=1), name="sum_{}".format(name_j))(concatenated)
+                            #factor_j = Reshape((1, self.embedding_dimensions))(added)
 
-                if factor_i is None:
-                    print "Warning... {} does not have an embedding".format(feature_i)
-                    continue
-                if factor_j is None:
-                    print "Warning... {} does not have an embedding".format(feature_j)
-                    continue
+                            dp = Dot(axes=-1, name="interaction_{}x{}".format(feature_i, name_j))
+                            dpa = dp([factor_i, added])
+                            dot_products.append(dpa)
 
-                dot_product = Dot(axes=-1, name="interaction_{}X{}".format(feature_i, name_j))
-                interactions.append(dot_product([factor_i,factor_j]))
+
+
+
+            interactions.append(dot_products)
+
+
+        to_sum = []
+        for i, dot_products in enumerate(interactions):
+            if len(dot_products) >= 2:
+                if deep_out:
+                    concatenated = Concatenate(name="factors_term{}".format(i))(dot_products)
+                    if self.dropout_layer > 0:
+                        concatenated = Dropout(self.dropout_layer, name="factors_dropout_{}".format(i))(concatenated)
+                    added = Dense(units=1,
+                                  name="factors_weight{}".format(i),
+                                  use_bias=self.deep_out_bias,
+                                  activation=self.deep_out_activation,
+                                  kernel_initializer='normal',
+                                  bias_initializer='normal',
+                                  kernel_regularizer=l2(self.l2_deep),
+                                  bias_regularizer=l2(self.l2_deep),
+                                  kernel_constraint=deep_kernel_constraint
+                                  )(concatenated)
+                else:
+                    added = Add(name="factors_weight{}".format(i))(dot_products)
+                to_sum.append( added )
+            elif len(dot_products) == 1:
+                to_sum.append(dot_products[0])
+
 
         # Add whatever you have now:
-        if len(interactions)==0:
+        if len(to_sum)==0:
             two_way = None
-        elif len(interactions)==1:
-            two_way =  interactions[0:]
+        elif len(to_sum)==1:
+            two_way =  to_sum[0]
         else:
-            two_way = Add(name="factors_term")(interactions)
+            two_way = Add(name="factors_term")(to_sum)
+
 
         return inputs, biases, two_way
 
@@ -415,6 +473,7 @@ class DeepFM():
 
         if self.obj=='ns':
             output = Reshape((1,),name='final_output')(Activation('sigmoid', name="sigmoid")(output_layer))
+            #output = Activation('sigmoid', name="sigmoid")(output_layer)
         elif self.obj=='nce':
             noise_probs = Input(batch_shape=(None, 1), name='noise_probs')
             features.append(noise_probs)
