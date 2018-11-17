@@ -32,6 +32,7 @@
 \usepackage[most]{tcolorbox}
 \usepackage{amsmath}
 \usepackage{natbib}
+\setlength{\bibsep}{0pt plus 0.3ex}  %% Reduce size of bibliography
 
 \usepackage{upgreek}
 
@@ -64,7 +65,7 @@
 \setcounter{secnumdepth}{2}
 
 
-\title{Feat2Vec for Embedding Data with Multiple Features Types}
+\title{Beyond Word Embeddings: Representations for Multi-modal Data}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -116,7 +117,7 @@
 \begin{abstract}
 Methods that calculate dense vector representations for text have proven to be very successful for knowledge representation.
 %Surprisingly, very little work has focused on methods for structured datasets where there is more than one type of feature---that is, datasets that have arbitrary features beyond words or images.
-We study how to estimate  dense representations when multiple feature types (e.g., text, continuous, categorical) exist within a dataset.
+We study how to estimate  dense representations for multi-modal data (e.g., text, continuous, categorical).
 We propose  $\Feat2Vec$  as a novel model that supports  supervised learning when explicit labels are available, and self-supervised learning when there are no labels.
 $\Feat2Vec$ calculates embeddings for data with multiple feature types enforcing that all embeddings exist in a common space.
 %In the supervised case, we show that our method has advantages over recently proposed methods;
@@ -377,10 +378,6 @@ Factorization Machine is equivalent to the popular Matrix Factorization algorith
 
 % $\Feat2Vec$ extends Factorization Machine in two ways:
 % it allows grouping of features and it enables arbitrary feature extraction functions.
-
-Principal Component Analysis is a common method to learn embeddings of individual dimensions of  data.
-Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions when a group of dimensions need to be treated as a single group.
-For example, consider a dataset that has a textual description of items--- we may be interested in having an embedding for the feature group (the entire description) instead of the individual words.
 In this section we describe how $\Feat2Vec$  learns embeddings of feature groups.
 
 \subsection{Model}
@@ -514,10 +511,14 @@ However, $\Feat2Vec$ is not limited to bag of words features, and we  demonstrat
 
 
 The structure of $\Feat2Vec$ model significantly expands previously published models.
-For example, it improves Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and feature extraction functions.
+For example, Principal Component Analysis is a common method to learn embeddings of individual dimensions of  data.
+Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions when a group of dimensions need to be treated as a single group.
+For example, consider a dataset that has a textual description of items--- we may be interested in having an embedding for the feature group (the entire description) instead of the individual words.
+$\Feat2Vec$ extends Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and we use feature extraction functions.
 StarSpace~\cite{wu2017starspace}  introduces feature groups (called entities in their paper), but constrains  them to be ``bags of features'', is supervised, and limited to two feature types.
-In contrast, $\Feat2Vec$ allows continuous features.
-Our model does not require the user to assign a feature as a label, and we propose a self-supervised learning algorithm.
+In contrast, $\Feat2Vec$ allows continuous features, and does not require the user to assign a feature as a label; additionally, we propose a self-supervised learning algorithm.
+
+
 
 %However, it would be straightforward to combine this approach with  \algoralph{}. This is not explored in this work.
 
@@ -1030,6 +1031,7 @@ Though further experimentation is necessary, we believe that our results are an 
 
 
 {
+\footnotesize
 \footnotesize
 \bibliographystyle{aaai}
 \bibliography{joseg}
