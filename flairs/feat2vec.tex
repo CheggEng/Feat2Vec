@@ -65,7 +65,7 @@
 \setcounter{secnumdepth}{2}
 
 
-\title{Beyond Word Embeddings: Representations for Multi-modal Data}
+\title{Beyond Word Embeddings:\\ Dense Representations for Multi-modal Data}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -78,14 +78,14 @@
 % author name.
 
 \author{
-  David S.~Hippocampus
+Anonymized Author(s)
   % \thanks{Use footnote for providing further
   %   information about author (webpage, alternative
   %   address)---\emph{not} for acknowledging funding agencies.} \\
-  Department of Computer Science\\
-  Cranberry-Lemon University\\
-  Pittsburgh, PA 15213 \\
-  \texttt{hippo@cs.cranberry-lemon.edu} \\
+Department\\
+  Institution\\
+Place\\
+  \texttt{some@email.com} \\
   %% examples of more authors
   %% \And
   %% Coauthor \\
@@ -439,7 +439,7 @@ Any neural function that outputs a $r$-dimensional vector could be plugged into 
 
 Figure~\ref{fig:architecture} compares existing factorization methods  with our novel model in diagram form.
 %To graphically demonstrate the difference between Factorization Machine and
-Figure~\ref{fig:factorization_machine} shows a Factorization Machine~\cite{rendle2010factorization} that embeds each feature .
+Figure~\ref{fig:factorization_machine} shows a Factorization Machine~\cite{rendle2010factorization} that embeds each feature.
 In this example, Figure~\ref{fig:feat2vec}  shows $\Feat2Vec$ with two feature groups:
 the first group only has a single feature which is projected to an embedding (just like matrix factorization);
 but the second group has multiple features, which are together projected to a single embedding.
@@ -517,7 +517,7 @@ Although structured regularization techniques exist~\cite{jenatton2010structured
 %For example, consider a dataset that has a textual description of items--- we may be interested in having an embedding for the feature group (the entire description) instead of the individual words.
 $\Feat2Vec$ extends Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and we use feature extraction functions.
 StarSpace~\cite{wu2017starspace}  introduces feature groups (called entities in their paper), but is only compatible with supervised tasks, constrains  groups to be ``bags of features'', and is limited to two feature types.
-In contrast, $\Feat2Vec$ allows any number of groups to enter the model, and is compatible with diverse types of data, such as continuous features or ordered sequences.
+In contrast, $\Feat2Vec$ allows any number of groups to enter the model, and is compatible with multi-modal data, such as continuous features or ordered sequences.
 
 Additionally, we introduce a new implicit sampling method that enables learning self-supervised embeddings for feature groups.
 % replaced n <- p;  because we use p for probabilities
@@ -608,7 +608,7 @@ For each positive record, we generate $k$ negative labels using the 2-step algor
 \Function{Feat2Vec\_Sample}{$S^+, k, \alpha_1, \alpha_2$}
 \State $S^-  \leftarrow \emptyset $
 \For {$\vect{x}^{\,+} \in S^+ $}
-	\State Draw a random feature group $\upkappa_i  \sim \q_1(\{\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1) $
+	\State    $\upkappa_i  \sim \q_1(\{\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1) $	\Comment Draw a random \begin{flushright} feature group\end{flushright}
 	\For {$j \in \{1,\ldots,k\}$}
 			\State $\vect{x}^{\,-}  \leftarrow \vect{x}^{\,+} $ \Comment  set initially to be equal to the \begin{flushright}positive sample\end{flushright}
 			\State Draw a random entity  $\tilde x \sim \q_2(\mathrm{X}_{ \upkappa_i },\alpha_2)$
@@ -850,8 +850,8 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 %\subsubsection{Does $\Feat2Vec$ enable better embeddings?}
 The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
 Since our algorithm is designed for multi-modal data, we generalize this task for multiple feature types as follows.
-Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we have trained a self-supervised $\Feat2Vec$ model on, we choose one group $g_i$ as the ``target'' and a group $g_j$ as the predictor.
-Given a held-out instance, we rank all possible values of the target group by cosine similarity to the predictor group's embedding $\phi_j( \vect{x}_{\vect{\upkappa}_j})$ for that instance. We then retrieve the ranking of the actual target entity for the held-out instance in the test dataset.
+Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we choose one group $g_y$ as the ``target'',  and aggregate the remaining groups as the predictor ($g_x$).
+Given a held-out instance, we rank all possible values of the target group by cosine similarity to the predictor group's embedding $\phi_x( \vect{x}_{\vect{\upkappa}_x})$ for that instance. We then retrieve the ranking of the actual target entity for the held-out instance in the test dataset.
 Rankings are evaluated according to  their  mean percentile rank (MPR):
 $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the the target entity rank for instance $i$.
 A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric.
