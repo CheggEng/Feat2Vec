@@ -714,19 +714,22 @@ In other words, it optimizes $n$ multi-label classifiers, where each classifier 
 \label{sec:targeted embeddings}
 
 We now address our working hypotheses for evaluating supervised embeddings.
+We evaluate  on the Yelp dataset\footnote{https://www.yelp.com/dataset/challenge}, which consists of 4.7 million reviews of restaurants.
 %To avoid overfitting, for all our experiments we define a training, development and a test.
-For our experiment, we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters.
+For all of our experiments, we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters.
 %Since these datasets are large and require significant time to train on an Nvidia K80 GPU cluster, we report results on only a single training-test split.
 %For the multi-label classification task in \ref{sec:coldstart} we predict a probability for each document-label pair and use an evaluation metric called Area Under the Curve (AUC) of the Receiver Operating Characteristic (ROC).
 %A caveat of our evaluation strategy is that we could be underestimating the performance of our models---there is a small probability that  the sampled negatives labels are false negatives.
 %However, since we apply the same evaluation strategy consistently across our methods and baselines, the relative difference of the AUC is meaningful.
 %We choose the AUC as a metric because it is popular for both classification and ranking problems.
-We use mean squared error (MSE) as the evaluation metric for a rating prediction task.
-In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
-We share most of the code for the experiments online\footnote{\url{https://goo.gl/zEQBiA}} for reproducibility.
+We use mean squared error (MSE) as the evaluation metric for predicting ratings in the Yelp dataset.
+%In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
+We share most of the code for the experiments online\footnote{\url{https://goo.gl/zEQBiA}}.
 
 % Table~\ref{deepout-datasetsl} provides descriptive statistics of the datasets that we consider.
-For our feature extraction function $\phi$ for text, we use  a Convolutional Neural Network (CNN) that  has been shown to be effective for natural language tasks~\cite{DBLP:journals/corr/KalchbrennerGB14,tagspace}.
+We build 3 feature groups for this task: item (restaurant) identifiers, user identifiers, and review text.
+We use a standard linear (Equation \ref{eq:fully_connected}) extraction functions $\phi$  on each one-hot encoding representation of users and items.
+For our feature extraction function for review text, we use  a Convolutional Neural Network (CNN), which  has been shown to be effective for natural language tasks~\cite{DBLP:journals/corr/KalchbrennerGB14,tagspace}.
 %In Appendix~\ref{appendix:cnndetails} we describe this network  and its hyper-parameters.
 Instead of tuning the hyper-parameters, we follow previously published  guidelines~\cite{zhang2015sensitivity}.
 
@@ -828,12 +831,10 @@ Factorization) \\
 
 \subsubsection{Comparison with alternative CNN-based text factorization}
 \label{ratingpred}
-We now compare  with a method called DeepCoNN, a deep network specifically designed for  incorporating text into matrix factorization~\cite{deepconn}---which reportedly,  is the state of the art for predicting customer ratings when textual reviews are available.
-To make results comparables, the \algoralphabbr{} experiments use the same feature extraction function used by DeepCoNN.
-We evaluate  on the Yelp dataset\footnote{https://www.yelp.com/dataset/challenge}, which consists of 4.7 million reviews of restaurants.
+We now compare  with a method called DeepCoNN, a deep network specifically designed for  incorporating text into matrix factorization~\cite{deepconn}, a state of the art method for predicting customer ratings when text reviews are available.
+To make results comparable, the \algoralphabbr{} experiments use the same feature extraction function used by DeepCoNN.
 For each user-item pair, DeepCoNN concatenates the text from all reviews for that item and all reviews by that user.
-The concatenated text is fed into a feature extraction function followed by a factorization machine.
-For $\Feat2Vec$, we build 3 feature groups: item (restaurant) identifiers, user identifiers, and review text.
+The concatenated text is then fed into a feature extraction function for each entity, followed by a factorization machine.
 
 
 Table \ref{ratingpredtable} compares our methods to  DeepCoNN's published results  because a public implementation is not available.
