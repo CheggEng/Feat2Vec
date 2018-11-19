@@ -280,7 +280,7 @@ class TestDeepFM(TestCase):
         feature_names = ["f1", "f2", "f3", "f5", "f6", "f7", "f8",
                          "f9", "f10", "f11"]
 
-        fm = DeepFM(model_features=[["f1", ],
+        fm = DeepFM(model_features=[["f1" ],
                                     ["f2"],
                                     [10],
                                     [10],

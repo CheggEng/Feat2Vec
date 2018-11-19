@@ -183,7 +183,7 @@ class DeepFM():
                                         #output_shape=(self.embedding_dimensions,),
                                         name='unmasker_{}'.format(self.feature_names[feature_index]))(ftemp_filtered)
             factor = ftemp_filtered
-            #factor = Reshape((self.embedding_dimensions,1),
+            #factor = Reshape((self.embedding_dimensions,),
             #                 name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(ftemp_filtered)
         else:
             factor=None
@@ -230,9 +230,6 @@ class DeepFM():
                   kernel_initializer='normal',
                   name="embedding_{}".format(self.feature_names[feature_index]))(feature_filtered)
 
-            factor = Reshape((1, self.embedding_dimensions),
-                             name="embedding_{}_reshaped".format(self.feature_names[feature_index]))(factor)
-
         else:
             factor=None
         if not self.embeddings_only[feature_index]:
@@ -246,7 +243,7 @@ class DeepFM():
         return feature, factor, bias
 
 
-    def build_variables(self, i,  inputs, biases, factors):
+    def build_variables(self, i,  inputs, biases, factors, flattened_factors):
 
         if inputs[i] is None: # The input hasn't been created, so we must do so:
             #create bias/embeddings for each feature
@@ -270,22 +267,35 @@ class DeepFM():
 
             # Save layers:
             inputs[i] = feature
-            factors[i] = factor
             biases[i] = bias
 
         else: # We've created the input, so no need to do anything:
             factor = factors[i]
 
-        return factor
+        # Make sure factor is (batch_size, num_words, embeddings) and not simply (batch_size, embeddings):
+        if factor is not None:
+            if (len(factor.shape) < 3):
+                if factors[i] is None:
+                    factors[i] = Reshape((1, self.embedding_dimensions),
+                                         name="embedding_{}_reshaped".format(self.feature_names[i]))(factor)
+                flattened_factors[i] = factor
+            else:
+                factors[i] = factor
+                if flattened_factors[i] is None:
+                    flattened_factors[i] = Reshape((self.embedding_dimensions,),
+                                                   name="embedding_{}_flattened".format(self.feature_names[i]))(factor)
+
+        return flattened_factors[i]
 
 
 
     def two_way_interactions(self, collapsed_type, deep_out, deep_kernel_constraint):
         # Calculate interactions with a dot product
 
-        inputs =  [None] * len(self.feature_names)
-        biases =  [None] * len(self.feature_names)
+        inputs  =  [None] * len(self.feature_names)
+        biases  =  [None] * len(self.feature_names)
         factors = [None] * len(self.feature_names)
+        flattened_factors = [None] * len(self.feature_names)
 
         interactions = []
         for i, groups in enumerate(self.deep_weight_groups):
@@ -293,12 +303,12 @@ class DeepFM():
             for grp, (feature_i, feature_j) in enumerate(groups):
                 #factor_i = factors[self.feature_names.index(feature_i)]
                 index_i = self.feature_names.index(feature_i)
-                factor_i = self.build_variables(index_i, inputs, biases, factors) # Does not create the variable if it already exists
+                factor_i = self.build_variables(index_i, inputs, biases, factors, flattened_factors) # Does not create the variable if it already exists
 
                 if isinstance(feature_j, str) or isinstance(feature_j, unicode):
                     #factor_j = factors[ self.feature_names.index(feature_j) ]
                     index_j = self.feature_names.index(feature_j)
-                    factor_j = self.build_variables(index_j, inputs, biases, factors) # Does not create the variable if it already exists
+                    factor_j = self.build_variables(index_j, inputs, biases, factors, flattened_factors) # Does not create the variable if it already exists
                     name_j = feature_j
 
                     if (factor_i  is not None) and (factor_j is not None): # Check for backwards compatibility
@@ -328,9 +338,12 @@ class DeepFM():
                         factors_j = []
                         for feature_j_n in feature_j:
                             index_j_n = self.feature_names.index(feature_j_n)
-                            factor = self.build_variables(index_j_n, inputs, biases, factors) # Does not create the variable if it already exists
+                            self.build_variables(index_j_n, inputs, biases, factors, flattened_factors) # Does not create the variable if it already exists
+                            factor = factors[index_j_n]
                             if deep_out:
                                 factor = Scaler(name="scaler_{}_{}".format(feature_j_n, i), constraint=deep_kernel_constraint)(factor)
+                            #factor = Reshape( (1, self.embedding_dimensions))(factor)
+
                             factor_j = factor
                             factors_j.append(factor_j)
                             factors_names_j.append(feature_j_n)
@@ -354,7 +367,9 @@ class DeepFM():
                                                 noise_shape=(None, len(factors_j), 1)
                                                 )(concatenated) #https://github.com/keras-team/keras/issues/7290
                             added = Lambda(lambda x: K.sum(x, keepdims=True, axis=1), name="sum_{}".format(name_j))(concatenated)
-                            #factor_j = Reshape((1, self.embedding_dimensions))(added)
+
+
+                            added = Reshape((self.embedding_dimensions,), name="flatten_{}".format(name_j))(added)
 
                             dp = Dot(axes=-1, name="interaction_{}x{}".format(feature_i, name_j))
                             dpa = dp([factor_i, added])
