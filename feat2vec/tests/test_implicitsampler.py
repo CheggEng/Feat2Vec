@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
-import implicitsampler
 from unittest import TestCase
-from implicitsampler import SamplingStrategy, ImplicitSampler
+from feat2vec import ImplicitSampler
 
 np.random.seed(1)
 #generate some data
