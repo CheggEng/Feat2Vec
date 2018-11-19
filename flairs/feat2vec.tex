@@ -556,9 +556,16 @@ For labeling and classification tasks, we optimize the binary cross-entropy.
 % a general-purpose optimization algorithm called ADAM~\cite{kingma2014adam} that needs no tuning of  gradient  step sizes.
 
 It is straightforward to optimize Equation~\ref{eq:learning} directly.
-In the multi-class scenario, if the number of labels is very large, it is common practice to use a binary classifier with implicit sampling~\cite{samplingnotes}.
+Typically, this loss will be for a prediction task, and involve at least two feature groups---one of the feature groups is the target label that we want to predict, such as rating, and the other group(s) is the input from which we want to make the prediction, such as review text.
+
+Consider a target feature group $g_i$ that exists in a high dimensional space.
+This could be a one-hot encoding of a categorical variable with a large number of possible values.
+In such a scenario, it is overwhelmingly costly to feed the model all negative labels, particularly if the model is sparse.
+In these cases, we may instead use a binary classifier with implicit sampling~\cite{samplingnotes}.
+In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
+%$\Word2Vec$ makes use of an algorithm called Negative Sampling, that has little theoretical guarantees~\cite{samplingnotes}.
 %For the multi-label classification tasks, we use $\Feat2Vec$ with a binary output.
-In this case, we would have at least two feature groups---one of the feature groups is the target label that we want to predict, such as rating, and the other group(s) is the input from which we want to make the prediction, such as review text.
+
 %The output indicates whether the label is associated in the data with the input ($y=1$), or not ($y=0$).
 %The datasets we use for our labeling experiments only contains positive labels, thus for each training example we sample $k$ negative labels for each positive label.
 %It is typical to use one of the following negative sampling strategies according to the best validation error, in each case excluding the actual positive labels for each training example -- (i) uniformly from all possible labels, or (ii)  from the empirical distributions of positive labels~\cite{improving_pairwise_learning}.
@@ -574,21 +581,14 @@ We now discuss how $\Feat2Vec$ can be used to learn embeddings in an self-superv
 
 The training dataset for a $\Feat2Vec$ model consists of the observed data.
 In natural language, these would be documents written by humans, along with document metadata.
-Since Feat2Vec~(Equation \ref{eq:deepfm}) requires positive and negative examples, we also need to supply  unobserved data as negative examples.
-Consider a feature group $\vect{\upkappa}_i$ that exists in very high dimensional space.
-This could be a one-hot encoding of a categorical variable with a large number of possible values.
-In such a scenario, it is overwhelmingly costly to feed the model all negative labels, particularly if the model is sparse.
-
-A shortcut around this is implicit sampling, where instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
-%$\Word2Vec$ makes use of an algorithm called Negative Sampling, that has little theoretical guarantees~\cite{samplingnotes}.
+Since self-supervised Feat2Vec will require positive and negative examples during training, we supply unobserved data as negative examples.
 For example, $\Word2Vec$  samples a negative observation from a noise distribution $\q_{w2v}$ that is proportional to the empirical frequency of a word in the training data.
 
 We introduce a new implicit sampling method that enables learning self-supervised embeddings for feature groups.
-We can learn the correlation of feature groups within a dataset by imputing negative labels, simply by generating unobserved records as our negative samples.
 % replaced n <- p;  because we use p for probabilities
 Unlike $\Word2Vec$, we do not constraint features types to be words.
 %Features groups can be  individual columns in a data matrix,  but they need not to be.
-Instead, by grouping subfeatures using the parameter $\vect{\pmb{\upkappa}}$ in Equation \ref{eq:deepfm}, the model can reason on more abstract entities in the data. By entity, we mean a particular feature group value.
+Instead, by grouping features using the parameter $\vect{\pmb{\upkappa}}$ in Equation \ref{eq:deepfm}, the model can reason on more abstract entities in the data. By entity, we mean a particular feature group value.
 For example, in our experiments on a movie dataset, we define a ``genre'' feature group, where we  group non-mutually exclusive indicators for movie genres, including comedy, action, and drama films.
 %For more involved feature types (e.g., an image),  one would need to  define a function $\phi$ that builds intermediate layers  to map the entity to an embedding .
 
@@ -651,6 +651,7 @@ P_{\q_2}(x|\mathrm{X}_{\upkappa_i},\alpha_2)  \
 \end{equation}
 Here, $\operatorname{count}(x)$ is the number of times a value $x$ of feature group $i$ appeared in the training dataset $S^+$ , and $\alpha_2$ is again a flattening hyperparameter.
 
+
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
 The literature offers two solutions:
 in the Negative Sampling of $\Word2Vec$, duplicate negative samples are ignored~\cite{samplingnotes}.
@@ -669,7 +670,6 @@ This would introduce an astronomical amount of computation and greatly increase 
 Instead, we appeal to the work of \citet{fastnnlang},
 who show that in the context of language models setting the $Z_{\vec{x}}=1$ in advance does not change the performance of the model.
 The intuition is that if the underlying model has enough free parameters, it will effectively learn the probabilities itself, since systemic under/over prediction of probabilities will result in penalties on the loss function.
-
 %change notation to be in terms of phi and w the weights
 Written explicitly, the new structural probability model is:
 \begin{equation}
@@ -843,15 +843,15 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 
 \subsection{Self-Supervised Embeddings}
 \label{sec:unsupexp}
-\subsubsection{Does $\Feat2Vec$ enable better embeddings?}
+%\subsubsection{Does $\Feat2Vec$ enable better embeddings?}
 The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
 Since our algorithm is designed for multi-modal data, we generalize this task for multiple feature types as follows.
-Given a dataset with $k$ feature groups $x_1,x_2\dots x_k$, we choose a single categorical feature as the `target'. 
-Given a held-out instance, we compute the average of the embeddings vectors $\vec{\phi}$ of all the features except the target $\sum^{k-1}_{i=0}\vec{\phi}_i$ and rank all possible values of the target feature by cosine similarity. 
-The rankings are evaluated with according to  their  mean percentile rank (MPR).
+Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we have trained a $\Feat2Vec$ model on, we choose a single group $g_i$ as the ``target'' and a group $g_j$ as the predictor.
+Given a held-out instance, we rank all possible values of the target group by cosine similarity to the source group's embedding $\phi_j( \vect{x}_{\vect{\upkappa}_j})$ for that instance. We then retrieve the ranking of the actual target entity in the test dataset.
+Rankings are evaluated with according to  their  mean percentile rank (MPR):
 $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
 A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric.
-We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings.
+We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings. In our experiments, we set $\alpha_1=.25$, $\alpha_2=0.75$, and $k=5$. We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
 %In particular, in the movie dataset we  compare the similarity of movie directors to those of actors who were cast in the same film for a left-out set of films.
 %For our educational dataset, we compare rankings of textbooks by evaluating the similarity of textbook and user embeddings.
  %See the appendix \S\ref{sec:imdbexp} for further details on the experimental setup.
@@ -866,14 +866,14 @@ We will use this method to compare the performance of $\Feat2Vec$ algorithm and 
 %\item The final metric we consider is top 1 precision, or the percent of test examples we successfully rank the entity as the top prediction.
 %\end{itemize}
 
-
-\subsubsection{Datasets}
+%
+% \subsubsection{Datasets}
 
 \paragraph{Movies}
 The Internet Movie Database (IMDB) is a publicly available dataset\footnote{\href{http://www.imdb.com/interfaces/}{http://www.imdb.com/interfaces/}} of information related to films, television programs and video games.
-In this paper, we focus only on data on its 465,136 movies.
+We limit our experiments to data on its 465,136 movies.
 %Table~\ref{tab:features} in the appendix (\S\ref{sec:imdbexp}) summarizes the feature types we use.
-The dataset contains information on writers, directors, and principal cast members attached to each film, along with film metadata.
+Table \ref{tab:features} summarizes our feature groups. For groups with multiple categories, we use a ``Bag of categories'' approach. For example, we sum embeddings of individual actors such as Tom Cruise to produce a single ``actor'' feature group embedding associated with a title.
 
 
 \paragraph{Education}
@@ -891,19 +891,39 @@ We use the Yelp dataset from our supervised experiments to evaluate the efficacy
 
 
 
+\begin{table}[htb]
+\footnotesize
+\caption{IMDB Feature Groups}
+\label{tab:features}
+\begin{tabular}{@{}lllp{6cm}@{}}
+\toprule
+% Created with: https://www.tablesgenerator.com/
+Feature Type Name      & Type              & \# of feats.  \\ \midrule
+Runtime (minutes)       & Real-valued       & 1          \\
+IMDB rating (0-10)      & Real-valued       & 1          \\
+\# of rating votes & Real-valued       & 1           \\
+Is adult film?          & Boolean           & 2         \\
+Movie releaes year      & Categorical          & 271      \\
+Movie title             & Text      & 165,471       \\
+Directors               & Bag of categories & 174,382                          \\
+Genres                  & Bag of categories & 28                  \\
+Writers                 & Bag of categories & 244,241             \\
+Principal actors & Bag of categories & 1,104,280      \\\bottomrule
+\end{tabular}
+\end{table}
 
 
 
 \subsubsection{Results}
 
-After training IMDB embeddings, we use the cast members associated with movies in the test set and  attempt to predict the actual director of the film.
-We take the sum of the cast member embeddings, and rank the directors by cosine similarity of their embeddings to the summed cast member vector.
-If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
+After training IMDB embeddings, we use cast members associated with movies in the test set and predict the actual director of the film.
+We rank directors by cosine similarity of their embedding to the title's cast member feature group embedding.
+%If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
 For the educational dataset, we directly  retrieve the most similar textbooks to the user embedding.
 
-Table \ref{tab:eval} presents the results from our evaluation.
-$\Feat2Vec$ sizably outperforms CBOW in the MPR metric.
-In fact,  $\Feat2Vec$ predicts the actual director 2.43\% of the times, while CBOW only does so 1.26\% of the time, making our approach almost 2 times better in terms of Top-1 Precision metric.
+Table \ref{tab:eval} presents our evaluation results.
+$\Feat2Vec$ outperforms CBOW in the MPR metric.
+Additionally, while CBOW predicts the actual director 1.26\% of the times, $\Feat2Vec$ does so 2.43\% of the time, a 92\% improvement in Top-1 Precision over CBOW.
 %We explore in greater detail the distribution of the rankings in the appendix in \S\ref{sec:imdbdist}.
 
 
@@ -928,11 +948,11 @@ Educational & 25.2\% & 29.2\% \\
 %^We can probably wordsmith this
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
 %We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
-We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$, since our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close, while $\Word2Vec$ will treat two differing ratings tokens as completely different entities.
-We evaluate the prediction of the real-valued rating of movies (scale is 0 to 10) in the test dataset by choosing the IMDB rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
- $\Feat2Vec$ scores an MSE of 6.6, while  $\Word2Vec$  scores 9.3.
+We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$. Our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close, while $\Word2Vec$ will treat two numerically different ratings as completely different entities.
+We evaluate the prediction of test dataset ratings by choosing the rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
+ $\Feat2Vec$ scores an MSE of 6.6, while  $\Word2Vec$ (CBOW)  scores 9.3.
 
-We also use the Yelp dataset, predicting the most similar rating embedding to the review text embedding produced by Feat2Vec, Word2Vec (CBOW), and Doc2Vec (DM).
+We also use the Yelp dataset, predicting the most similar rating embedding to the review text embeddings produced by Feat2Vec, Word2Vec (CBOW), and Doc2Vec (DM).
 %Doc2Vec is only used for the Yelp dataset because there is no clear ``document'' in the IMDB dataset, while in the Yelp dataset the review text is a natural candidate.
 For Word2Vec and Doc2Vec, the review text embedding is the average of word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
 %As a baseline, we compare our metrics to random predictions using the empirical distribution of ratings in the data. %, the best feasible non-personalized prediction.
@@ -1013,9 +1033,9 @@ In the supervised setting,  $\Feat2Vec$ is able to calculate embeddings for pass
 %This suggests that the need for  ad-hoc networks should be situated in relationship to the improvements over a general-purpose method.
 
 %In the self-supervised setting, $\Feat2Vec$'s embeddings are able to capture relationships across features that can be twice as good as $\Word2Vec$'s CBOW algorithm on some evaluation metrics.
-In the self-supervised setting, $\Feat2Vec$ exploits the structure of a dataset to learn embeddings in a way that is structurally more sensible than existing methods. This yields performance improvements in our ranking and prediction tasks.
+In the self-supervised setting, $\Feat2Vec$ exploits the structure of a dataset to learn embeddings in a more sensible way than existing methods. This yields performance improvements in our ranking and prediction tasks.
 %The sampling method, and loss function that we use have interesting theoretical properties.
-To the extent of our knowledge, Self-Supervised $\Feat2Vec$  is the first method able to calculate continuous representations of data with arbitrary feature types without explicit labels.
+To the extent of our knowledge, Self-Supervised $\Feat2Vec$  is the first method to calculate continuous representations of data with multi-modal feature types and no explicit labels.
 
 
 
