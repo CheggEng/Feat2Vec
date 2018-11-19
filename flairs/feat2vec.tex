@@ -422,7 +422,7 @@ A simple  implementation of $\phi_i$ is a linear fully-connected layer, where th
 \end{equation}
 Other, more sophisticated functional forms of $\phi_i$ we have explored in our experiments include:
 \begin{itemize}
-\item A convolutional neural network that transforms a text sequence into a $r$-dimensional embedding. This function is able to preserve information in the order of a text sequence, unlike other methods for transforming text to numerical values such as bag-of-words.
+\item A convolutional neural network that transforms a text sequence into a $r$-dimensional embedding. This function is able to learn higher order interactions of n-grams, unlike other methods for transforming text to numerical values such as bag-of-words.
 \item A deep, fully connected neural network that projects a scalar, such as average rating, into a $r$-dimensional embedding space. This extraction function, by treating the input as numerical, will require scalars close in value to have similar embeddings.
 \end{itemize}
 Any neural function that outputs a $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
