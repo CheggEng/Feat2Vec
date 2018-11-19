@@ -31,10 +31,6 @@ print "Loading DF..."
 with open(os.path.join(datadir,'yelp_train_data.p'),'r') as f:
     traindf=cPickle.load(f)
 
-#with open(os.path.join(datadir,'yelp_train_mini.p'),'w') as f:
-#    cPickle.dump(traindf.iloc[0:10000],f)
-# with open(os.path.join(datadir,'yelp_train_mini.p'),'r') as f:
-#     traindf=cPickle.load(f)
 with open(os.path.join(datadir,'yelp_textfilter.p'),'r') as f:
     review_filter = cPickle.load(f)
 
@@ -45,13 +41,7 @@ for c in ['business_id','user_id','stars','funny']:
 
 print traindf.head()
 vocab_map['textseq'] = review_filter.word_index
-#move the star var to 0-1
-# for c in ['stars']:
-#     vocab_map[c] = {'max':np.max(traindf[c]),'min':np.min(traindf[c])}
-#     print c,vocab_map[c]
-#     traindf[c] = ( traindf[c] - np.min(traindf[c]) ) / (np.max(traindf[c]) - np.min(traindf[c]) )
 
-#traindf = traindf.iloc[0:100000,:]
 
 glovefile =os.path.join(glovedir,'glove.6B.{d}d.txt'.format(d=text_embedding_size))
 glovevecs = np.zeros(shape=(review_filter.num_words,text_embedding_size))
@@ -67,12 +57,6 @@ with open(glovefile,'r') as f:
                 embedding = np.array([float(val) for val in splitLine[1:]])
                 glovevecs[idx,:] = embedding
 
-### Filter text
-#review_pd['textseq'] = review_filter.texts_to_sequences(review_pd.text.values.tolist())
-#textmat= keras.preprocessing.sequence.pad_sequences(review_pd['textseq'].values.tolist(),maxlen=text_max_len,value=0,padding='post',truncating='post')
-#review_pd['textseq'] = [textmat[i,:] for i in range(len(review_pd))]
-#num_words = len(review_filter.word_index) +1
-#print num_words
 
 ### Hyperparameters
 
@@ -91,11 +75,6 @@ conv_layer=keras.layers.convolutional.Convolution1D(filters=100,
     kernel_size=3,activation='relu',name='conv')(word_embed_layer)
 maxpool_layer=keras.layers.GlobalMaxPool1D()(conv_layer)
 text_embed_layer=keras.layers.Dense(dim,name='embedding_textseq',activation='linear')(maxpool_layer)
-#build deep Ratings layer
-# star_input = Input(batch_shape=(None,1),name='input_rating')
-# star_deep = keras.layers.Dense(dim,name='intermed_rating',activation='sigmoid')(star_input)
-# star_embed =  keras.layers.Dense(dim,name='embedding_stars',activation='linear')(star_deep)
-
 ### define F2V params
 model_features = [['business_id'],['user_id'],['stars'],['funny'],['textseq']]
 is_deepin_feature=[False,False,False,False,True]

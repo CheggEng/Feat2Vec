@@ -521,7 +521,7 @@ In contrast, $\Feat2Vec$ allows any number of groups to enter the model, and is 
 
 Additionally, we introduce a new implicit sampling method that enables learning self-supervised embeddings for feature groups.
 % replaced n <- p;  because we use p for probabilities
-Unlike $\Word2Vec$, a popular self-supervised embedding algorithm, we do not constraint features types to be words.
+Unlike $\Word2Vec$, a popular self-supervised embedding algorithm, we do not constrain features types to be words.
 %Features groups can be  individual columns in a data matrix,  but they need not to be.
 Instead, by grouping features using the hyperparameter $\vect{\pmb{\upkappa}}$ in Equation \ref{eq:deepfm}, the self-supervised model can reason on more abstract entities in the data.
 For example, in our experiments on a movie dataset, we are able to define a ``genre'' feature group, where we group non-mutually exclusive indicators for movie genres, including comedy, action, and drama films. This embedding may capture complex interactions between genre classifications typically unavailable through a tokenized treatment of genres.
@@ -699,7 +699,7 @@ L(S) & = \arg\min_{\bm\uptheta}   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} 
 \end{align*}
 
 
-$\Feat2Vec$ has interesting theoretical properties.
+Self-supervised $\Feat2Vec$ has interesting theoretical properties.
 % It is well known that Factorization Machines can be used as a multi-label classifier:
 % with at least two features, one can use one feature as a target label, and the other(s) as the input feature to make a prediction.
 % In such setting, the output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$), and therefore the input can be associated with more than one label.
@@ -850,9 +850,10 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 %\subsubsection{Does $\Feat2Vec$ enable better embeddings?}
 The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
 Since our algorithm is designed for multi-modal data, we generalize this task for multiple feature types as follows.
-Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we choose one group $g_y$ as the ``target'',  and aggregate the remaining groups as the predictor ($g_x$).
+Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we choose one group $g_y$ as the ``target'',  and choose another single feature group as the predictor ($g_x$).
+During training, self-supervised Feat2Vec does not treat the target group differently than any other group.
 Given a held-out instance, we rank all possible values of the target group by cosine similarity to the predictor group's embedding $\phi_x( \vect{x}_{\vect{\upkappa}_x})$ for that instance. We then retrieve the ranking of the actual target entity for the held-out instance in the test dataset.
-Rankings are evaluated according to  their  mean percentile rank (MPR):
+Rankings are evaluated according to  their  mean percentile rank:
 $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the the target entity rank for instance $i$.
 A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric.
 We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings. In our experiments, we set $\alpha_1=.25$, $\alpha_2=0.75$, $k=5$ and $r=50$. We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
@@ -956,7 +957,7 @@ We evaluate the prediction of test dataset ratings by choosing the rating embedd
 
 We also use the Yelp dataset, predicting the most similar rating embedding to the review text embeddings produced by Feat2Vec, Word2Vec (CBOW), and Doc2Vec (DM).
 Doc2Vec is only used for the Yelp dataset because there is no clear ``document'' in the IMDB dataset, while in the Yelp dataset the review text is a natural candidate.
-For Word2Vec and Doc2Vec, the review text embedding is the average of word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
+For Word2Vec and Doc2Vec, the review text embedding is the average of a review text's word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
 %As a baseline, we compare our metrics to random predictions using the empirical distribution of ratings in the data. %, the best feasible non-personalized prediction.
 In general, Word2Vec is poor in its predictive power, predicting 5 stars for 97\% of the test sample.
 Though Feat2Vec and Doc2Vec yield comparable MSE (2.94 vs. 2.92, respectively), Feat2Vec outperforms Doc2Vec by a substantial margin in classification error rate (55\% vs. 73\%) and mean absolute error (1.13 vs. 1.31).

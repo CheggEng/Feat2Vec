@@ -180,7 +180,3 @@ for r in tag_size_dict:
 allvecdf = pd.concat(allvecs)
 allvecdf = allvecdf.set_index(['feature','values']).sort_index()
 allvecdf.to_csv(os.path.join(yelpdir,'w2v/d2v_dm_embeddings.tsv'),sep='\t',encoding='utf-8')
-
-#########################
-####
-#w2v in gensim
