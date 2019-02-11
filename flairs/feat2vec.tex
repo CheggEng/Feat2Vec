@@ -44,6 +44,7 @@
 \newcommand{\vect}[1]{\vec{#1}}
 \DeclareMathOperator{\Feat2Vec}{Feat2Vec}
 \DeclareMathOperator{\Word2Vec}{Word2Vec}
+\DeclareMathOperator{\Doc2Vec}{Doc2Vec}
 \DeclareMathOperator{\q}{{\mathcal{Q}}}
 \newcommand{\dotp}{\boldsymbol{\cdot} }
 \renewcommand{\cite}[1]{\citep{#1}}
@@ -65,7 +66,7 @@
 \setcounter{secnumdepth}{2}
 
 
-\title{Beyond Word Embeddings:\\ Dense Representations for Multi-modal Data}
+\title{Beyond Word Embeddings: Representations for Multi-modal Data}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -78,14 +79,12 @@
 % author name.
 
 \author{
-Anonymized Author(s)
+  Luis Armona\thanks{Email: \texttt{larmona@stanford.edu} . Affiliation: Department of Economics, Stanford University }, Jos\'e Gonz\'alez Brenes\thanks{Email: \texttt{jgonzalez@chegg.com}}, and Ralph Edezath\thanks{Email: \texttt{redezath@chegg.com}} \\
   % \thanks{Use footnote for providing further
   %   information about author (webpage, alternative
   %   address)---\emph{not} for acknowledging funding agencies.} \\
-Department\\
-  Institution\\
-Place\\
-  \texttt{some@email.com} \\
+  Chegg Engineering \\
+  3990 Freedom Cir, Santa Clara, CA 95054
   %% examples of more authors
   %% \And
   %% Coauthor \\
@@ -119,7 +118,7 @@ Methods that calculate dense vector representations for text have proven to be v
 %Surprisingly, very little work has focused on methods for structured datasets where there is more than one type of feature---that is, datasets that have arbitrary features beyond words or images.
 We study how to estimate  dense representations for multi-modal data (e.g., text, continuous, categorical).
 We propose  $\Feat2Vec$  as a novel model that supports  supervised learning when explicit labels are available, and self-supervised learning when there are no labels.
-$\Feat2Vec$ calculates embeddings for data with multiple feature types, enforcing that all embeddings exist in a common space.
+$\Feat2Vec$ calculates embeddings for data with multiple feature types enforcing that all embeddings exist in a common space.
 %In the supervised case, we show that our method has advantages over recently proposed methods;
 %extensions of factorization machines;
 %such as enabling higher prediction accuracy, and providing a way to avoid the cold-start problem.
@@ -148,8 +147,8 @@ For example, word embedding algorithms such as $\Word2Vec$~\cite{mikolov2013dist
 %however,  in practice,
 %\textit{general-purpose} In the context of this paper, we refer to the embeddings of an self-supervised method that can be used for a variety of auxiliary prediction tasks as .
 
-In this paper, we propose $\Feat2Vec$ as a novel method that  embeds arbitrary feature types, such as text, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
-We believe that this is the first self-supervised algorithm that is able to calculate embeddings for multi-modal data, datasets with multiple feature types.
+In this paper we propose $\Feat2Vec$ as a novel method that  embeds arbitrary feature types, such as text, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
+We believe that this is the first self-supervised algorithm that is able to calculate embeddings from data with multiple feature types.
 %Additionally, we allow calculating embeddings for arbitrary features.
 %This generalizes many existing algorithms in the self-supervised scenario.
 Consider the non-trivial work that was required to extend a model like Word2Vec to support  additional features.
@@ -391,9 +390,9 @@ $\Feat2Vec$ predicts  a target output  $\hat y$ from a list of feature groups co
   {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
  \end{align}
 Each of the $n$ feature groups  $\vect{g}_i$ is defined a priori by $\vect \upkappa_i$, which indexes the dimensions in ${\vect{\mathbf x}}$  that belong to the $i$-th group.
-For example, we might group together individual words in an item's description into a single ``description text'' feature group. We define an \textit{entity} to be a particular value or realization of a feature group.
 The number of dimensions of each group may vary, but all of the feature groups are embedded to the same space via their \textit{feature extraction function} $\phi_i$.
-These functions learn how to embed each feature group $\vect{g}_i$ and outputs a vector in $\mathbb{R}^r$.
+A feature extraction function $\phi$ acts on the features in $\upkappa_i$, and the other features interact with the words only via the output of $\phi$.
+These functions learn how to embed each vector (feature group) and outputs a vector in $\mathbb{R}^r$.
 %In Factorization Machine, all the feature embeddings interact with each other, while in $\Feat2Vec$, the interactions only occur between different feature \textit{groups}.
 More, formally:
 
@@ -405,7 +404,7 @@ More, formally:
  \label{eq:deepfm}
 \end{align}
 
-Here $\omega$ is an activation function.
+Here, $\omega$ is an activation function.
 Intuitively, the dot product ($\dotp$) returns a scalar that measures the (dis)similarity between the embeddings of the feature groups.
 %$\phi_i$ is a feature extraction that inputs the $i$-th feature group of the instance, and returns an $r$-dimensional embedding.
 %The feature extraction function $\phi_i$ can allow for an arbitrary processing of its subfeatures $\vect{x}_{\vect{\upkappa}_i}$.
@@ -420,9 +419,9 @@ A simple  implementation of $\phi_i$ is a linear fully-connected layer, where th
 \label{eq:fully_connected}
 \phi_{i,r}\bigl( \vect{x\vphantom{\theta}}_i; \vect{\uptheta}_r\bigr )_r= \sum_{a=1}^{d_i}  \theta_{r_a} x_{i_a}
 \end{equation}
-Other, more sophisticated functional forms of $\phi_i$ we have explored in our experiments include:
+Other functional forms of $\phi_i$ we have explored in our experiments include:
 \begin{itemize}
-\item A convolutional neural network that transforms a text sequence into a $r$-dimensional embedding. This function is able to learn higher order interactions of n-grams, unlike other methods for transforming text to numerical values such as bag-of-words.
+\item A convolutional neural network that transforms a text sequence into a $r$-dimensional embedding. This function is able to preserve information in the order of a text sequence, unlike other methods for transforming text to numerical values such as bag-of-words.
 \item A deep, fully connected neural network that projects a scalar, such as average rating, into a $r$-dimensional embedding space. This extraction function, by treating the input as numerical, will require scalars close in value to have similar embeddings.
 \end{itemize}
 Any neural function that outputs a $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
@@ -437,10 +436,10 @@ Any neural function that outputs a $r$-dimensional vector could be plugged into 
 %$ and the linear extraction function presented in Equation \ref{eq:fully_connected}.
 
 
-Figure~\ref{fig:architecture} compares existing factorization methods  with our novel model in diagram form.
+Figure~\ref{fig:architecture} compares existing factorization methods  with our novel model.
 %To graphically demonstrate the difference between Factorization Machine and
 Figure~\ref{fig:factorization_machine} shows a Factorization Machine~\cite{rendle2010factorization} that embeds each feature.
-In this example, Figure~\ref{fig:feat2vec}  shows $\Feat2Vec$ with two feature groups:
+Figure~\ref{fig:feat2vec}  shows $\Feat2Vec$ with two feature groups:
 the first group only has a single feature which is projected to an embedding (just like matrix factorization);
 but the second group has multiple features, which are together projected to a single embedding.
 %Consider how we can use $\Feat2Vec$ to overcome the cold-start problem.
@@ -448,10 +447,8 @@ Figure~\ref{fig:neural} shows an approach of using neural networks within factor
 It replaces the dot product of factors with a learned neural function, which has been shown to improve predictive accuracy.
 The caveat of this architecture is that is no longer  possible to interpret the embeddings as latent factors related to the target task.
 
-In traditional factorization methods, individual item identifiers are embedded and thus need to be observed during training (i.e., cold-start problem).
- $\Feat2Vec$ can learn an embedding from an alternative characterization of the item---for example, an item's textual description.
-For this, we  can treat the entire textual description as a feature group $\upkappa_i$. %the group of word features.
-A feature extraction function $\phi_i$ acts on the features in $\upkappa_i$, and the other features interact with the words only via the output of $\phi_i$.
+%For this, we  can treat the entire textual description as a feature group $\upkappa_i$. %the group of word features.
+
 %However, $\Feat2Vec$ is not limited to bag of words features, and we  demonstrate this with continuous features.
 
 
@@ -512,19 +509,14 @@ A feature extraction function $\phi_i$ acts on the features in $\upkappa_i$, and
 
 
 The structure of the $\Feat2Vec$ model significantly expands previously published models.
-For example, Principal Component Analysis (PCA) is a common method to learn embeddings of individual dimensions of  data.
-Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions in PCA when we are interested in treating a subset of dimensions as a single group, such as words in an item's description.
-%For example, consider a dataset that has a textual description of items--- we may be interested in having an embedding for the feature group (the entire description) instead of the individual words.
+In traditional factorization methods, item identifiers are embedded and thus need to be observed during training (i.e., cold-start problem).
+$\Feat2Vec$ can learn an embedding from an alternative characterization of an item, such as a textual description.
+%For example, Principal Component Analysis is a common method to learn embeddings of individual dimensions of  data.
+%Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions when a group of dimensions need to be treated as a single group.
+%For example, consider a dataset that has a textual description of items--- we may be interested in having an embedding representation for the entire description instead of the individual words.
 $\Feat2Vec$ extends Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and we use feature extraction functions.
-StarSpace~\cite{wu2017starspace}  introduces feature groups (called entities in their paper), but is only compatible with supervised tasks, constrains  groups to be ``bags of features'', and is limited to two feature types.
-In contrast, $\Feat2Vec$ allows any number of groups to enter the model, and is compatible with multi-modal data, such as continuous features or ordered sequences.
-
-Additionally, we introduce a new implicit sampling method that enables learning self-supervised embeddings for feature groups.
-% replaced n <- p;  because we use p for probabilities
-Unlike $\Word2Vec$, a popular self-supervised embedding algorithm, we do not constrain features types to be words.
-%Features groups can be  individual columns in a data matrix,  but they need not to be.
-Instead, by grouping features using the hyperparameter $\vect{\pmb{\upkappa}}$ in Equation \ref{eq:deepfm}, the self-supervised model can reason on more abstract entities in the data.
-For example, in our experiments on a movie dataset, we are able to define a ``genre'' feature group, where we group non-mutually exclusive indicators for movie genres, including comedy, action, and drama films. This embedding may capture complex interactions between genre classifications typically unavailable through a tokenized treatment of genres.
+StarSpace~\cite{wu2017starspace}  introduces feature groups (called entities in their paper), but constrains  them to be ``bags of features'', is supervised, and limited to two feature types.
+In contrast, $\Feat2Vec$ allows continuous features, and does not require the user to assign one feature as a specific target. Additionally, we propose a self-supervised learning algorithm.
 
 
 
@@ -538,7 +530,7 @@ For example, in our experiments on a movie dataset, we are able to define a ``ge
 We can learn the the parameters of a Feat2Vec model $ \bm\uptheta$ using training data by minimizing a loss function $\mathcal L$:
 \label{sec:learning}
 \begin{equation}
-\arg \min_{\vect{\uptheta}} \sum_x  \mathcal{L}\bigl(  y(x), \hat y(x;\vect{\uptheta})\bigr) + \gamma ||  \bm{\uptheta}||_{2}
+\arg \min_{\vect{\uptheta}} \sum_x  \mathcal{L}\bigl(  y(x), \hat y(x;\vect{\uptheta})\bigr) + \gamma ||  \bm{\uptheta}||^{w}
 \label{eq:learning}
 \end{equation}
 Here, $y(x)$  is the true target value for $x$ obtained from training data, and $\hat{y}(x)$ is the one estimated by the model (Equation \ref{eq:deepfm});
@@ -568,10 +560,9 @@ Typically, this loss will be for a prediction task, and involve at least two fea
 
 Consider a target feature group $g_i$ that exists in a high dimensional space.
 This could be a one-hot encoding of a categorical variable with a large number of possible values.
-In such a scenario, it may be too costly to feed the model all negative labels, particularly if the model is sparse.
-In these cases, we can instead use a binary classifier with implicit sampling~\cite{samplingnotes}, where we  sample a fixed number ($k$) from the set of possible negative labels for each positively labeled record.
-%In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labeled record.
-This makes our Feat2Vec model feasible to implement for high-dimensional target features.
+In such a scenario, it is overwhelmingly costly to feed the model all negative labels, particularly if the model is sparse.
+In these cases, we may instead use a binary classifier with implicit sampling~\cite{samplingnotes}.
+In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
 %$\Word2Vec$ makes use of an algorithm called Negative Sampling, that has little theoretical guarantees~\cite{samplingnotes}.
 %For the multi-label classification tasks, we use $\Feat2Vec$ with a binary output.
 
@@ -587,14 +578,19 @@ This makes our Feat2Vec model feasible to implement for high-dimensional target 
 We now discuss how $\Feat2Vec$ can be used to learn embeddings in an self-supervised setting with no explicit target for prediction.
 %\subsubsection{Sampling for Unsupervised Learning}
 
-%For more involved feature types (e.g., an image),  one would need to  define a function $\phi$ that builds intermediate layers  to map the entity to an embedding .
-
 
 The training dataset for a $\Feat2Vec$ model consists of the observed data.
 In natural language, these would be documents written by humans, along with document metadata.
 Since self-supervised Feat2Vec will require positive and negative examples during training, we supply unobserved data as negative examples.
-This is analogous to $\Word2Vec$, which samples a negative instance from a noise distribution $\q_{w2v}$ that is proportional to the empirical frequency of a word in the training data.
+For example, $\Word2Vec$  samples a negative observation from a noise distribution $\q_{w2v}$ that is proportional to the empirical frequency of a word in the training data.
 
+We introduce a new implicit sampling method that enables learning self-supervised embeddings for feature groups.
+% replaced n <- p;  because we use p for probabilities
+Unlike $\Word2Vec$, we do not constraint features types to be words.
+%Features groups can be  individual columns in a data matrix,  but they need not to be.
+Instead, by grouping features using the parameter $\vect{\pmb{\upkappa}}$ in Equation \ref{eq:deepfm}, the model can reason on more abstract entities in the data. By entity, we mean a particular feature group value.
+For example, in our experiments on a movie dataset, we define a ``genre'' feature group, where we  group non-mutually exclusive indicators for movie genres, including comedy, action, and drama films.
+%For more involved feature types (e.g., an image),  one would need to  define a function $\phi$ that builds intermediate layers  to map the entity to an embedding .
 
 We start with a dataset $S^+ $ of records with $n$ feature groups.
 We then mark all observed records in the training set as our positive-labeled examples.
@@ -608,7 +604,7 @@ For each positive record, we generate $k$ negative labels using the 2-step algor
 \Function{Feat2Vec\_Sample}{$S^+, k, \alpha_1, \alpha_2$}
 \State $S^-  \leftarrow \emptyset $
 \For {$\vect{x}^{\,+} \in S^+ $}
-	\State    $\upkappa_i  \sim \q_1(\{\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1) $	\Comment Draw a random \begin{flushright} feature group\end{flushright}
+	\State Draw a random feature group $\upkappa_i  \sim \q_1(\{\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1) $
 	\For {$j \in \{1,\ldots,k\}$}
 			\State $\vect{x}^{\,-}  \leftarrow \vect{x}^{\,+} $ \Comment  set initially to be equal to the \begin{flushright}positive sample\end{flushright}
 			\State Draw a random entity  $\tilde x \sim \q_2(\mathrm{X}_{ \upkappa_i },\alpha_2)$
@@ -624,21 +620,20 @@ For each positive record, we generate $k$ negative labels using the 2-step algor
 
 Explained in words, our negative sampling method for self-supervised learning iterates over all of the observations of the training dataset.
 For each observation $\vect{x}^{\,+}$, it randomly selects the $i$-th feature group from a noise distribution $\q_1(\cdot)$.
-Then,  it creates a negative observation that is identical to $\vect{x}^{\,+}$, except that its $i$-th entity is replaced by a value sampled from a noise distribution $\q_2(\cdot)$.
+Then,  it creates a negative observation that is identical to $\vect{x}^{\,+}$, except that its $i$-th feature group value is replaced by a value sampled from a noise distribution $\q_2(\cdot)$.
 In our application, we use the same class of noise distributions (flattened multinomial) for both levels of sampling, but this need not be the case.
 We now describe the noise distributions that we use.
 Let  $P_{\q}(x)$ denote the probability of $x$ under distribution $\q$.
 
-\textbf{Sampling Feature Groups.}
+\textbf{Sampling Feature Groups.} The function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\phi_i$.
 To sample a feature group, we choose a feature group $\upkappa_i$ from a multinomial distribution with probabilities proportional a feature's complexity.
 By complexity, we mean the number of parameters we learn that are associated with a feature group's extraction function $\phi_i$.
-This noise distribution places more weight on features that have more parameters and thus are going to require more training iterations to properly learn. The sampling probabilities of each feature group are:
+This choice places more weight on features that have more parameters and thus are going to require more training iterations to properly learn. The sampling probabilities of each feature group are:
 
 \begin{equation}
 P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1 )  \
 = \frac{\operatorname{params}(\phi_i)^{\alpha_1}}{\sum_{j=1}^{|\vect{\upkappa}|} \operatorname{params}(\phi_j)^{\alpha_1}}
 \end{equation}
-where the function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\phi_i$.
 For categorical variables using a linear fully-connected layer, the complexity is simply proportional to the number of categories in the feature group.
 However, if we have multiple intermediate layers for some feature extraction functions (e.g., convolutional layers), these parameters should also be counted towards a feature group's complexity.
 The hyper-parameter $\alpha_1 \in [0,1]$ flattens the distribution.
@@ -647,8 +642,8 @@ The hyper-parameter $\alpha_1 \in [0,1]$ flattens the distribution.
 %Figure \ref{fig:alpha} in the Appendix provides a visualization of how the feature sampling rate varies with the hyperparameter for features with differing levels of complexity.
 
 
-\textbf{Sampling Entities.}
-To sample an entity within a feature group $\upkappa_i$, we use a similar strategy to $\Word2Vec$ and sample from the empirical distribution of values:
+\textbf{Sampling Feature Group Values.}
+To sample an entity within a feature group $\upkappa_i$, we use a similar strategy to $\Word2Vec$ and use the empirical distribution of values:
 %For  $\q_2(\mathrm{X}_{\upkappa_i}, \alpha_2)$, is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $\upkappa_i$, as in the negative sampling procedure used in $\Word2Vec$ :
 \begin{equation}
 P_{\q_2}(x|\mathrm{X}_{\upkappa_i},\alpha_2)  \
@@ -688,7 +683,7 @@ s(\vec{x\vphantom{phi}}|\vec{\phi}, \bm\uptheta) =
 $s(.)$ denotes the score of a record $\vec{x}$ given parameters/extraction functions,
 and $P_{\q}(.)$ denotes the probability of a record $\vec{x}$ being drawn from our negative sampling algorithm, conditional on the positively labeled record $\vect{x}^+$ the negative sample is drawn for:
 \begin{align*}
-P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathrm{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upkappa_i}|\mathrm{X}_{\upkappa_i},\upkappa_i,\alpha_2)\times \\ P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1)
+P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathrm{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upkappa_i}|\mathrm{X}_{\upkappa_i},\alpha_2)\times \\ P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1)
 %\text{\hl{Write equation!! This is only defined in the middle of the appendix}}
 \end{align*}
 
@@ -699,12 +694,12 @@ L(S) & = \arg\min_{\bm\uptheta}   \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} 
 \end{align*}
 
 
-Self-supervised $\Feat2Vec$ has interesting theoretical properties.
+%$\Feat2Vec$ has interesting theoretical properties.
 % It is well known that Factorization Machines can be used as a multi-label classifier:
 % with at least two features, one can use one feature as a target label, and the other(s) as the input feature to make a prediction.
 % In such setting, the output indicates whether the label is associated with the input ($y=+1$), or not ($y=0$), and therefore the input can be associated with more than one label.
-With $n$ feature groups, the loss function of self-supervised $\Feat2Vec$ can be shown to be equivalent to  a convex combination of the losses from $n$ supervised $\Feat2Vec$ models with implicit sampling (proof omitted).
-In other words, it optimizes $n$ multi-label classifiers, where each classifier  is optimized for a different target feature group. Intuitively, during sampling in self-supervised Feat2Vec, we choose a random target feature group according to $P_{\q_1}$, and then add that specific group's supervised loss to the total self-supervised loss.
+With $n$ feature groups, the loss function of self-supervised $\Feat2Vec$ can be shown to be a weighted average of the losses from $n$ distinct supervised $\Feat2Vec$ models\footnote{Proof can be found in the supplemental material at \url{http://web.stanford.edu/~larmona/supplemental_theorem.pdf}}, one for each feature group.
+In other words, it optimizes $n$ multi-label classifiers, where each classifier is optimized for a different feature group. Intuitively, in Algorithm \ref{algo:samp}, we sample a target feature group according to $P_{\q_1}$, and then add that group's supervised loss to the total self-supervised loss.
 
 
 \section{Empirical Results}
@@ -714,22 +709,21 @@ In other words, it optimizes $n$ multi-label classifiers, where each classifier 
 \label{sec:targeted embeddings}
 
 We now address our working hypotheses for evaluating supervised embeddings.
-We evaluate  on the Yelp dataset\footnote{https://www.yelp.com/dataset/challenge}, which consists of 4.7 million reviews of restaurants.
 %To avoid overfitting, for all our experiments we define a training, development and a test.
-For all of our experiments, we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters.
+For all our experiments we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters.
 %Since these datasets are large and require significant time to train on an Nvidia K80 GPU cluster, we report results on only a single training-test split.
 %For the multi-label classification task in \ref{sec:coldstart} we predict a probability for each document-label pair and use an evaluation metric called Area Under the Curve (AUC) of the Receiver Operating Characteristic (ROC).
+Since we only observe positive labels during supervised training, for each positive label in the test set we sample negative labels according to the label frequency.
+This ensures that if a model merely predicts the labels according to their popularity, it would have an AUC of 0.5.
 %A caveat of our evaluation strategy is that we could be underestimating the performance of our models---there is a small probability that  the sampled negatives labels are false negatives.
 %However, since we apply the same evaluation strategy consistently across our methods and baselines, the relative difference of the AUC is meaningful.
 %We choose the AUC as a metric because it is popular for both classification and ranking problems.
-We use mean squared error (MSE) as the evaluation metric for predicting ratings in the Yelp dataset.
-%In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
-We share most of the code for the experiments online\footnote{\url{https://goo.gl/zEQBiA}}.
+For the regression task, we use mean squared error (MSE) as the evaluation metric.
+In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
+We share most of the code for the experiments online\footnote{\url{https://goo.gl/zEQBiA}} for reproducibility.
 
 % Table~\ref{deepout-datasetsl} provides descriptive statistics of the datasets that we consider.
-We build 3 feature groups for this task: item (restaurant) identifiers, user identifiers, and review text.
-We use a standard linear (Equation \ref{eq:fully_connected}) extraction functions $\phi$  on each one-hot encoding representation of users and items.
-For our feature extraction function for review text, we use  a Convolutional Neural Network (CNN), which  has been shown to be effective for natural language tasks~\cite{DBLP:journals/corr/KalchbrennerGB14,tagspace}.
+For our feature extraction function $\phi$ for text, we use  a Convolutional Neural Network (CNN) that  has been shown to be effective for natural language tasks~\cite{DBLP:journals/corr/KalchbrennerGB14}.
 %In Appendix~\ref{appendix:cnndetails} we describe this network  and its hyper-parameters.
 Instead of tuning the hyper-parameters, we follow previously published  guidelines~\cite{zhang2015sensitivity}.
 
@@ -831,10 +825,12 @@ Factorization) \\
 
 \subsubsection{Comparison with alternative CNN-based text factorization}
 \label{ratingpred}
-We now compare  with a method called DeepCoNN, a deep network specifically designed for  incorporating text into matrix factorization~\cite{deepconn}, a state of the art method for predicting customer ratings when text reviews are available.
-To make results comparable, the \algoralphabbr{} experiments use the same feature extraction function used by DeepCoNN.
+We now compare  with a method called DeepCoNN, a deep network specifically designed for  incorporating text into matrix factorization~\cite{deepconn}---which reportedly,  is the state of the art for predicting customer ratings when textual reviews are available.
+To make results comparables, the \algoralphabbr{} experiments use the same feature extraction function used by DeepCoNN.
+We evaluate  on the Yelp dataset\footnote{\url{https://www.yelp.com/dataset/challenge}}, which consists of 4.7 million reviews of restaurants.
 For each user-item pair, DeepCoNN concatenates the text from all reviews for that item and all reviews by that user.
-The concatenated text is then fed into a feature extraction function for each entity, followed by a factorization machine.
+The concatenated text is fed into a feature extraction function followed by a factorization machine.
+For $\Feat2Vec$, we build 3 feature groups: item (restaurant) identifiers, user identifiers, and review text.
 
 
 Table \ref{ratingpredtable} compares our methods to  DeepCoNN's published results  because a public implementation is not available.
@@ -849,14 +845,17 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 \label{sec:unsupexp}
 %\subsubsection{Does $\Feat2Vec$ enable better embeddings?}
 The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
-Since our algorithm is designed for multi-modal data, we generalize this task for multiple feature types as follows.
-Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we choose one group $g_y$ as the ``target'',  and choose another single feature group as the predictor ($g_x$).
-During training, self-supervised Feat2Vec does not treat the target group differently than any other group.
-Given a held-out instance, we rank all possible values of the target group by cosine similarity to the predictor group's embedding $\phi_x( \vect{x}_{\vect{\upkappa}_x})$ for that instance. We then retrieve the ranking of the actual target entity for the held-out instance in the test dataset.
-Rankings are evaluated according to  their  mean percentile rank:
-$MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max R)$, where $R_i$ is the the target entity rank for instance $i$.
-A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so a lower value is better under this metric.
-We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings. In our experiments, we set $\alpha_1=.25$, $\alpha_2=0.75$, $k=5$ and $r=50$. We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
+Since our algorithm is designed for multi-modal data, we generalize this task for feature types beyond text as follows.
+Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we have trained a self-supervised $\Feat2Vec$ model on, we choose a single group $g_i$ as the ``target'' and a group $g_j$ as the predictor.
+Given a held-out instance, we rank all possible values of the target group by cosine similarity to the source group's embedding $\phi_j( \vect{x}_{\vect{\upkappa}_j})$ for that instance. We then retrieve the ranking of the actual target entity in the test dataset.
+Rankings are evaluated with according to  their  mean percentile rank (MPR):
+$MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max_i R_i)$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
+A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so lower is better under this metric.
+We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings. For $\Word2Vec$, each record is treated as a separate document. To incorporate non-text data in $\Word2Vec$, we tokenize all feature values and treat them as words in the $\Word2Vec$ training corpus (e.g. a movie record flagged as belonging to the horror genre has the token  ``genre\_horror'' in its $\Word2Vec$ training document).
+%
+In our experiments, we set $\alpha_1=.25$, $\alpha_2=0.75$, and $k=5$. Wherever possible, we use the same hyperparameters across embedding models ($\Word2Vec$, $\Doc2Vec$, $\Feat2Vec$).
+We chose an $\alpha_1$ value that would highlight $\Feat2Vec$'s ability to prioritize learning of low-complexity feature groups which nonetheless appear in each observation.
+We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
 %In particular, in the movie dataset we  compare the similarity of movie directors to those of actors who were cast in the same film for a left-out set of films.
 %For our educational dataset, we compare rankings of textbooks by evaluating the similarity of textbook and user embeddings.
  %See the appendix \S\ref{sec:imdbexp} for further details on the experimental setup.
@@ -875,12 +874,10 @@ We will use this method to compare the performance of $\Feat2Vec$ algorithm and 
 % \subsubsection{Datasets}
 
 \paragraph{Movies}
-The Internet Movie Database (IMDB) is a publicly available dataset\footnote{\href{http://www.imdb.com/interfaces/}{http://www.imdb.com/interfaces/}} of information related to films, television programs and video games.
+The Internet Movie Database (IMDB) is a publicly available dataset\footnote{\url{http://www.imdb.com/interfaces/}} of information related to films, television programs and video games.
 We limit our experiments to data on its 465,136 movies.
 %Table~\ref{tab:features} in the appendix (\S\ref{sec:imdbexp}) summarizes the feature types we use.
-Table \ref{tab:features} summarizes our feature groups. For categorical features within a group, we learn a unique embedding for each value.
-For groups with multiple categories, we use a ``Bag of categories'' approach to produce a group embedding.
-For example, we sum learned embeddings of individual actors such as Tom Cruise to produce a single ``actor'' feature group embedding associated with a title. For real-valued features, we pass the scalar output through a fully-connected 3-layer neural network to output an $r$-dimensional embedding.
+Table \ref{tab:features} summarizes our feature groups. For groups with multiple categories, we use a ``Bag of categories'' approach. For example, we sum embeddings of individual actors such as Tom Cruise to produce a single ``actor'' feature group embedding associated with a title.
 
 
 \paragraph{Education}
@@ -895,6 +892,9 @@ Each observation is an interaction a user had with a textbook.
 We use the Yelp dataset from our supervised experiments to evaluate the efficacy of self-supervised embeddings in ratings prediction.
 %, compared to traditional self-supervised word embedding algorithms Doc2Vec and Word2Vec (CBOW).
 
+
+
+
 \begin{table}[htb]
 \footnotesize
 \caption{IMDB Feature Groups}
@@ -902,13 +902,13 @@ We use the Yelp dataset from our supervised experiments to evaluate the efficacy
 \begin{tabular}{@{}lllp{6cm}@{}}
 \toprule
 % Created with: https://www.tablesgenerator.com/
-Feature Group      & Type              & \# of feats.  \\ \midrule
+Feature Type Name      & Type              & \# of feats.  \\ \midrule
 Runtime (minutes)       & Real-valued       & 1          \\
 IMDB rating (0-10)      & Real-valued       & 1          \\
 \# of rating votes & Real-valued       & 1           \\
-Is adult film?          & Categorical           & 2         \\
-Movie release year      & Categorical          & 271      \\
-Movie title             & Bag of Words      & 165,471       \\
+Is adult film?          & Boolean           & 2         \\
+Movie releaes year      & Categorical          & 271      \\
+Movie title             & Text      & 165,471       \\
 Directors               & Bag of categories & 174,382                          \\
 Genres                  & Bag of categories & 28                  \\
 Writers                 & Bag of categories & 244,241             \\
@@ -921,6 +921,7 @@ Principal actors & Bag of categories & 1,104,280      \\\bottomrule
 \subsubsection{Results}
 
 After training IMDB embeddings, we use cast members associated with movies in the test set and predict the actual director of the film.
+We rank directors by cosine similarity of their embedding to the title's cast member feature group embedding.
 %If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
 For the educational dataset, we directly  retrieve the most similar textbooks to the user embedding.
 
@@ -951,13 +952,13 @@ Educational & 25.2\% & 29.2\% \\
 %^We can probably wordsmith this
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
 %We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
-We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$. Our rating embedding extraction function (a 3-layer NN) will require embeddings of numerically similar ratings to be close, while $\Word2Vec$ will treat two numerically different ratings as completely different entities.
+We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$. Our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close, while $\Word2Vec$ will treat two numerically different ratings as completely different entities.
 We evaluate the prediction of test dataset ratings by choosing the rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
  $\Feat2Vec$ scores an MSE of 6.6, while  $\Word2Vec$ (CBOW)  scores 9.3.
 
 We also use the Yelp dataset, predicting the most similar rating embedding to the review text embeddings produced by Feat2Vec, Word2Vec (CBOW), and Doc2Vec (DM).
 Doc2Vec is only used for the Yelp dataset because there is no clear ``document'' in the IMDB dataset, while in the Yelp dataset the review text is a natural candidate.
-For Word2Vec and Doc2Vec, the review text embedding is the average of a review text's word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
+For Word2Vec and Doc2Vec, the review text embedding is the average of word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
 %As a baseline, we compare our metrics to random predictions using the empirical distribution of ratings in the data. %, the best feasible non-personalized prediction.
 In general, Word2Vec is poor in its predictive power, predicting 5 stars for 97\% of the test sample.
 Though Feat2Vec and Doc2Vec yield comparable MSE (2.94 vs. 2.92, respectively), Feat2Vec outperforms Doc2Vec by a substantial margin in classification error rate (55\% vs. 73\%) and mean absolute error (1.13 vs. 1.31).
@@ -1045,8 +1046,7 @@ To the extent of our knowledge, Self-Supervised $\Feat2Vec$  is the first method
 Future work could study how to reduce the amount of  human knowledge our approach requires;
 for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
 These ideas can extend to our codebase that we make available
-\footnote{The code for the $\Feat2Vec$ algorithm is available \href{https://www.dropbox.com/sh/wdr2sgt0z9gj6kb/AABlzw7QhteTYViSoMk3CDZpa?dl=0}{here} and the experiments using the IMDB/Yelp data can be found
-\href{https://www.dropbox.com/sh/uc07ng403i4ss9a/AAAPshFzdOug_ooeLn4SGR3Ua?dl=0}{here}.
+\footnote{The $\Feat2Vec$ model code is available \href{https://www.dropbox.com/sh/wdr2sgt0z9gj6kb/AABlzw7QhteTYViSoMk3CDZpa?dl=0}{here}. The experiments using non-proprietary data are available \href{https://www.dropbox.com/sh/uc07ng403i4ss9a/AAAPshFzdOug_ooeLn4SGR3Ua?dl=0}{here}.
 }.
 %Overall, we evaluate supervised and self-supervised Feat2Vec on 2 datasets each.
 %Our evaluation is limited to two datasets---a public dataset that is freely available,  and a proprietary one that we are unable to distribute.

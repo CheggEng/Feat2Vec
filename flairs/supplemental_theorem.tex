@@ -5,7 +5,7 @@
 % before loading nips_2018
 
 % ready for submission
-\usepackage{nips_2018}
+%\usepackage{aaai}
 
 % to compile a preprint version, e.g., for submission to arXiv, add
 % add the [preprint] option:
@@ -62,7 +62,6 @@
 
 
 
-\title{Feat2Vec: Supplemental Materials}
 
 % The \author macro works with any number of authors. There are two
 % commands used to separate the names and addresses of multiple
@@ -73,58 +72,25 @@
 % if LaTeX puts 3 of 4 authors names on the first line, and the last
 % on the second line, try using \AND instead of \And before the third
 % author name.
-
-\author{
-  David S.~Hippocampus\thanks{Use footnote for providing further
-    information about author (webpage, alternative
-    address)---\emph{not} for acknowledging funding agencies.} \\
-  Department of Computer Science\\
-  Cranberry-Lemon University\\
-  Pittsburgh, PA 15213 \\
-  \texttt{hippo@cs.cranberry-lemon.edu} \\
-  %% examples of more authors
-  %% \And
-  %% Coauthor \\
-  %% Affiliation \\
-  %% Address \\
-  %% \texttt{email} \\
-  %% \AND
-  %% Coauthor \\
-  %% Affiliation \\
-  %% Address \\
-  %% \texttt{email} \\
-  %% \And
-  %% Coauthor \\
-  %% Affiliation \\
-  %% Address \\
-  %% \texttt{email} \\
-  %% \And
-  %% Coauthor \\
-  %% Affiliation \\
-  %% Address \\
-  %% \texttt{email} \\
-}
-
 \begin{document}
 % \nipsfinalcopy is no longer used
+\appendix
 
-\maketitle
-
-\begin{abstract}
-Supplemental proof for Feat2Vec paper
-\end{abstract}
-
+\vspace*{-2cm}
+\section{Appendix}
+Supplemental proof for ``Beyond Word Embeddings: Representations for Multi-modal Data''. by Luis Armona, Jos\'e Gonz\'alez-Brenes, and Ralph Edezath.
 
 
 
 
-\subsection{Proof to Theorem \ref{thm:proof}}
+
+\subsection{Proof to Theorem 1}
 \begin{theorem}
-The gradient for learning embeddings with $\Feat2Vec$ is a convex combination of the gradient from $n$ targeted Factorization Machines for each feature in the data when each feature group is a singleton, where $n$ is the total number of features in the dataset.
+The gradient for learning embeddings with self-supervised $\Feat2Vec$ is a convex combination of the gradient from $n$ supervised Factorization Machines learned with implicit sampling, one for each feature group in the data.
 \label{thm:proof}
 \end{theorem}
 \begin{proof}
-Let $S^+_{\upkappa_i}$ denote the positively labeled records whose corresponding negative samples resample feature $\upkappa_i$. For convenience, suppress the inclusion of learned parameters $\bm\uptheta$ in the notation in this section while understanding the feature extraction functions $\vec{\phi}$ implicitly include these parameters. We can express the loss function $L(.)$, the binary cross-entropy of the data given the $\Feat2Vec$ model, as follows:
+Let $S^+_{\upkappa_i}$ denote the positively labeled records whose corresponding negative samples resample feature group $\upkappa_i$. For convenience, suppress the inclusion of learned parameters $\bm\uptheta$ in the notation in this section while understanding the feature extraction functions $\vec{\phi}$ implicitly include these parameters. We can express the loss function $L(.)$, the binary cross-entropy of the data given the self-supervised $\Feat2Vec$ model, as follows:
 
 \begin{align*}
  L(S^+ | \vec{\phi} )  =&   \frac{1}{|S^+|} \sum_{\vect{x}^+ \in S^+} \Big(\log(\tilde p(y=1|\vec{\phi},\vect{x}^+  ) ) + \sum_{\vect{x}^{\,-}\sim \q(.|\vect{x}^+)}^k \log(\tilde p(y=0|\vec{\phi},\vect{x}^{\,-})) \Big) \\
@@ -133,20 +99,20 @@ Let $S^+_{\upkappa_i}$ denote the positively labeled records whose corresponding
   =&  \frac{1}{|S^+|}\sum_{i=1}^n \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) } p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q}(\vect{x}^+ |\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i}) }) \\ &
   +  \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q}(\vect{x}^{\,-} |\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i})p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q}(\vect{x}^{\,-}|\vect{x}^+, \vect{x}^+ \in S^+_{\upkappa_i})}) \Big) \\
   \intertext{Note now that $P_{\q}(\vect{x}|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})$ is simply the probability of the record's feature value $\vect{x}_{f}$ under the second step noise distribution $\q_2(\mathrm{X_{f}},\alpha_2)$:
-   $P_{\q}(\vect{x}|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i}) = P_{\q_2}(\vect{x}_{f})$}\\
-=&  \frac{1}{|S^+|}\sum_{i=1}^n \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) } p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) } ) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,i\in S^+_{\upkappa_i})}^k \log(\frac{  P_{\q_2}(\vect{x}^{\,-}_{f})p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})) } \Big) \\
+   $P_{\q}(\vect{x}|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i}) = P_{\q_2}(\vect{x}_{\upkappa_i})$}\\
+=&  \frac{1}{|S^+|}\sum_{i=1}^n \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) } p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) } ) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,i\in S^+_{\upkappa_i})}^k \log(\frac{  P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})p(\vect{x}^+ \in S^+_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})) } \Big) \\
    = & \frac{1}{|S^+|}\sum_{i=1}^n \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \log(p(\vect{x}^+ \in S^+_{\upkappa_i})^{k+1})\\
-  &   +  \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})})   \Big) \\
+  &   +  \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})})   \Big) \\
 \intertext{We now drop the term containing the probability of assignment to a feature group $p(\vect{x}^+ \in S^+_{\upkappa_i})$ since it is outside of the learned model parameters $\vec{\phi}$ and fixed in advance:}\\
-    \propto & \frac{1}{|S^+|} \sum_{i=1}^n \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})}) \Big) \\
-    \xrightarrow[|S^+|\rightarrow \infty]{ }  & \sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{f})}) \Big] \\
-   & = \sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $f$}) \Big]
+    \propto & \frac{1}{|S^+|} \sum_{i=1}^n \sum_{\vect{x}^+ \in S^+_{\upkappa_i}} \Big( \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})}) \Big) \\
+    \xrightarrow[|S^+|\rightarrow \infty]{ }  & \sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ \log(\frac{e^{s(\vect{x}^+,\vec{\phi}) }}{e^{s(\vect{x}^+,\vec{\phi}) } + P_{\q_2}(\vect{x}^+_{\upkappa_i}) }) + \sum_{\vect{x}^{\,-} \sim \q(.|\vect{x}^+,\vect{x}^+ \in S^+_{\upkappa_i})}^k \log(\frac{ P_{\q_2}(\vect{x}^{\,-}_{f})}{e^{s(\vect{x}^{\,-},\vec{\phi}) } + P_{\q_2}(\vect{x}^{\,-}_{\upkappa_i})}) \Big] \\
+   & = \sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $\upkappa_i$}) \Big]
 \end{align*}
 
 Thus, the loss function is just a convex combination  of the loss functions of the targeted classifiers for each of the $p$ features, and by extension so is the gradient since:
 
-\[\frac{\partial }{\partial \phi}\sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $f$}) \Big] =
- \sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) \frac{\partial }{\partial \phi}E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $f$}) \Big]\]
+\[\frac{\partial }{\partial \phi}\sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $\upkappa_i$}) \Big] =
+ \sum_{i=1}^n p(\vect{x}^+ \in S^+_{\upkappa_i}) \frac{\partial }{\partial \phi}E\Big[ L(\vec{x} |\vec{\phi}, \text{target = $\upkappa_i$}) \Big]\]
  Thus the algorithm will, at each step, learn a convex combination of the gradient for a targeted classifier on feature $f$, with weights proportional to the feature group sampling probabilities in step 1 of the sampling algorithm. Note that if feature groups are not singletons, the gradient from unsupervised $\Feat2Vec$ will analogously be a convex combination of $n$ gradients learned from supervised learning tasks on each of the $n$ feature groups.
 \end{proof}
 
