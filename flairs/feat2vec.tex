@@ -425,7 +425,7 @@ Other functional forms of $\phi_i$ we have explored in our experiments include:
 \item A deep, fully connected neural network that projects a scalar, such as average rating, into a $r$-dimensional embedding space. This extraction function, by treating the input as numerical, will require scalars close in value to have similar embeddings.
 \end{itemize}
 Any neural function that outputs a $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
-
+Although in this work we have only used datasets with natural language, categorical and numerical features, it would be straightforward to incorporate other types of data - eg. images or time series - with the appropriate feature extraction functions.
 
 
 % As a concrete example of feature grouping, consider a user-level dataset with information on past purchases of 2 products ($p_1,p_2$) and 2 shipping locations ($l_1,l_2$). A data scientist may want interactions to occur exclusively between locations and purchases, because they believe interactions between purchases or between locations are non-informative. There would then be 2 feature groups: all recorded purchases, and all recorded shipping locations:
@@ -560,7 +560,7 @@ Typically, this loss will be for a prediction task, and involve at least two fea
 
 Consider a target feature group $g_i$ that exists in a high dimensional space.
 This could be a one-hot encoding of a categorical variable with a large number of possible values.
-In such a scenario, it is overwhelmingly costly to feed the model all negative labels, particularly if the model is sparse.
+In such a scenario, it is overwhelmingly costly to feed the model all negative labels.
 In these cases, we may instead use a binary classifier with implicit sampling~\cite{samplingnotes}.
 In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
 %$\Word2Vec$ makes use of an algorithm called Negative Sampling, that has little theoretical guarantees~\cite{samplingnotes}.
@@ -572,7 +572,7 @@ In implicit sampling, instead of using all of the possible negative labels, one 
 %EXCLUDED bayesian_pairwise_ranking,; duplicitous reference.
 
 
-\subsection{Self-supervised Learning From Data}
+\subsection{Self-Supervised Learning From Data}
 \label{sec:sampling}
 
 We now discuss how $\Feat2Vec$ can be used to learn embeddings in an self-supervised setting with no explicit target for prediction.
@@ -704,24 +704,20 @@ In other words, it optimizes $n$ multi-label classifiers, where each classifier 
 
 \section{Empirical Results}
 \label{sec:evaluation}
+For all our experiments, we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters. In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
 
 \subsection{Supervised Embeddings}
 \label{sec:targeted embeddings}
 
 We now address our working hypotheses for evaluating supervised embeddings.
 %To avoid overfitting, for all our experiments we define a training, development and a test.
-For all our experiments we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters.
 %Since these datasets are large and require significant time to train on an Nvidia K80 GPU cluster, we report results on only a single training-test split.
 %For the multi-label classification task in \ref{sec:coldstart} we predict a probability for each document-label pair and use an evaluation metric called Area Under the Curve (AUC) of the Receiver Operating Characteristic (ROC).
 Since we only observe positive labels during supervised training, for each positive label in the test set we sample negative labels according to the label frequency.
-This ensures that if a model merely predicts the labels according to their popularity, it would have an AUC of 0.5.
 %A caveat of our evaluation strategy is that we could be underestimating the performance of our models---there is a small probability that  the sampled negatives labels are false negatives.
 %However, since we apply the same evaluation strategy consistently across our methods and baselines, the relative difference of the AUC is meaningful.
 %We choose the AUC as a metric because it is popular for both classification and ranking problems.
 For the regression task, we use mean squared error (MSE) as the evaluation metric.
-In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
-We share most of the code for the experiments online\footnote{\url{https://goo.gl/zEQBiA}} for reproducibility.
-
 % Table~\ref{deepout-datasetsl} provides descriptive statistics of the datasets that we consider.
 For our feature extraction function $\phi$ for text, we use  a Convolutional Neural Network (CNN) that  has been shown to be effective for natural language tasks~\cite{DBLP:journals/corr/KalchbrennerGB14}.
 %In Appendix~\ref{appendix:cnndetails} we describe this network  and its hyper-parameters.
@@ -851,10 +847,13 @@ Given a held-out instance, we rank all possible values of the target group by co
 Rankings are evaluated with according to  their  mean percentile rank (MPR):
 $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max_i R_i)$, where $R_i$ is the rank of the entity under our evaluation procedure for observation $i$.
 A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so lower is better under this metric.
-We will use this method to compare the performance of $\Feat2Vec$ algorithm and compare its performance to $\Word2Vec$'s CBOW algorithm for learning embeddings. For $\Word2Vec$, each record is treated as a separate document. To incorporate non-text data in $\Word2Vec$, we tokenize all feature values and treat them as words in the $\Word2Vec$ training corpus (e.g. a movie record flagged as belonging to the horror genre has the token  ``genre\_horror'' in its $\Word2Vec$ training document).
+Under this evaluation, we will compare the performance of $\Feat2Vec$ algorithm to $\Word2Vec$'s CBOW algorithm for learning embeddings. To create a corpus for training $\Word2Vec$,  each record in the data is treated as a separate document.
+Specifically, we tokenize all feature values in a record and treat them as words (e.g. a movie record flagged as belonging to the horror genre has the token  \texttt{genre\_horror} in its document).
+We set the $\Word2Vec$ context window wide enough so that training is invariant to the token order.
 %
-In our experiments, we set $\alpha_1=.25$, $\alpha_2=0.75$, and $k=5$. Wherever possible, we use the same hyperparameters across embedding models ($\Word2Vec$, $\Doc2Vec$, $\Feat2Vec$).
-We chose an $\alpha_1$ value that would highlight $\Feat2Vec$'s ability to prioritize learning of low-complexity feature groups which nonetheless appear in each observation.
+Wherever possible, we use common hyperparameters across models from \cite{mikolov2013distributed}.
+Explicitly, for our unsupervised $\Feat2Vec$ model, we set $\alpha_1=.25$, $\alpha_2=0.75$, and $k=5$.
+Our novel feature group weighting parameter, $\alpha_1$, was not tuned, but instead set ex-ante to a value that would highlight $\Feat2Vec$'s ability to prioritize learning of low-complexity feature groups which nonetheless appear in each observation.
 We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
 %In particular, in the movie dataset we  compare the similarity of movie directors to those of actors who were cast in the same film for a left-out set of films.
 %For our educational dataset, we compare rankings of textbooks by evaluating the similarity of textbook and user embeddings.
@@ -920,11 +919,10 @@ Principal actors & Bag of categories & 1,104,280      \\\bottomrule
 
 \subsubsection{Results}
 
-After training IMDB embeddings, we use cast members associated with movies in the test set and predict the actual director of the film.
+After training IMDB embeddings, we use cast members in a held out set of movies to  predict the actual director of the film.
 We rank directors by cosine similarity of their embedding to the title's cast member feature group embedding.
 %If there is a cast member in the test dataset who did not appear in the training data, we exclude them from the summation.
 For the educational dataset, we directly  retrieve the most similar textbooks to the user embedding.
-
 Table \ref{tab:eval} presents our evaluation results.
 $\Feat2Vec$ outperforms CBOW in the MPR metric.
 Additionally, while CBOW predicts the actual director 1.26\% of the times, $\Feat2Vec$ does so 2.43\% of the time, a 92\% improvement in Top-1 Precision over CBOW.
@@ -953,16 +951,16 @@ Educational & 25.2\% & 29.2\% \\
 %One of our goals in this work is a general-purpose algorithm that can handle arbitrary features.
 %We study  $\Feat2Vec$'s performance on a continuous feature. %non-categorical features, we evaluate the embeddings calculated using
 We now focus on how well $\Feat2Vec$ performs on a real-valued feature.  We expect this task to highlight $\Feat2Vec$'s advantage over token-based embedding learning algorithms, such as $\Word2Vec$. Our rating embedding extraction function (a 3-layer DNN) will require embeddings of numerically similar ratings to be close, while $\Word2Vec$ will treat two numerically different ratings as completely different entities.
-We evaluate the prediction of test dataset ratings by choosing the rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
+We evaluate the prediction of IMDB ratings by choosing the rating embedding most similar\footnote{As before, the metric is cosine similarity.} to the embedding of the movie's director, and compute the MSE of the predicted rating in the test dataset.
  $\Feat2Vec$ scores an MSE of 6.6, while  $\Word2Vec$ (CBOW)  scores 9.3.
 
 We also use the Yelp dataset, predicting the most similar rating embedding to the review text embeddings produced by Feat2Vec, Word2Vec (CBOW), and Doc2Vec (DM).
 Doc2Vec is only used for the Yelp dataset because there is no clear ``document'' in the IMDB dataset, while in the Yelp dataset the review text is a natural candidate.
 For Word2Vec and Doc2Vec, the review text embedding is the average of word embeddings, analogous to the context vector used for learning in these algorithms. Figure \ref{fig:confmat} reports the confusion matrices for each model from this experiment.
 %As a baseline, we compare our metrics to random predictions using the empirical distribution of ratings in the data. %, the best feasible non-personalized prediction.
-In general, Word2Vec is poor in its predictive power, predicting 5 stars for 97\% of the test sample.
+Word2Vec is poor in its predictive power, predicting 5 stars for 97\% of the test sample.
 Though Feat2Vec and Doc2Vec yield comparable MSE (2.94 vs. 2.92, respectively), Feat2Vec outperforms Doc2Vec by a substantial margin in classification error rate (55\% vs. 73\%) and mean absolute error (1.13 vs. 1.31).
-As made evident by the figure, Doc2Vec is unable to identify low rating reviews: only 0.4\% of Doc2vec predictions are $\leq$ 2 stars, despite this comprising 20\% of the data. In contrast, Feat2Vec is more diverse in its predictions, and better able to identify extreme reviews.
+In general, Doc2Vec is unable to identify low rating reviews: only 0.4\% of Doc2vec predictions are $\leq$ 2 stars, despite this comprising 20\% of the data. In contrast, Feat2Vec is more diverse in its predictions, and better able to identify extreme reviews.
 %This occurs because Doc2Vec only learns to predict the modal outcome; XX\% of Doc2Vec's predictions are 5 stars, compared to YY\% of Feat2Vec's, despite the fact that only ZZ\% of the test datasets ratings are 5 stars.
 %Only Feat2Vec performs well along both metrics. %, relative to other self-supervised methods.
 
@@ -1033,24 +1031,21 @@ it decouples feature extraction from prediction for datasets with multiple featu
 % Nonetheless, a limitation of our work is that we do not compare with StarSpace, which future work may decide to do.
 
 
-In the supervised setting,  $\Feat2Vec$ is able to calculate embeddings for passages of texts. We show  results  outperforming an algorithm specifically designed for text---even when using the same feature extraction CNN.
+In the supervised setting,  $\Feat2Vec$ outperforms an algorithm specifically designed for text---even when using the same feature extraction CNN.
 %This suggests that the need for  ad-hoc networks should be situated in relationship to the improvements over a general-purpose method.
-
 %In the self-supervised setting, $\Feat2Vec$'s embeddings are able to capture relationships across features that can be twice as good as $\Word2Vec$'s CBOW algorithm on some evaluation metrics.
 In the self-supervised setting, $\Feat2Vec$ exploits the structure of a dataset to learn embeddings in a more sensible way than existing methods. This yields performance improvements in our ranking and prediction tasks.
 %The sampling method, and loss function that we use have interesting theoretical properties.
-To the extent of our knowledge, Self-Supervised $\Feat2Vec$  is the first method to calculate continuous representations of data with multi-modal feature types and no explicit labels.
-
-
+To the extent of our knowledge, self-supervised $\Feat2Vec$  is the first method to calculate continuous representations of data with multi-modal feature types and no explicit labels.
 
 Future work could study how to reduce the amount of  human knowledge our approach requires;
 for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
 These ideas can extend to our codebase that we make available
-\footnote{The $\Feat2Vec$ model code is available \href{https://www.dropbox.com/sh/wdr2sgt0z9gj6kb/AABlzw7QhteTYViSoMk3CDZpa?dl=0}{here}. The experiments using non-proprietary data are available \href{https://www.dropbox.com/sh/uc07ng403i4ss9a/AAAPshFzdOug_ooeLn4SGR3Ua?dl=0}{here}.
+\footnote{The $\Feat2Vec$ model code is available \href{https://www.dropbox.com/sh/wdr2sgt0z9gj6kb/AABlzw7QhteTYViSoMk3CDZpa?dl=0}{here}. The self-supervised experiments using non-proprietary data are available \href{https://www.dropbox.com/sh/uc07ng403i4ss9a/AAAPshFzdOug_ooeLn4SGR3Ua?dl=0}{here} and the supervised experiment is available \href{https://goo.gl/zEQBiA}{here}.
 }.
 %Overall, we evaluate supervised and self-supervised Feat2Vec on 2 datasets each.
 %Our evaluation is limited to two datasets---a public dataset that is freely available,  and a proprietary one that we are unable to distribute.
-Though further experimentation is necessary, we believe that our results are an encouraging step towards general-purpose embedding models.
+Though further experimentation is necessary, we believe that our results are an encouraging step forward towards general-purpose embedding models.
 
 
 {
