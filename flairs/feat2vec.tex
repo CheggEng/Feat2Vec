@@ -54,10 +54,10 @@
 \title{Beyond Word Embeddings: Dense Representations for Multi-modal Data}
 
 \author{
-  Luis Armona,\textsuperscript{\rm 1} Jos\'e Gonz\'alez Brenes,\textsuperscript{\rm 2} Ralph Edezath\textsuperscript{\rm 2} \\
+  Luis Armona,\textsuperscript{\rm 1} Ralph Edezhath\textsuperscript{\rm 2}  Jos\'e Gonz\'alez Brenes,\textsuperscript{\rm 2} \\
   \textsuperscript{\rm 1}Department of Economics, Stanford University, \\
   \textsuperscript{\rm 2}Chegg, Inc.\\
-  larmona@stanford.edu, jgonzalez@chegg.com, redezath@chegg.com
+  larmona@stanford.edu,redezhath@chegg.com, jgonzalez@chegg.com 
 }
 
 \begin{document}
@@ -188,7 +188,7 @@ Typically, this loss will be for a prediction task, and involve at least two fea
 
 Consider a target feature group $g_i$ that exists in a high dimensional space.
 This could be a one-hot encoding of a categorical variable with a large number of possible values.
-In such a scenario, it is overwhelmingly costly to feed the model all negative labels.
+In such a scenario, it is overwhelmingly costly to feed the model all possible negative labels.
 In these cases, we may instead use a binary classifier with implicit sampling~\cite{samplingnotes}.
 In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
 
@@ -340,7 +340,7 @@ Factorization) \\
 \subsubsection{Comparison with alternative CNN-based text factorization}
 \label{ratingpred}
 We now compare  with a method called DeepCoNN, a deep network specifically designed for  incorporating text into matrix factorization~\cite{deepconn}---which reportedly,  is the state of the art for predicting customer ratings when textual reviews are available.
-To make results comparables, the $\Feat2Vec$ experiments use the same feature extraction function used by DeepCoNN.
+To make results comparable, the $\Feat2Vec$ experiments use the same feature extraction function used by DeepCoNN.
 We evaluate  on the Yelp dataset\footnote{\url{https://www.yelp.com/dataset/challenge}}, which consists of 4.7 million reviews of restaurants.
 For each user-item pair, DeepCoNN concatenates the text from all reviews for that item and all reviews by that user.
 The concatenated text is fed into a feature extraction function followed by a factorization machine.
@@ -393,7 +393,7 @@ Table \ref{tab:features} summarizes our feature groups. For groups with multiple
 
 
 \paragraph{Education}
-We use a dataset from an anonymized leading technology company that provides educational services.
+We use a dataset from a leading technology company that provides educational services.
 In this proprietary dataset, we have 57  million observations and 9 categorical feature types which include textbook identifier, user identifier, school identifier,
 along with other proprietary features.
 Each observation is an interaction a user had with a textbook.
