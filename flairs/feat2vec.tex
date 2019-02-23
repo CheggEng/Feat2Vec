@@ -48,16 +48,16 @@
 %
 \pdfinfo{
 /Title (Beyond Word Embeddings: Dense Representations for Multi-modal Data)
-/Author (Luis Armona, Jose Gonzalez Brenes, Ralph Edezath)
+/Author (Luis Armona, Ralph Edezath, Jos\'e P. Gonz\'alez-Brenes)
 }
 
 \title{Beyond Word Embeddings: Dense Representations for Multi-modal Data}
 
 \author{
-  Luis Armona,\textsuperscript{\rm 1\rm 2} Ralph Edezhath\textsuperscript{\rm 2}  Jos\'e Gonz\'alez Brenes,\textsuperscript{\rm 2} \\
+  Luis Armona\textsuperscript{\rm1,\rm 2}, Ralph Edezhath\textsuperscript{\rm 2},  Jos\'e P. Gonz\'alez-Brenes,\textsuperscript{\rm 2} \\
   \textsuperscript{\rm 1}Department of Economics, Stanford University, \\
   \textsuperscript{\rm 2}Chegg, Inc.\\
-  larmona@stanford.edu,redezhath@chegg.com, jgonzalez@chegg.com 
+  larmona@stanford.edu, \{redezhath, jgonzalez\}@chegg.com
 }
 
 \begin{document}
@@ -82,7 +82,8 @@ For example, in the Nextflix challenge, movie identifiers  are embedded to predi
 On the other hand, \textbf{(ii)~self-supervised methods} (sometimes referred to as unsupervised methods) are not tuned for the prediction task they are ultimately used for.
 For example, word embedding algorithms such as $\Word2Vec$~\cite{mikolov2013distributed} are self-supervised. These algorithms are typically evaluated by analogy solving, or sentiment analysis~\cite{le2014distributed}, even though their loss functions are not tuned for either of these tasks.
 
-In this paper we propose $\Feat2Vec$ as a novel method that  embeds arbitrary feature types, such as text, images, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
+Throughout this paper, we liberally refer as multi-modal any data that has different types of information.
+In this paper we propose $\Feat2Vec$ as a novel method that  embeds multi-modal data, such as text, images, numerical or categorical data, in a common vector space---for both supervised and self-supervised scenarios.
 We believe that this is the first self-supervised algorithm that is able to calculate embeddings from data with multiple feature types.
 Consider the non-trivial work that was required to extend a model like Word2Vec to support  additional features.
 The authors of the seminal Doc2Vec~\cite{le2014distributed} paper needed to design both a new neural network and a new sampling strategy  to add a single feature (document ID).
@@ -94,6 +95,11 @@ In this section we describe how $\Feat2Vec$  learns embeddings of feature groups
 
 \subsection{Model}
 \label{sec:algoralph}
+$\Feat2Vec$ operates on multi-modal data that naturally groups into different types.
+For example, we may group individual words into a single ``text'' feature group;
+or we may group individual pixels into a single ``image'' feature group.
+We define an entity to be a particular value or realization of a feature group. 
+
 $\Feat2Vec$ predicts  a target output  $\hat y$ from a list of feature groups, constructed from a partition $\vect{\pmb{\upkappa}}$ of raw features ${\vect{\mathbf x}}$:
 \begin{align}
   {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
@@ -124,7 +130,7 @@ where $ \vect{\uptheta}_r $ are learned weights. Other functional forms of $\phi
 \item A deep, fully connected neural network that projects a scalar, such as average rating, into an $r$-dimensional embedding space. This extraction function, by treating the input as numerical instead of categorical, requires inputs close in value (e.g. 4.01 and 4.02 stars) to have similar embeddings.
 \end{itemize}
 Any neural function that outputs an $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
-Although in this work we have only used datasets with natural language, categorical and numerical features, it would be straightforward to incorporate other types of data - eg. images or audio - with the appropriate feature extraction functions, enabling the embedding of multi-modal features in the same space.
+Although in this work we have only used datasets with natural language, categorical and numerical features, it would be straightforward to incorporate other types of data--eg. images or audio--with the appropriate feature extraction functions, enabling the embedding of multi-modal features in the same space.
 
 Figure~\ref{fig:architecture} compares existing factorization methods  with our novel model.
 Figure~\ref{fig:factorization_machine} shows a Factorization Machine~\cite{rendle2010factorization} that embeds each feature.
@@ -161,7 +167,9 @@ The caveat of this architecture is that is no longer  possible to interpret the 
 \end{figure*}
 
 
-The structure of the $\Feat2Vec$ model significantly expands previously published models.
+Our work in $\Feat2Vec$  significantly expands previously published models.
+For example, Principal Component Analysis (PCA) is a common method to learn embeddings of individual dimensions of  data.
+Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions in PCA when we are interested in treating a subset of dimensions as a single group, such as words in an item's description.
 In traditional factorization methods, item identifiers are embedded and thus need to be observed during training (i.e., cold-start problem).
 $\Feat2Vec$ can learn an embedding from an alternative characterization of an item, such as a textual description.
 $\Feat2Vec$ extends Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and we use feature extraction functions.
@@ -175,12 +183,13 @@ In contrast, $\Feat2Vec$ allows continuous features, and does not require the us
 We can learn the the parameters of a Feat2Vec model $ \bm\uptheta$ using training data by minimizing a loss function $\mathcal L$:
 \label{sec:learning}
 \begin{equation}
-\arg \min_{\vect{\uptheta}} \sum_x  \mathcal{L}\bigl(  y(x), \hat y(x;\vect{\uptheta})\bigr) + \gamma ||  \bm{\uptheta}||^{w}
+\arg \min_{\vect{\uptheta}} \sum_x  \mathcal{L}\bigl(  y(x), \hat y(x;\vect{\uptheta})\bigr) + \gamma 
+%||  \bm{\uptheta}||^{w}
 \label{eq:learning}
 \end{equation}
 Here, $y(x)$  is the true target value for $x$ obtained from training data, and $\hat{y}(x)$ is the one estimated by the model (Equation \ref{eq:deepfm});
 $\bm\uptheta$ represents the parameters learned in during training (i.e. the parameters associated with the extraction functions $\phi_i$).
-The hyperparameter $\gamma$ controls the amount of regularization.
+%The hyperparameter $\gamma$ controls the amount of regularization.
 For labeling and classification tasks, we optimize the binary cross-entropy.
 
 It is straightforward to optimize Equation~\ref{eq:learning} directly.
@@ -308,7 +317,8 @@ In other words, it optimizes $n$ multi-label classifiers, where each classifier 
 
 \section{Empirical Results}
 \label{sec:evaluation}
-For all our experiments, we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters. In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
+For all our experiments, we define a development set and a single test set which is 10\% of the dataset, and a part of the development set is used for early stopping or validating hyper-parameters.
+% In preliminary experiments we noticed that regularization slows down convergence with no gains in prediction accuracy, so we avoid overfitting only by using early stopping.
 
 \subsection{Supervised Embeddings}
 \label{sec:targeted embeddings}
@@ -371,18 +381,18 @@ Under this evaluation, we will compare the performance of $\Feat2Vec$ algorithm 
 Specifically, we tokenize all feature values in a record and treat them as words (e.g. a movie record flagged as belonging to the horror genre has the token  \texttt{genre\_horror} in its document).
 We set the $\Word2Vec$ context window wide enough so that training is invariant to the token order.
 Wherever possible, we use common hyperparameters across models from \cite{mikolov2013distributed}.
-Explicitly, for our unsupervised $\Feat2Vec$ model, we set $\alpha_1=.25$, $\alpha_2=0.75$, and $k=5$.
+Explicitly, for our self-supervised $\Feat2Vec$ model, we set $\alpha_1=.25$, $\alpha_2=0.75$, and $k=5$.
 Our novel feature group weighting parameter, $\alpha_1$, was not tuned, but instead set ex-ante to a value that would highlight $\Feat2Vec$'s ability to prioritize learning of low-complexity feature groups which nonetheless appear in each observation.
 We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
 
 
 
-\begin{figure*}[th]
+\begin{figure}[th]
 \centering
-\includegraphics[width=.8\textwidth]{../paper/output/yelp/text_rating_confusionmat_numbers}
+\includegraphics[width=.5\textwidth]{../paper/output/yelp/text_rating_confusionmat_numbers}
 \caption{Confusion Matrices of Self-Supervised Yelp Ratings Predictions}
 \label{fig:confmat}
-\end{figure*}
+\end{figure}
 
 
 \paragraph{Movies}
@@ -480,7 +490,6 @@ for example by automatically grouping features into entities, or by automaticall
 These ideas can extend to our codebase that we make available
 \footnote{The $\Feat2Vec$ model code is available  here: \url{https://www.dropbox.com/sh/wdr2sgt0z9gj6kb/AABlzw7QhteTYViSoMk3CDZpa?dl=0}. The self-supervised experiments using non-proprietary data are available here: \url{https://www.dropbox.com/sh/uc07ng403i4ss9a/AAAPshFzdOug_ooeLn4SGR3Ua?dl=0}{here}. The supervised experiments are available here: \url{https://goo.gl/zEQBiA}.
 }.
-
 Though further experimentation is necessary, we believe that our results are an encouraging step forward towards general-purpose embedding models.
 
 
