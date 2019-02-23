@@ -54,7 +54,7 @@
 \title{Beyond Word Embeddings: Dense Representations for Multi-modal Data}
 
 \author{
-  Luis Armona,\textsuperscript{\rm 1} Ralph Edezhath\textsuperscript{\rm 2}  Jos\'e Gonz\'alez Brenes,\textsuperscript{\rm 2} \\
+  Luis Armona,\textsuperscript{\rm 1\rm 2} Ralph Edezhath\textsuperscript{\rm 2}  Jos\'e Gonz\'alez Brenes,\textsuperscript{\rm 2} \\
   \textsuperscript{\rm 1}Department of Economics, Stanford University, \\
   \textsuperscript{\rm 2}Chegg, Inc.\\
   larmona@stanford.edu,redezhath@chegg.com, jgonzalez@chegg.com 
@@ -124,7 +124,7 @@ where $ \vect{\uptheta}_r $ are learned weights. Other functional forms of $\phi
 \item A deep, fully connected neural network that projects a scalar, such as average rating, into an $r$-dimensional embedding space. This extraction function, by treating the input as numerical instead of categorical, requires inputs close in value (e.g. 4.01 and 4.02 stars) to have similar embeddings.
 \end{itemize}
 Any neural function that outputs an $r$-dimensional vector could be plugged into our framework as an extraction function $\phi$.
-Although in this work we have only used datasets with natural language, categorical and numerical features, it would be straightforward to incorporate other types of data - eg. images or time series - with the appropriate feature extraction functions.
+Although in this work we have only used datasets with natural language, categorical and numerical features, it would be straightforward to incorporate other types of data - eg. images or audio - with the appropriate feature extraction functions, enabling the embedding of multi-modal features in the same space.
 
 Figure~\ref{fig:architecture} compares existing factorization methods  with our novel model.
 Figure~\ref{fig:factorization_machine} shows a Factorization Machine~\cite{rendle2010factorization} that embeds each feature.
@@ -207,8 +207,7 @@ Instead, by grouping features using the parameter $\vect{\pmb{\upkappa}}$ in Equ
 For example, in our experiments on a movie dataset, we define a ``genre'' feature group, where we  group non-mutually exclusive indicators for movie genres, including comedy, action, and drama films.
 
 We start with a dataset $S^+ $ of records with $n$ feature groups.
-We then mark all observed records in the training set as our positive-labeled examples.
-For each positive record, we generate $k$ negative labels using the 2-step algorithm documented in Algorithm \ref{algo:samp}:
+For each positive (observed) record, we generate $k$ negative labels using the 2-step algorithm documented in Algorithm \ref{algo:samp}:
 
 \begin{algorithm}[htb]
  \caption{Implicit sampling algorithm for self-supervised $\Feat2Vec$}
@@ -361,7 +360,7 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 
 
 The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
-Since our algorithm is designed for multi-modal data, we generalize this task for feature types beyond text as follows.
+We generalize this task for feature types beyond text as follows.
 Given a dataset with $n$ feature groups $g_1,g_2,\ldots g_n$ we have trained a self-supervised $\Feat2Vec$ model on, we choose a single group $g_i$ as the ``target'' and a group $g_j$ as the predictor.
 Given a held-out instance, we rank all possible values of the target group by cosine similarity to the source group's embedding $\phi_j( \vect{x}_{\vect{\upkappa}_j})$ for that instance. We then retrieve the ranking of the actual target entity in the test dataset.
 Rankings are evaluated according to  their  mean percentile rank (MPR):
@@ -413,7 +412,7 @@ Runtime (minutes)       & Real-valued       & 1          \\
 IMDB rating (0-10)      & Real-valued       & 1          \\
 \# of rating votes & Real-valued       & 1           \\
 Is adult film?          & Boolean           & 2         \\
-Movie releaes year      & Categorical          & 271      \\
+Movie release year      & Categorical          & 271      \\
 Movie title             & Text      & 165,471       \\
 Directors               & Bag of categories & 174,382                          \\
 Genres                  & Bag of categories & 28                  \\
