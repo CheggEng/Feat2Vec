@@ -15,10 +15,9 @@
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
-
-\newcommand{\citet}[1]{\citeauthor{#1} ̃\shortcite{#1}}
+\newcommand{\citet}[1]{\citeauthor{#1} \shortcite{#1}}
 \newcommand{\citep}{\cite}
-\newcommand{\citealp}[1]{\citeauthor{#1} ̃\citeyear{#1}}
+\newcommand{\citealp}[1]{\citeauthor{#1} �\citeyear{#1}}
 
 \usepackage{upgreek}
 \usepackage{amsmath}
@@ -100,24 +99,25 @@ For example, we may group individual words into a single ``text'' feature group;
 or we may group individual pixels into a single ``image'' feature group.
 We define an entity to be a particular value or realization of a feature group.
 
-$\Feat2Vec$ predicts  a target output  $\hat y$ from a list of feature groups, constructed from a partition $\vect{\pmb{\upkappa}}$ of raw features ${\vect{\mathbf x}}$:
+$\Feat2Vec$ predicts  a target output  $\tilde y$ from observations that can be interpreted as a list of feature groups:
 \begin{align}
   {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
  \end{align}
 Each of the $n$ feature groups  $\vect{g}_i$ is defined a priori by $\vect \upkappa_i$, which indexes the dimensions in ${\vect{\mathbf x}}$  that belong to the $i$-th group.
+Thus, each observation is constructed from a partition of raw features ${\vect{\mathbf x}}$.
 The number of dimensions of each group may vary, but all of the feature groups are embedded to the same space via their \textit{feature extraction function} $\phi_i$.
 A feature extraction function $\phi_i$ acts on the features in $\upkappa_i$. Other features interact with $\vect{x}_{\vect \upkappa_i}$ only via the output of $\phi_i$.
 These functions learn how to transform each input (feature group) into an $r$-dimensional embedding in $\mathbb{R}^r$.
 More formally, we define our model for a target $y$ as follows:
 
 \begin{align}
-\hat y(\vect{\mathbf{x}\vphantom{phi}},\vec{\pmb{\phi}}, \vect{\pmb{\upkappa}\vphantom{phi}} ) = \omega \biggl(
-                       \sum_{i =1}^n \sum_{j=i}^n  \overbracket {\phi_i( \vect{x}_{\vect{\upkappa}_i}) }^{ \mathclap  { \text{group $i$}\atop \text{embedding}}} \dotp \overbracket {\phi_j( \vect{x}_{\vect{\upkappa}_j}) }^{ \mathclap  { \text{group $j$}\atop \text{embedding}}}
+\tilde y(\vect{{x}\vphantom{phi}},\vec{\pmb{\upphi}}, \vect{\pmb{\uptheta}\vphantom{phi}} ) = \omega \biggl(
+                       \sum_{i =1}^n \sum_{j=i}^n  \overbracket {\phi_i( \vect{x \vphantom{\uptheta} }_{\vect{\upkappa}_i};  \vect{\pmb{\uptheta}}) }^{ \mathclap  { \text{group $i$}\atop \text{embedding}}} \dotp \overbracket {\phi_j( \vect{x \vphantom{\uptheta} }_{\vect{\upkappa}_j}; \vect{\pmb{\uptheta}  }) }^{ \mathclap  { \text{group $j$}\atop \text{embedding}}}
   \biggr)
  \label{eq:deepfm}
 \end{align}
 
-Here, $\omega$ is an activation function.
+Here, $\omega$ is an activation (link) function.
 Intuitively, the dot product ($\dotp$) returns a scalar that measures the (dis)similarity between the embeddings of the feature groups.
 A simple  implementation of $\phi_i$ is a linear fully-connected layer, where the output of the $r$-th entry is:
 \begin{equation}
@@ -180,17 +180,17 @@ In contrast, $\Feat2Vec$ allows continuous features, and does not require the us
 \subsection{Supervised Learning from Data}
 \label{sec:learning_supervised}
 
-We can learn the the parameters of a Feat2Vec model $ \bm\uptheta$ using training data by minimizing a loss function $\mathcal L$:
+We can learn the the parameters of a Feat2Vec model $ \bm\uptheta$  by minimizing a supervised loss function $\mathcal L_\text{sup}$:
 \label{sec:learning}
 \begin{equation}
-\arg \min_{\vect{\uptheta}} \sum_x  \mathcal{L}\bigl(  y(x), \hat y(x;\vect{\uptheta})\bigr)
+\arg \min_{\bm{\uptheta}} \sum_{\vect{x} \in \mathbf{X}}  \mathcal{L}_\text{sup}\bigl( \, y(\vect{x}), \tilde y(\vect{x};{\bm \upphi, \bm\uptheta}) \, \bigr)
 %+ \gamma||  \bm{\uptheta}||^{w}
 \label{eq:learning}
 \end{equation}
-Here, $y(x)$  is the true target value for $x$ obtained from training data, and $\hat{y}(x)$ is the one estimated by the model (Equation \ref{eq:deepfm});
-$\bm\uptheta$ represents the parameters learned in during training (i.e. the parameters associated with the extraction functions $\phi_i$).
+Here, $\mathbf X$ is the training dataset, $y(\vect{x})$  is the true target value for an observation $\vect{x} \in \mathbf{X}$, and $\tilde {y}(\vect{x})$ is its estimated value (using Equation \ref{eq:deepfm});
+$\bm\uptheta$ represents the parameters learned  during training (i.e. the parameters associated with the extraction functions $\phi_i$).
 %The hyperparameter $\gamma$ controls the amount of regularization.
-For labeling and classification tasks, we optimize the binary cross-entropy.
+For labeling and classification tasks, we optimize the logistic loss.
 
 It is straightforward to optimize Equation~\ref{eq:learning} directly.
 Typically, this loss will be for a prediction task, and involve at least two feature groups---one of the feature groups is the target label that we want to predict, such as rating, and the other group(s) is the input from which we want to make the prediction, such as review text.
@@ -212,40 +212,45 @@ In natural language, these would be documents written by humans, along with docu
 Since self-supervised Feat2Vec will require positive and negative examples during training, we supply unobserved data as negative examples.
 This sampling procedure is analogous to the $\Word2Vec$ algorithm, which samples a negative observation from a noise distribution $\q_{w2v}$ that is proportional to the empirical frequency of a word in the training data.
 Unlike $\Word2Vec$, we do not constrain features types to be words.
-Instead, by grouping features using the hyperparameter $\vect{\pmb{\upkappa}}$ in Equation \ref{eq:deepfm}, the model can reason on more abstract entities in the data.
+Instead, by leveraging on the feature groups $\vect{\pmb{\upkappa}}$ of the data (Equation \ref{eq:deepfm}), the model can reason on more abstract entities in the data.
 For example, in our experiments on a movie dataset, we define a ``genre'' feature group, where we  group non-mutually exclusive indicators for movie genres, including comedy, action, and drama films.
 
-We start with a dataset $S^+ $ of records with $n$ feature groups.
-For each positive (observed) record, we generate $k$ negative labels using the 2-step algorithm documented in Algorithm \ref{algo:samp}.
+We start with a training dataset $\mathbf X^+ $ of records with $n$ feature groups that we assume to have a positive label.
+For each observed (positive) datapoint $\vect{x}^+$, we generate $k$ observations with negative labels using the 2-step algorithm documented in Algorithm~\ref{algo:samp}.
+We illustrate the intuition of this algorithm with an example.
+Consider that we have a dataset with three feature groups---entities for (i) a passage of text (bag of words), (ii) a restaurant identifier (categorical), and a sentiment (a continuous value).
+The positive examples are observations of the values seen in the training set; while negative examples are generated by modifying observations by substituting one of the entities randomly from another observation.
+For example, by substituting the passage of text, a negative example may result as:
+$\langle$\textit{Ewww, gross!!!}, \textsl{Le Fancy Restaurant}, $100\rangle$.
 
+ 
 \begin{algorithm}[htb]
- \caption{Implicit sampling algorithm for self-supervised $\Feat2Vec$}
+ \caption{Implicit sampling algorithm for self-supervised $\Feat2Vec$ \label{algo:sampling}}
  \label{algo:samp}
 \begin{algorithmic}[1]
 \footnotesize
-\Function{Feat2Vec\_Sample}{$S^+, k, \alpha_1, \alpha_2$}
+\Function{$\q$}{$\vect{x}^{\,+}; k, \alpha_1, \alpha_2$}
 \State $S^-  \leftarrow \emptyset $
-\For {$\vect{x}^{\,+} \in S^+ $}
-	\State Draw a random feature group $\upkappa_i  \sim \q_1(\{\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1) $
+%\For {$\vect{x}^{\,+} \in X^+ $}
 	\For {$j \in \{1,\ldots,k\}$}
-			\State $\vect{x}^{\,-}  \leftarrow \vect{x}^{\,+} $ \Comment  set initially to be equal to the \begin{flushright}positive sample\end{flushright}
-			\State Draw a random entity  $\tilde x \sim \q_2(\mathrm{X}_{ \upkappa_i },\alpha_2)$
-			\State $\vect{x}^{\,-}_{\upkappa_i}  \leftarrow \tilde x$ \Comment{substitute the $i$-th feature group \begin{flushright}with the sampled one\end{flushright}}
-			\State  $S^-  \leftarrow S^-  + \{  \vect{x}^{\,-} \}$
+			\State Draw  which feature group $i \sim \q_1(\bm{\upphi},\alpha_1) $ to sample
+			\State  Draw a random entity $\vect{g} \sim \q_2(\mathrm{X_{\upkappa_i}}, \alpha_2)$ 
+			\State $\vect{x}^{\,-}  \leftarrow \vect{x}^{\,+} $ \Comment  Set identical to the positive sample
+			\State $\vect{x}^{-}_{\upkappa_i} \leftarrow \vect{g}$ \Comment{substitute the $i$-th feature group with $\vect{g}$}
+			\State  $\mathbf{X}^-  \leftarrow \mathbf{X}^-  + \{  \vect{x}^{\,-} \}$ \Comment{append}
 	\EndFor
-\EndFor
-\State \Return $S^-$
+%\EndFor
+\State \Return   $\mathbf{X}^-$ \Comment{Sampled negative observations from $\vect{x}^{\,+}$}
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
 
 
-Explained in words, our negative sampling method for self-supervised learning iterates over all of the observations of the training dataset.
-For each observation $\vect{x}^{\,+}$, it randomly selects the $i$-th feature group from a noise distribution $\q_1(\cdot)$.
-Then,  it creates a negative observation that is identical to $\vect{x}^{\,+}$, except that its $i$-th feature group value is replaced by a value sampled from a noise distribution $\q_2(\cdot)$.
+More formally, our negative sampling generates observations with a negative label from an observation in the training dataset (that is assumed to have a positive label).
+First, it randomly selects the $i$-th feature group from a noise distribution $\q_1(\cdot)$.
+It then creates a negative observation that is identical to $\vect{x}^{\,+}$, except that its $i$-th feature group value is replaced by a value sampled from a noise distribution $\q_2(\cdot)$.
 In our application, we use the same class of noise distributions (flattened multinomial) for both levels of sampling, but this need not be the case.
 We now describe the noise distributions that we use.
-Let  $P_{\q}(x)$ denote the probability of $x$ under distribution $\q$.
 
 \textbf{Sampling Feature Groups.} The function $\operatorname{params}$ calculates the complexity of a  feature extraction function $\phi_i$.
 To sample a feature group, we choose a feature group $\upkappa_i$ from a multinomial distribution with probabilities proportional to a feature's complexity.
@@ -253,7 +258,7 @@ By complexity, we mean the number of parameters we learn that are associated wit
 This sampling procedure places more weight on features that have more parameters and thus are going to require more training iterations to properly learn. The sampling probabilities of each feature group are:
 
 \begin{equation}
-P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^{|\vect{\upkappa}|},\alpha_1 )  \
+P_{\q_1}(i|\bm{\upphi},\alpha_1 )  \
 = \frac{\operatorname{params}(\phi_i)^{\alpha_1}}{\sum_{j=1}^{|\vect{\upkappa}|} \operatorname{params}(\phi_j)^{\alpha_1}}
 \end{equation}
 For categorical variables using a linear fully-connected layer, the complexity is simply proportional to the number of categories in the feature group.
@@ -267,10 +272,12 @@ The hyper-parameter $\alpha_1 \in [0,1]$ flattens the distribution.
 To sample an entity within a feature group $\upkappa_i$, we use a similar strategy to $\Word2Vec$ and use the empirical distribution of values:
 %For  $\q_2(\mathrm{X}_{\upkappa_i}, \alpha_2)$, is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $\upkappa_i$, as in the negative sampling procedure used in $\Word2Vec$ :
 \begin{equation}
-P_{\q_2}(x|\mathrm{X}_{\upkappa_i},\alpha_2)  \
-= \frac{ \operatorname{count}(x)^{\alpha_2}}{\sum_{x_{\upkappa_i}' \in S^+ } \operatorname{count}(x_{\upkappa_i}')^{\alpha_2}}, \quad \alpha_2 \in [0,1]
+P_{\q_2}(\vect{g} |\mathrm{X}_{\upkappa_i},\alpha_2)  \
+= \frac{ \operatorname{count}(\vect{g} )^{\alpha_2}}{\sum\limits_{\vect{j}' \in \mathbf{X}^+_{\upkappa_i} } \operatorname{count}(\vect{j})^{\alpha_2}}, \quad \alpha_2 \in [0,1]
 \end{equation}
-Here, $\operatorname{count}(x)$ is the number of times a value $x$ of feature group $i$ appeared in the training dataset $S^+$ , and $\alpha_2$ is again a flattening hyperparameter.
+Here, $\operatorname{count}(\vect{g})$ is the number of times a value $\vect{g}$ of feature group $i$ appeared in the training dataset $\mathbf{X}^+$ .
+Thus, an entity is sampled according to its empirical distribution---whether it is a single word, a continuous number, or a passage of text.
+Again, $\alpha_2$ is simply a flattening hyperparameter.
 
 
 This method will sometimes by chance generate negatively labeled samples that \textit{do} exist in our sample of observed records.
@@ -281,38 +288,44 @@ Instead, we account for the probability of random negative labels being identica
 %%%%%%%%%%%%%%%%
 \subsubsection{The Loss Function for Self-Supervised Learning}
 \label{sec:learning}
-For our self-supervised learning of embeddings, we optimize a NCE loss function. We adjust the structural statistical model
-$\hat y = p(y=1|\vect{x},\vect{\phi}, \bm\uptheta)$,
-expressed in Equation \ref{eq:deepfm}, to account for the possibility of random negative labels that appear identical to positively labeled data.
-Since in self-supervised learning we only deal with a dichotomous label, indicating a positive or negative sample, we restrict our attention to usage of Equation \ref{eq:deepfm} with $\omega$ as a logistic link function.
-
-An additional burden of NCE is that we need to calculate a partition function $Z_{\vec{x}}$ for each unique record type $\vec{x}$ in the data that transforms the probability $\hat y$ of a positive or negative label into a well-behaved distribution that integrates to 1.
-This would introduce an astronomical amount of computation and greatly increase the complexity of our model.
-Instead, we appeal to the work of \cite{fastnnlang},
-who show that in the context of language models setting the $Z_{\vec{x}}=1$ in advance does not change the performance of the model.
+For our self-supervised learning of embeddings, we optimize a NCE loss function. 
+We need to make sure that  our loss function is well-behaved distribution that integrates to 1.
+This often requires a partition function $Z_{\vec{x}}$ for each unique record type $\vec{x}$,
+which can be computationally costly and greatly increase the complexity of our model.
+Instead, we appeal to the work of \citet{fastnnlang},
+who show that in models with many parameters setting the $Z_{\vec{x}}=1$ does not change the performance of the model.
 The intuition is that if the underlying model has enough free parameters, it will effectively learn the probabilities itself, since systemic under/over prediction of probabilities will result in penalties on the loss function.
-Written explicitly, the new structural probability model is:
-\begin{equation}
-\tilde p(y=1|\vec{x\vphantom{phi}},\vec{\phi}, \bm\uptheta) = \frac{\exp\bigl(s(\vec{x\vphantom{phi}}|\vec{\phi}, \bm\uptheta) \bigr)}{\exp( s\bigl(\vec{x\vphantom{phi}}|\vec{\phi}, \bm\uptheta), \bigr) + P_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)}
-\end{equation}
-\begin{equation}
-s(\vec{x\vphantom{phi}}|\vec{\phi}, \bm\uptheta) =
-                       \sum_{i =1}^{|\vect{\upkappa}|} \sum_{j=i}^{|\vect{\upkappa}|}   \phi_i( \vect{x}_{\vect{\upkappa}_i}) \dotp \phi_j( \vect{x}_{\vect{\upkappa}_j})
-\end{equation}
-$s(.)$ denotes the score of a record $\vec{x}$ given parameters/extraction functions,
-and $P_{\q}(.)$ denotes the probability of a record $\vec{x}$ being drawn from our negative sampling algorithm, conditional on the positively labeled record $\vect{x}^+$ the negative sample is drawn for:
-\begin{align*}
-P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathrm{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upkappa_i}|\mathrm{X}_{\upkappa_i},\alpha_2)\times \\ P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1)
-\end{align*}
 
-Our loss function $L$ optimizes $\bm\uptheta$, the parameters of the feature extraction functions $\vect\phi$, while accounting for the probability of negative samples.
-\begin{align*}
-L(S) & = \arg\min_{\bm\uptheta}  - \frac{1}{|S^+|} \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\tilde p(y=1|\vect{x}^{\,+},\vec{\phi},\bm\uptheta   ) ) \; + \\
-&  \sum_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\tilde p(y=0|\vect{x}^{\,-},\vec{\phi},\bm\uptheta   )) \Big)
-\end{align*}
+We adjust the structural statistical model of Equation~\ref{eq:deepfm} to handle self-supervised learning.
+Because we only deal with a dichotomous label (positive or negative example), we restrict our attention to the logistic link function.
+Written explicitly, this is:
+\begin{align}
+\tilde p(y=1|\vec{x\vphantom{phi}},\vect{\bm\upphi},\vect{\bm\uptheta}) &=
+ \frac{\exp\bigl(\tilde y (\vec{x\vphantom{phi}}|\vect{\bm\upphi},\vect{\bm\uptheta}) \bigr)}{\exp( \tilde y \bigl(\vec{x\vphantom{phi}}, \vect{\bm\upphi},\vect{\bm\uptheta}) \bigr) + P_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)} \nonumber \\
+ & \triangleq \hat s(\vect{x\vphantom{\uptheta}};\vect{\bm\uptheta})
+\end{align}
+For notational convenience, we refer to this structural probability as $\hat s(\cdot; \vect{\bm\uptheta})$.
+ $P_{\q}(x)$ denotes the probability of $x$ under distribution $\q$;
+ it accounts for the possibility of sampling an observation with a negative label that appears identical to one in the training data (with a positive label):
+\begin{align}
+P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathrm{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upkappa_i}|\mathrm{X}_{\upkappa_i},\alpha_2)\times \nonumber \\ 
+                                                                                            P_{\q_1}(\upkappa_i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1)
+\end{align}
+%The details of the sampling of observations with negative labels is explained in \S~\ref{sec:sampling}.
 
+We seek to optimize the parameters $\bm\uptheta$ of the feature extraction functions $\vect\phi$:
+\begin{equation}
+\arg\min_{\bm\uptheta} \sum_{\vect{x}^{\,+} \in X^+}  \mathcal{L}_\text{self} \bigl( {\vect{x}^{\,+}}; \bm\uptheta  \bigr)
+\end{equation}
+For this, we define our self-supervised loss as $\mathcal{L}_\text{self}$ as: 
+\begin{align}
+%-  \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\hat p(y=1|\vect{x}^{\,+},\bm\uptheta   ) ) +  \textstyle\sum\limits_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\hat p(y=0|\vect{x}^{\,-},\bm\uptheta   )) \Big)
+-\sum_{\vect{x}^{\,+} \in \mathbf{X}^+} \biggl( \log\bigl(\hat s(\vect{x}^{\,+};{\bm\uptheta} )   \bigr) +  \textstyle\sum\limits_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log\bigl(1-\hat s(\vect{x}^{\,-};{\bm\uptheta}) \bigr) \biggr)
+\end{align}
+
+Note that the observations with positive labels come directly from the training data, and the observations with negative labels are sampled using Algorithm~\ref{algo:sampling}.
 With $n$ feature groups, the loss function of self-supervised $\Feat2Vec$ can be shown to be a weighted average of the losses from $n$ distinct supervised $\Feat2Vec$ models,\footnote{The proof can be found in supplementary material at \url{http://web.stanford.edu/~larmona/feat2vec/supplemental_theorem.pdf}} one for each feature group.
-In other words, it optimizes $n$ multi-label classifiers, where each classifier is optimized for a different feature group. The intuition is as follows. In Algorithm \ref{algo:samp}, we first sample a target feature group $\upkappa_i$ according to $P_{\q_1}$, and then add the loss from a supervised $\Feat2Vec$ model for $\upkappa_i$ to the total self-supervised loss. Thus, $P_{\q_1}$ determines the weights the self-supervised loss function assigns to each feature group.
+In other words, it optimizes $n$ multi-label classifiers, where each classifier is optimized for a different feature group. The intuition is as follows. In Algorithm \ref{algo:samp}, we first sample a target feature group $g$ according to $P_{\q_1}$, and then add the loss from a supervised $\Feat2Vec$ model for $g$ to the total self-supervised loss. Thus, $P_{\q_1}$ determines the weights the self-supervised loss function assigns to each feature group.
 
 
 \section{Empirical Results}
