@@ -90,7 +90,7 @@ The gradient for learning embeddings with self-supervised $\Feat2Vec$ is a conve
 \label{thm:proof}
 \end{theorem}
 \begin{proof}
-Let $\mathbf{X}$ denote the training data with positive labels, $|\mathbf{X}$ the number of observations in the data, and $S^+_{\upkappa_i}$ denote the positively labeled records in $\mathbf{X}$ whose corresponding negative samples resample feature group $i$. For convenience, suppress the inclusion of learned parameters $\bm\uptheta$ in the notation in this section while understanding the feature extraction functions $\vec{\phi}$ implicitly include these parameters. We can express the loss function $L(.)$, the binary cross-entropy of the data given the self-supervised $\Feat2Vec$ model, as follows:
+Let $\mathbf{X}$ denote the training data with positive labels, $|\mathbf{X}|$ the number of observations in the data, and $S^+_{\upkappa_i}$ denote the positively labeled records in $\mathbf{X}$ whose corresponding negative samples resample feature group $i$. For convenience, suppress the inclusion of learned parameters $\bm\uptheta$ in the notation in this section while understanding the feature extraction functions $\vec{\phi}$ implicitly include these parameters. We can express the loss function $L(.)$, the binary cross-entropy of the data given the self-supervised $\Feat2Vec$ model, as follows:
 
 \begin{align*}
  L(\mathbf{X} | \vec{\phi} )  =& -  \frac{1}{|\mathbf{X}|} \sum_{\vect{x}^+ \in \mathbf{X}} \Big(\log(\tilde p(y=1|\vec{\phi},\vect{x}^+  ) ) + \sum_{\vect{x}^{\,-}\sim \q(.|\vect{x}^+)}^k \log(\tilde p(y=0|\vec{\phi},\vect{x}^{\,-})) \Big) \\
