@@ -396,7 +396,9 @@ Under this evaluation, we will compare the performance of $\Feat2Vec$ algorithm 
 Specifically, we tokenize all feature values in a record and treat them as words (e.g. a movie record flagged as belonging to the horror genre has the token  \texttt{genre\_horror} in its document).
 We set the $\Word2Vec$ context window wide enough so that training is invariant to the token order.
 We use hyperparameters $\alpha_2=.75$ and $k=5$ from \cite{mikolov2013distributed} and set the embeddings dimension to $r=50$. These hyperparameters are used in each of our embedding models during evaluation.
-The novel feature group weighting parameter in $\Feat2Vec$, $\alpha_1$, was set ex-ante to a value $\alpha_1=0.25$ that would showcase $\Feat2Vec$'s ability to oversample low-complexity feature groups. It is not tuned to the data.
+The novel feature group weighting parameter in $\Feat2Vec$ was set to $\alpha_1=0.25$ in order to highlight the differences with $\Word2Vec$, since $\alpha_1=1$ corresponds to all feature groups being sampled equally.
+This parameter $\alpha_1$ was not tuned further.
+
 We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
 
 
