@@ -104,7 +104,8 @@ $\Feat2Vec$ predicts  a target output  $\tilde y$ from observations that can be 
   {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
  \end{align}
 Each of the $n$ feature groups  $\vect{g}_i$ is defined a priori by $\vect \upkappa_i$, which indexes the dimensions in ${\vect{\mathbf x}}$  that belong to the $i$-th group.
-Thus, each observation is constructed from a partition of raw features ${\vect{\mathbf x}}$.
+Thus, each observation is constructed from a partition of raw features ${\vect{\mathbf x}}$
+(e.g,  a group can be an image, and a raw feature can be a pixel).
 The number of dimensions of each group may vary, but all of the feature groups are embedded to the same space via their \textit{feature extraction function} $\phi_i$.
 A feature extraction function $\phi_i$ acts on the features in $\upkappa_i$. Other features interact with $\vect{x}_{\vect \upkappa_i}$ only via the output of $\phi_i$.
 These functions learn how to transform each input (feature group) into an $r$-dimensional embedding in $\mathbb{R}^r$.
