@@ -94,23 +94,17 @@ In this section we describe how $\Feat2Vec$  learns embeddings of feature groups
 
 \subsection{Model}
 \label{sec:algoralph}
-$\Feat2Vec$ operates on multi-modal data that naturally group into different types.
-For example, we may group individual words into a single ``text'' feature group;
-or we may group individual pixels into a single ``image'' feature group.
+$\Feat2Vec$ predicts  a target output  $\tilde y$ from each observation ${\vect{\mathbf x}}$, which is multi-modal data that can be interpreted as a list of feature groups $\vect{g_i}$:
+\begin{align}
+%  {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
+  {\vect{\mathbf x}} =   \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle  = \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle 
+ \end{align}
+For notational convenience, we also refer to the $i$-th feature group as  $\vect{x}_{\vect \upkappa_i}$.
+In other words, each observation is constructed from a partition of raw features specified by $\vect\upkappa$.
+Examples of  how to group features include ``text'' from individual words,  or an ``image'' from individual pixels.
 We define an entity to be a particular value or realization of a feature group.
 
-$\Feat2Vec$ predicts  a target output  $\tilde y$ from each observation ${\vect{\mathbf x}}$, which can be interpreted as a list of feature groups:
-\begin{align}
-  {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
- \end{align}
-Each of the $n$ feature groups is defined a priori by $\vect \upkappa_i$, which indexes the dimensions in ${\vect{\mathbf x}}$  that belong to the $i$-th group.
-Thus, each observation is constructed from a partition of raw features ${\vect{\mathbf x}}$
-(e.g. a raw feature can be a pixel, and a group can be a collection of pixels making an image).
-The number of dimensions of each group may vary, but all of the feature groups are embedded to the same space via their \textit{feature extraction function} $\phi_i$. The parameters associated with the extraction function $\phi_i$ are denoted $\vect{{\uptheta}}_i$.
-A feature extraction function $\phi_i$ acts on the features in $\upkappa_i$. Other features interact with $\vect{x}_{\vect \upkappa_i}$ only via the output of $\phi_i$.
-These extraction functions learn how to transform each input (feature group) into an $r$-dimensional embedding in $\mathbb{R}^r$.
-More formally, we define our model for a target $y$ as follows:
-
+We define our model for a target $y$ as follows:
 \begin{align}
 \tilde y(\vect{{x}\vphantom{phi}},\vec{\pmb{\upphi}}, \vect{\pmb{\uptheta}\vphantom{phi}} ) = \omega \biggl(
                        \sum_{i =1}^n \sum_{j=i}^n  \overbracket {\phi_i( \vect{x \vphantom{\uptheta} }_{\vect{\upkappa}_i};  \vect{{\uptheta}}_i) }^{ \mathclap  { \text{group $i$}\atop \text{embedding}}} \dotp \overbracket {\phi_j( \vect{x \vphantom{\uptheta} }_{\vect{\upkappa}_j}; \vect{{\uptheta}_j  }) }^{ \mathclap  { \text{group $j$}\atop \text{embedding}}}
@@ -118,12 +112,18 @@ More formally, we define our model for a target $y$ as follows:
  \label{eq:deepfm}
 \end{align}
 
-Here, $\omega$ is an activation (link) function.
+The number of dimensions $d_i$ of each feature group may vary, but all of them are embedded to the same space via their \textit{feature extraction function} $\phi_i$.
+These functions learn how to transform each input (feature group) into an $r$-dimensional embedding of length $r$. %in $\mathbb{R}^r$.
+Thus, the range of $\phi_i : \mathbb{R}^{d_i} \rightarrow \mathbb{R}^{r}$.
+We only allow a feature extraction function $\phi_i$ to act on the features of $g_i$; and feature groups interact with each other only via the output of $\phi_i$.
+We denote the parameters of the extraction function $\phi_i$ as $\vect{{\uptheta}}_i$.
+$\omega$ is an activation (link) function.
 Intuitively, the dot product ($\dotp$) returns a scalar that measures the (dis)similarity between the embeddings of the feature groups.
+
 A simple  implementation of $\phi_i$ is a linear fully-connected layer, where the output of the $r$-th entry is:
 \begin{equation}
 \label{eq:fully_connected}
-\phi_{i}\bigl( \vect{x\vphantom{\theta}}_i; \vect{\uptheta}_{i,r}\bigr )_r= \sum_{a=1}^{d_i}  \theta_{i,r,a} x_{i,a}
+\phi_{i}\bigl( \vect{x\vphantom{\theta}}_i; \vect{\uptheta}_{i}\bigr )_r= \sum_{a=1}^{d_i}  \theta_{{i_r}_a} x_{i_a}
 \end{equation}
 where $ \vect{\uptheta}_{i,r} $ are learned weights. Other functional forms of $\phi_i$ we have explored in our experiments include:
 \begin{itemize}
@@ -170,7 +170,7 @@ The caveat of this architecture is that is no longer  possible to interpret the 
 
 Our work in $\Feat2Vec$  significantly expands previously published models.
 For example, Principal Component Analysis (PCA) is a common method to learn embeddings of individual dimensions of  data.
-Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions in PCA when we are interested in treating a subset of dimensions as a single group, such as words in an item's description.
+Although structured regularization techniques exist~\cite{jenatton2010structured}, it is not obvious how to combine different dimensions in PCA when we are interested in treating a subset of dimensions as a single group.
 In traditional factorization methods, item identifiers are embedded and thus need to be observed during training (i.e., cold-start problem).
 $\Feat2Vec$ can learn an embedding from an alternative characterization of an item, such as a textual description.
 $\Feat2Vec$ extends Factorization Machine~\cite{rendle2010factorization}, in that we allow calculating embeddings for feature groups and we use feature extraction functions.
@@ -196,11 +196,11 @@ For labeling and classification tasks, we optimize the logistic loss.
 It is straightforward to optimize Equation~\ref{eq:learning} directly.
 Typically, this loss will be for a prediction task, and involve at least two feature groups---one of the feature groups is the target label that we want to predict, such as rating, and the other group(s) is the input from which we want to make the prediction, such as review text.
 
-Consider a target entity $\vect{g}_i$ that exists in a high dimensional space.
-This could be a one-hot encoding of a categorical variable with a large number of possible values.
-In such a scenario, it is overwhelmingly costly to feed the model all possible negative labels.
-In these cases, we may instead use a binary classifier with implicit sampling~\cite{samplingnotes}.
+Multi-class classification models can be computationally costly to learn when the number of classes is very high.
+In these cases, a common work-around is to  reformulate the learning problem into a binary classifier with implicit sampling~\cite{samplingnotes}.
 In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
+Implicit sampling is also useful for multi-label classification with a large number of labels. 
+We leverage on implicit sampling for our self-supervised learning algorithm.
 
 \subsection{Self-Supervised Learning From Data}
 \label{sec:sampling}
@@ -306,7 +306,7 @@ Written explicitly, this is:
  & \triangleq \hat s(\vect{x\vphantom{\uptheta}};\vect{\bm\uptheta})
 \end{align}
 For notational convenience, we refer to this structural probability as $\hat s(\vect{x\vphantom{\uptheta}}; \vect{\bm\uptheta})$.
-Here, $\tilde y (.)$ denotes the model in Equation $\ref{eq:deepfm}$ with $\omega$ set to the identity function. This can be interpeted as the ``score'' of an observation with respect to $\Feat2Vec$.
+Here, $\tilde y (.)$ denotes the model in Equation $\ref{eq:deepfm}$ with $\omega$ set to the logistic loss. This can be interpeted as the ``score'' of an observation with respect to $\Feat2Vec$.
  $P_{\q}(x)$ denotes the probability of $x$ under distribution $\q$;
  it accounts for the possibility of sampling an observation with a negative label from Algorithm \ref{algo:samp} that appears identical to one in the training data (with a positive label):
 \begin{align}
@@ -317,12 +317,12 @@ P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathbf{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upk
 
 We seek to optimize the parameters $ \vect{\bm\uptheta}$ of the feature extraction functions $\vec{\pmb{\upphi}}$:
 \begin{equation}
-\arg\min_{ \vect{\bm\uptheta}} \sum_{\vect{x}^{\,+} \in \mathbf{X}}  \mathcal{L}_\text{self} \bigl( {\vect{x}^{\,+}};  \vect{\bm\uptheta}  \bigr)
+\arg\min_{ \vect{\bm\uptheta}} \sum_{\vect{x}^{\,+} \in \mathbf{X}}  \mathcal{L}_\text{self} \bigl( {\vect{x\vphantom{uptheta}}^{\,+}};  \vect{\bm\uptheta}  \bigr)
 \end{equation}
 For this, we define our self-supervised loss $\mathcal{L}_\text{self}$ as:
 \begin{align}
 %-  \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\hat p(y=1|\vect{x}^{\,+},\bm\uptheta   ) ) +  \textstyle\sum\limits_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\hat p(y=0|\vect{x}^{\,-},\bm\uptheta   )) \Big)
--\sum_{\vect{x}^{\,+} \in \mathbf{X}} \biggl( \log\bigl(\hat s(\vect{x}^{\,+}; \vect{\bm\uptheta} )   \bigr) +  \textstyle\sum\limits_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log\bigl(1-\hat s(\vect{x}^{\,-}; \vect{\bm\uptheta}) \bigr) \biggr)
+-\sum_{\vect{x}^{\,+} \in \mathbf{X}} \biggl( \log\bigl(\hat s(\vect{x\vphantom{uptheta}}^{\,+}; \vect{\bm\uptheta} )   \bigr) +  \textstyle\sum\limits_{\vect{x\vphantom{uptheta}}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log\bigl(1-\hat s(\vect{x}^{\,-}; \vect{\bm\uptheta}) \bigr) \biggr)
 \end{align}
 
 Note that the observations with positive labels come directly from the training data, and the observations with negative labels are sampled using Algorithm~\ref{algo:sampling}.
@@ -381,7 +381,6 @@ Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n
 
 \subsection{Self-Supervised Embeddings}
 \label{sec:unsupexp}
-
 
 
 The prediction of similar or related words is a commonly used method for evaluating self-supervised word embeddings~\cite{bojanowski2016enriching,mikolov2013efficient}.
