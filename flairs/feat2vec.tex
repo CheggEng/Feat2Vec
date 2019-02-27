@@ -192,13 +192,14 @@ $ \vect{\bm\uptheta}$ represents the parameters learned  during training (i.e. t
 %The hyperparameter $\gamma$ controls the amount of regularization.
 For labeling and classification tasks, we optimize the logistic loss.
 
-It is straightforward to optimize Equation~\ref{eq:learning} directly.
-Typically, this loss will be for a prediction task, and involve at least two feature groups---one of the feature groups is the target label that we want to predict, such as rating, and the other group(s) is the input from which we want to make the prediction, such as review text.
-
+We can optimize Equation~\ref{eq:learning} directly using gradient descent algorithms.
 Multi-class classification models can be computationally costly to learn when the number of classes is very high.
-In these cases, a common work-around is to  reformulate the learning problem into a binary classifier with implicit sampling~\cite{samplingnotes}.
-In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
-Implicit sampling is also useful for multi-label classification with a large number of labels.
+In these cases, a common work-around is to  reformulate the learning problem into a binary classifier with implicit sampling~\cite{samplingnotes}:
+simply redefine the observation by appending the target label  as one of the feature groups of the observation (e.g., rating), while keeping the other feature group(s) the same (e.g. review text).
+The new implicit target label is a binary value that indicates whether the observation exists in the training dataset.
+
+In implicit sampling, instead of using all of the possible negative labels, one samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
+Implicit sampling is also useful for multi-label classification with a large number of labels, or when negative examples are not easily available.
 We leverage on implicit sampling for our self-supervised learning algorithm.
 
 \subsection{Self-Supervised Learning From Data}
@@ -320,7 +321,7 @@ We seek to optimize the parameters $ \vect{\bm\uptheta}$ of the feature extracti
 \end{equation}
 For this, we define our self-supervised loss $\mathcal{L}_\text{self}$ as:
 \begin{align}
--\sum_{\vect{x}^{\,+} \in \mathbf{X}} \biggl( \log\bigl(\hat s(\vect{x\vphantom{uptheta}}^{\,+}; \vect{\bm\uptheta} )   \bigr) +  \textstyle\sum\limits_{\vect{x\vphantom{uptheta}}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log\bigl(1-\hat s(\vect{x}^{\,-}; \vect{\bm\uptheta}) \bigr) \biggr)
+-\sum_{\vect{x}^{\,+} \in \mathbf{X}} \biggl( \log\bigl(\hat s(\vect{x\vphantom{uptheta}}^{\,+}; \vect{\bm\uptheta} )   \bigr) +  \textstyle\sum\limits_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log\bigl(1-\hat s(\vect{x\vphantom{uptheta}}^{\,-}; \vect{\bm\uptheta}) \bigr) \biggr)
 \end{align}
 
 Note that the observations with positive labels come directly from the training data, and the observations with negative labels are sampled using Algorithm~\ref{algo:sampling}.
@@ -336,17 +337,37 @@ For all our experiments, we define a development set and a single test set which
 \subsection{Supervised Embeddings}
 \label{sec:targeted embeddings}
 
-We now address our working hypotheses for evaluating supervised embeddings.
-Since we only observe positive labels during supervised training, for each positive label in the test set we sample negative labels according to the label frequency.
+We compare with two baselines:
+(i) a method called DeepCoNN~\cite{deepconn},which is  a deep network specifically designed for  incorporating text into recommendation problems---reportedly,  it is the state of the art for predicting customer ratings when textual reviews are available;
+(ii) and with Matrix Factorization \cite{koren_matrixfactorization}, a commonly used baseline.
 
-For the regression task, we use mean squared error (MSE) as the evaluation metric.
-For our feature extraction function $\phi$ for text, we use  a Convolutional Neural Network (CNN) that  has been shown to be effective for natural language tasks ~\cite{DBLP:journals/corr/KalchbrennerGB14}.
+We use our own implementation of Matrix Factorization,
+but we rely on DeepCoNN's published results  (at time of writing, their  implementation was not available).
+Fortunately, DeepCoNN also compares on Matrix Factorization, which makes interpretation of our results easier.
+To make results comparable, the $\Feat2Vec$ experiments use the same feature extraction reported  by DeepCoNN.
+Thus, we can rule out that differences of performance are due to choices in feature extraction functions.
 Instead of tuning the hyper-parameters, we follow previously published  guidelines~\cite{zhang2015sensitivity}.
 
-\begin{table}[]
+We evaluate  on the Yelp dataset\footnote{\url{https://www.yelp.com/dataset/challenge}}, which consists of 4.7 million reviews of restaurants.
+For each user-item pair, DeepCoNN concatenates the text from all reviews for that item and all reviews by that user.
+The concatenated text is fed into a feature extraction function followed by a factorization machine.
+For $\Feat2Vec$, we build 3 feature groups: item (restaurant) identifiers, user identifiers, and review text.
+
+Table \ref{ratingpred} summarizes our results.
+We use mean squared error (MSE) as the evaluation metric.
+\algoralph{} provides a large performance increase.
+Additionally, we claim that 
+our approach is more general, because it can trivially be extended to incorporate more features.
+It is also  more efficient:
+DeepCoNN relies on concatenating text, and when the average reviews per user is $\bar{n_u}$  and the average reviews per item is $\bar{n_i}$, this results in text duplicated on average $\bar{n_i}\times \bar{n_u}$ times per training epoch.
+In contrast, for \algoralphabbr{} each review is seen only once per epoch.
+Thus \algoralphabbr{}, can be 1-2 orders of magnitude more efficient for datasets where $\bar{n_i}\times \bar{n_u}$ is large.
+
+
+\begin{table}[ht]
 \centering
 \caption{Supervised Yelp rating prediction}
-\label{ratingpredtable}
+\label{ratingpred}
 \begin{tabular}{@{}lcc@{}}
 \toprule
                      & MSE   & Improvement over MF \\ \midrule
@@ -358,23 +379,6 @@ Factorization) \\
 \end{tabular}
 \end{table}
 
-
-\subsubsection{Comparison with alternative CNN-based text factorization}
-\label{ratingpred}
-We now compare  with a method called DeepCoNN, a deep network specifically designed for  incorporating text into matrix factorization~\cite{deepconn}---which, reportedly,  is the state of the art for predicting customer ratings when textual reviews are available.
-To make results comparable, the $\Feat2Vec$ experiments use the same feature extraction function used by DeepCoNN.
-We evaluate  on the Yelp dataset\footnote{\url{https://www.yelp.com/dataset/challenge}}, which consists of 4.7 million reviews of restaurants.
-For each user-item pair, DeepCoNN concatenates the text from all reviews for that item and all reviews by that user.
-The concatenated text is fed into a feature extraction function followed by a factorization machine.
-For $\Feat2Vec$, we build 3 feature groups: item (restaurant) identifiers, user identifiers, and review text.
-
-
-Table \ref{ratingpredtable} compares our methods to  DeepCoNN's published results  because a public implementation is not available.
-\algoralph{} provides a large performance increase when comparing the  reported improvement in the mean squared error (MSE) over Matrix Factorization,
-Our approach is more general, and we claim that it is also  more efficient.
-Since DeepCoNN concatenates text, when the average reviews per user is $\bar{n_u}$  and reviews per item is $\bar{n_i}$, each text is duplicated on average $\bar{n_i}\times \bar{n_u}$ times per training epoch.
-In contrast, for \algoralphabbr{} each review is seen only once per epoch.
-Thus it can be 1-2 orders of magnitude more efficient for datasets where $\bar{n_i}\times \bar{n_u}$ is large.
 
 
 \subsection{Self-Supervised Embeddings}
@@ -400,23 +404,24 @@ This parameter $\alpha_1$ was not tuned further.
 We evaluate self-supervised $\Feat2Vec$  on 3 datasets:
 
 
-
-
-\paragraph{Movies}
+\begin{itemize}
+\item\textbf{Movies}
 The Internet Movie Database (IMDB) is a publicly available dataset\footnote{\url{http://www.imdb.com/interfaces/}} of information related to films, television programs and video games.
 We limit our experiments to data on its 465,136 movies.
 Table \ref{tab:features} summarizes our feature groups. For groups with multiple categories, we use a ``Bag of categories'' approach. For example, we sum embeddings of individual actors such as Tom Cruise to produce a single ``actor'' feature group embedding associated with a movie.
 
 
-\paragraph{Education}
+\item\textbf{Education}
 We use a dataset from a leading technology company that provides educational services.
 In this proprietary dataset, we have 57  million observations and 9 categorical feature types which include textbook identifier, user identifier, school identifier,
 along with other proprietary features.
 Each observation is an interaction a user had with a textbook.
 
-\paragraph{Yelp}
+\item\textbf{Yelp}
 We use the Yelp dataset from our supervised experiments to evaluate the efficacy of self-supervised embeddings in ratings prediction.
 We train embeddings for the following feature groups: user ID, restaurant ID, review text, number of times a review is flagged as funny, and 0-5 star rating of the review.
+\end{itemize}
+
 \begin{table}
 \centering
 \footnotesize
