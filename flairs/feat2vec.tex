@@ -344,7 +344,7 @@ To evaluate our supervised learning model, we compare against two baselines:
 We use our own implementation of Matrix Factorization,
 but we rely on DeepCoNN's published results  (at time of writing, their  implementation was not available).
 Fortunately, DeepCoNN also compares on Matrix Factorization, which makes interpretation of our results easier.
-To make results comparable, the $\Feat2Vec$ experiments use the same feature extraction reported  by DeepCoNN.
+To make results comparable, the $\Feat2Vec$ experiments use the same feature extraction reported  by DeepCoNN (a convolutional neural network architecture).
 Thus, we can rule out that differences of performance are due to choices in feature extraction functions.
 Instead of tuning the hyper-parameters, we follow previously published  guidelines~\cite{zhang2015sensitivity}.
 
@@ -504,13 +504,13 @@ Embeddings have proven useful in a wide variety of contexts, but they are typica
 We believe $\Feat2Vec$ is an important step towards general-purpose embedding methods.
 It decouples feature extraction from prediction for datasets with multiple feature types,  it can be self-supervised, and its embeddings are easily interpretable.
 
-In the supervised setting,  $\Feat2Vec$ outperforms an algorithm specifically designed for text---even when using the same feature extraction CNN.
+In the supervised setting,  $\Feat2Vec$ outperforms an algorithm specifically designed for text---even when using the same feature extraction function.
 In the self-supervised setting, $\Feat2Vec$ exploits the structure of a dataset to learn embeddings in a more sensible way than existing methods. This yields performance improvements in our ranking and prediction tasks.
 To the extent of our knowledge, self-supervised $\Feat2Vec$  is the first method to calculate continuous representations of data with multi-modal feature types and no explicit labels.
 
 Future work could study how to reduce the amount of  human knowledge our approach requires;
 for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
-These ideas can extend to our codebase that we make available
+These ideas can extend to our codebase that we make available%
 \footnote{The $\Feat2Vec$ model code is available  here: \url{https://github.com/CheggEng/Feat2Vec}. The experiments using non-proprietary data are available here: \url{http://web.stanford.edu/~larmona/feat2vec/}. 
 }.
 Though further experimentation is necessary, we believe that our results are an encouraging step forward towards general-purpose embedding models.
