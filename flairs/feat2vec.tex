@@ -97,7 +97,7 @@ In this section we describe how $\Feat2Vec$  learns embeddings of feature groups
 $\Feat2Vec$ predicts  a target output  $\tilde y$ from each observation ${\vect{\mathbf x}}$, which is multi-modal data that can be interpreted as a list of feature groups $\vect{g_i}$:
 \begin{align}
 %  {\vect{\mathbf x}} =   \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle  = \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle
-  {\vect{\mathbf x}} =   \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle  = \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle 
+  {\vect{\mathbf x}} =   \langle \vect{g}_1, \vect{g}_2, \dots, \vect{g}_n \rangle  = \langle \vect{x}_{\vect \upkappa_1}, \vect{x}_{\vect \upkappa_2}, \dots, \vect{x}_{\vect \upkappa_n} \rangle
  \end{align}
 For notational convenience, we also refer to the $i$-th feature group as  $\vect{x}_{\vect \upkappa_i}$.
 In other words, each observation is constructed from a partition of raw features specified by $\vect\upkappa$.
@@ -112,9 +112,8 @@ We define our model for a target $y$ as follows:
  \label{eq:deepfm}
 \end{align}
 
-The number of dimensions $d_i$ of each feature group may vary, but all of them are embedded to the same space via their \textit{feature extraction function} $\phi_i$.
+The number of dimensions $d_i$ of each feature group may vary, but all of them are embedded to the same space via their \textit{feature extraction function} $\phi_i : \mathbb{R}^{d_i} \rightarrow \mathbb{R}^{r}$.
 These functions learn how to transform each input (feature group) into an $r$-dimensional embedding of length $r$. %in $\mathbb{R}^r$.
-Thus, the range of $\phi_i : \mathbb{R}^{d_i} \rightarrow \mathbb{R}^{r}$.
 We only allow a feature extraction function $\phi_i$ to act on the features of $g_i$; and feature groups interact with each other only via the output of $\phi_i$.
 We denote the parameters of the extraction function $\phi_i$ as $\vect{{\uptheta}}_i$.
 $\omega$ is an activation (link) function.
@@ -199,7 +198,7 @@ Typically, this loss will be for a prediction task, and involve at least two fea
 Multi-class classification models can be computationally costly to learn when the number of classes is very high.
 In these cases, a common work-around is to  reformulate the learning problem into a binary classifier with implicit sampling~\cite{samplingnotes}.
 In implicit sampling, instead of using all of the possible negative labels, one simply samples a fixed number ($k$) from the set of possible negative labels for each positively labelled record.
-Implicit sampling is also useful for multi-label classification with a large number of labels. 
+Implicit sampling is also useful for multi-label classification with a large number of labels.
 We leverage on implicit sampling for our self-supervised learning algorithm.
 
 \subsection{Self-Supervised Learning From Data}
@@ -275,7 +274,7 @@ To sample an entity within a feature group $i$, we use a similar strategy to $\W
 %For  $\q_2(\mathrm{X}_{\upkappa_i}, \alpha_2)$, is the ``flattened'' empirical multionomial distribution over the frequency of the feature values of feature $\upkappa_i$, as in the negative sampling procedure used in $\Word2Vec$ :
 \begin{equation}
 P_{\q_2}(\vect{g} |\mathrm{X}_{\upkappa_i},\alpha_2)  \
-= \frac{ \operatorname{count}(\vect{g} )^{\alpha_2}}{\sum\limits_{\vect{j}' \in\mathrm{X_{\upkappa_i}} } \operatorname{count}(\vect{j}'')^{\alpha_2}}, \quad \alpha_2 \in [0,1]
+= \frac{ \operatorname{count}(\vect{g} )^{\alpha_2}}{\sum\limits_{\vect{j} \in\mathrm{X}_{\upkappa_i} } \operatorname{count}(\vect{j})^{\alpha_2}}, \quad \alpha_2 \in [0,1]
 \end{equation}
 Here, $\operatorname{count}(\vect{g})$ is the number of times an entity $\vect{g}$ of feature group $i$ appeared in the training dataset $\mathbf{X}$ .
 Thus, an entity is sampled according to its empirical distribution---whether it is a single word, a continuous number, or a passage of text.
@@ -298,17 +297,17 @@ Instead, we appeal to the work of \citet{fastnnlang},
 who show that in models with many parameters setting $Z_{\vec{x}}=1$ in advance does not change the performance of the model.
 The intuition is that if the underlying model has enough free parameters, it will effectively learn the probabilities itself, since systemic under/over prediction of probabilities will result in penalties on the loss function.
 
-We adjust the structural statistical model of Equation~\ref{eq:deepfm} to handle self-supervised learning.
+For self-supervised learning, we adjust the structural statistical model of Equation~\ref{eq:deepfm} to account for the probability of negative examples, as in \cite{samplingnotes}.
 Written explicitly, this is:
 \begin{align}
 \tilde p(y=1|\vec{x\vphantom{phi}},\vect{\bm\upphi},\vect{\bm\uptheta}) &=
- \frac{\exp\bigl(\tilde y (\vec{x\vphantom{phi}}|\vect{\bm\upphi},\vect{\bm\uptheta}) \bigr)}{\exp( \tilde y \bigl(\vec{x\vphantom{phi}}, \vect{\bm\upphi},\vect{\bm\uptheta}) \bigr) + P_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)} \nonumber \\
+ \frac{\exp\bigl(\tilde y (\vec{x\vphantom{phi}}|\vect{\bm\upphi},\vect{\bm\uptheta}) \bigr)}{\exp( \tilde y \bigl(\vec{x\vphantom{phi}}, \vect{\bm\upphi},\vect{\bm\uptheta}) \bigr) + k\times P_{\q}(\vec{\vphantom{phi}x}| \alpha_1,\alpha_2)} \nonumber \\
  & \triangleq \hat s(\vect{x\vphantom{\uptheta}};\vect{\bm\uptheta})
 \end{align}
 For notational convenience, we refer to this structural probability as $\hat s(\vect{x\vphantom{\uptheta}}; \vect{\bm\uptheta})$.
-Here, $\tilde y (.)$ denotes the model in Equation $\ref{eq:deepfm}$ with $\omega$ set to the logistic loss. This can be interpeted as the ``score'' of an observation with respect to $\Feat2Vec$.
- $P_{\q}(x)$ denotes the probability of $x$ under distribution $\q$;
- it accounts for the possibility of sampling an observation with a negative label from Algorithm \ref{algo:samp} that appears identical to one in the training data (with a positive label):
+Here, $\tilde y (.)$ denotes the model in Equation $\ref{eq:deepfm}$ with $\omega$ set to the identity function. This can be interpeted as the ``score'' of an observation with respect to $\Feat2Vec$.
+ $P_{\q}(x)$ denotes the probability of $x$ under noise distribution $\q$;
+ it accounts for the possibility of sampling an observation with a negative label from Algorithm \ref{algo:samp} that appears identical to one in the training data (with a positive label). The probability of a negatively labeled record $\vec{x}$, conditional on a positive datapoint $\vec{x}^+$, is simply given by:
 \begin{align}
 P_{\q}(\vec{x}|\alpha_1,\alpha_2,\mathbf{X},\vect{x}^+) = P_{\q_2}(\vec{x}_{\upkappa_i}|\mathrm{X}_{\upkappa_i},\alpha_2)\times \nonumber \\
                                                                                             P_{\q_1}(i|\operatorname{params}(\phi_i)\}_{i=1}^n,\alpha_1)
@@ -321,7 +320,6 @@ We seek to optimize the parameters $ \vect{\bm\uptheta}$ of the feature extracti
 \end{equation}
 For this, we define our self-supervised loss $\mathcal{L}_\text{self}$ as:
 \begin{align}
-%-  \sum_{\vect{x}^{\,+} \in S^+} \Big(\log(\hat p(y=1|\vect{x}^{\,+},\bm\uptheta   ) ) +  \textstyle\sum\limits_{\vect{x}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log(\hat p(y=0|\vect{x}^{\,-},\bm\uptheta   )) \Big)
 -\sum_{\vect{x}^{\,+} \in \mathbf{X}} \biggl( \log\bigl(\hat s(\vect{x\vphantom{uptheta}}^{\,+}; \vect{\bm\uptheta} )   \bigr) +  \textstyle\sum\limits_{\vect{x\vphantom{uptheta}}^{\,-}  \sim \q(\cdot|\vect{x}^+)}^k \log\bigl(1-\hat s(\vect{x}^{\,-}; \vect{\bm\uptheta}) \bigr) \biggr)
 \end{align}
 
@@ -391,7 +389,8 @@ Rankings are evaluated according to  their  mean percentile rank (MPR):
 $MPR = \frac{1}{N}\sum_{i=1}^N R_i/(\max_i R_i)$, where $R_i$ is the rank of the entity for observation $i$ under our evaluation procedure, and $\max_i R_i$ is the worst ranking that can be received.
 A score of 0 would indicate perfect performance (i.e. top rank every test sample given), so lower is better under this metric.
 
-Under this evaluation, we will compare the performance of $\Feat2Vec$ algorithm to $\Word2Vec$'s CBOW algorithm for learning embeddings. To create a corpus for training $\Word2Vec$,  each record in the data is treated as a separate document.
+Under this evaluation, we will compare the performance of $\Feat2Vec$ algorithm to $\Word2Vec$'s CBOW algorithm for learning embeddings. During training, CBOW uses a ``context window'' of nearby words to predict a target word, so there is a natural way to apply embeddings learned from CBOW to our ranking task (aggregate context embeddings in the left-out instance's source group to predict the target group).
+To create a corpus for training $\Word2Vec$,  each record in the data is treated as a separate document.
 Specifically, we tokenize all feature values in a record and treat them as words (e.g. a movie record flagged as belonging to the horror genre has the token  \texttt{genre\_horror} in its document).
 We set the $\Word2Vec$ context window wide enough so that training is invariant to the token order.
 We use hyperparameters $\alpha_2=.75$ and $k=5$ from \cite{mikolov2013distributed} and set the embeddings dimension to $r=50$. These hyperparameters are used in each of our embedding models during evaluation.
@@ -507,7 +506,7 @@ To the extent of our knowledge, self-supervised $\Feat2Vec$  is the first method
 Future work could study how to reduce the amount of  human knowledge our approach requires;
 for example by automatically grouping features into entities, or by automatically choosing a feature extraction function.
 These ideas can extend to our codebase that we make available
-\footnote{The $\Feat2Vec$ model code is available  here: \url{https://github.com/CheggEng/Feat2Vec}. The self-supervised experiments using non-proprietary data are available here: \url{http://web.stanford.edu/~larmona/feat2vec/}. The supervised experiments are available here: \url{https://goo.gl/zEQBiA}.
+\footnote{The $\Feat2Vec$ model code is available  here: \url{https://github.com/CheggEng/Feat2Vec}. The experiments using non-proprietary data are available here: \url{http://web.stanford.edu/~larmona/feat2vec/}. 
 }.
 Though further experimentation is necessary, we believe that our results are an encouraging step forward towards general-purpose embedding models.
 
