@@ -362,7 +362,7 @@ It is also  more efficient:
 DeepCoNN relies on concatenating text, and when the average reviews per user is $\bar{n_u}$  and the average reviews per item is $\bar{n_i}$, this results in text duplicated on average $\bar{n_i}\times \bar{n_u}$ times per training epoch.
 In contrast, for \algoralphabbr{} each review is seen only once per epoch.
 Thus \algoralphabbr{}, can be 1-2 orders of magnitude more efficient for datasets where $\bar{n_i}\times \bar{n_u}$ is large.
-
+Note also that Matrix Factorization cannot predict ratings for restaurants or users that have not been during training, whereas our model and DeepCoNN avoid the cold-start problem since they use the review text.
 
 \begin{table}[ht]
 \centering
