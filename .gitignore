@@ -1,7 +1,12 @@
 *.pyc
+<<<<<<< HEAD
 *.aux
 *.bbl
 *.blg
 *.log
 *.out
 *.gz
+=======
+.idea/
+.ipynb_checkpoints/
+>>>>>>> 4d6f39bedabe34dc4df80b0d3958ee64dbaa09e2
