@@ -108,12 +108,12 @@ def gen_step1_probs(fm,feature_names,alpha):
                 if l.name=='embedding_{}'.format(model_layers) or l.name=='factor_{}'.format(model_layers):
                     init_probs[i] += l.count_params()
                     break
-    print "--Original Probs--"
-    print init_probs/np.sum(init_probs)
+    print("--Original Probs--")
+    print(init_probs/np.sum(init_probs))
     init_probs = np.power(init_probs,alpha)
     init_probs = init_probs/np.sum(init_probs)
-    print "--New Probs with alpha={}--".format(alpha)
-    print init_probs
+    print("--New Probs with alpha={}--".format(alpha))
+    print(init_probs)
     return init_probs
 
 
@@ -193,7 +193,7 @@ class SamplingStrategy(Callback):
         self.df=df
         distros=[] #the list of probability vectors for each feature
         for f,i in zip(self.features,self.items):
-            print "generating probs for " + str(f)
+            print("generating probs for " + str(f))
             if self.alpha==0:
                 distros.append(np.array([1./len(i) for j in range(len(i))]))
             else:
@@ -225,14 +225,14 @@ class SamplingStrategy(Callback):
             vals = pd.DataFrame(values).groupby(0).size()
             for i,item in enumerate(itemset):
                 count_df.loc[i,'count']  = vals[item] + self.bias
-            print count_df
+            print(count_df)
             #count_df['count'] = pd.DataFrame(values).groupby(0).size() + self.bias
             count_df.loc[count_df['count'].isnull(),'count'] = self.bias
             #print pd.Series(temp_
             count_df['raw_prob'] = count_df['count']/count_df['count'].sum()
             count_df['distorted'] = count_df['raw_prob']**self.alpha
             count_df['dist'] = count_df['distorted']/count_df['distorted'].sum()
-            print count_df
+            print(count_df)
             return np.array(count_df['dist'])
 
 ############################
@@ -289,7 +289,7 @@ class ImplicitSampler():
         # Generator:
         self.df = df
         if sampling_features is None:
-            print "using all columns as sampling features since sampling_features arg was not passed"
+            print("using all columns as sampling features since sampling_features arg was not passed")
             self.sampling_features = [[f] for f in self.df.columns]
         else:
             assert all([type(i)==list for i in sampling_features]), \
@@ -301,7 +301,7 @@ class ImplicitSampler():
                     "all features should be column names or integers representing column locations"
             self.sampling_features = sampling_features
         if model_features is None:
-            print "using all columns as model features since model_features arg was not passed"
+            print("using all columns as model features since model_features arg was not passed")
             self.model_features =  [f for f in self.df.columns]
         else:
             self.model_features = model_features
@@ -315,9 +315,9 @@ class ImplicitSampler():
 
          #if no items list given, just look at the set of our given labels
         if sampling_items is None:
-            print "no sampling_items passed; generating unique item sets from df passed"
+            print("no sampling_items passed; generating unique item sets from df passed")
             sampling_items = []
-            print self.sampling_features
+            print(self.sampling_features)
             for f in self.sampling_features:
                 sampling_items.append([tuple(i) for i in self.df[f].drop_duplicates().values.tolist()])
         assert len(sampling_items) == len(sampling_features), \
@@ -329,7 +329,7 @@ class ImplicitSampler():
         self.negative_samples = negative_samples
 
         if batch_size is None:
-            print "setting batch_size to entire DF since no arg passed"
+            print("setting batch_size to entire DF since no arg passed")
             self.batch_size = len(self.df)
         else:
             self.batch_size = batch_size
@@ -366,7 +366,7 @@ class ImplicitSampler():
             "init_probs should be a 1D numpy array with length equal to number of sampling_features"
             self.init_probs = init_probs
         if self.keep_noise_probs and prob_dict is None:
-            print "calculating prob lookup dict for expedited sampling of negative labels..."
+            print("calculating prob lookup dict for expedited sampling of negative labels...")
             self.prob_dict = {}
             for f,i,p in zip(self.sampling_features,self.items,self.probabilities):
                 self.prob_dict[tuple(f)] = dict( zip([tuple(j) for j in list(i)],p) )
@@ -381,7 +381,7 @@ class ImplicitSampler():
         '''
         splits df into minibatches of size "size".
         '''
-        return (df.iloc[pos:pos + size] for pos in xrange(0, len(df), size))
+        return (df.iloc[pos:pos + size] for pos in range(0, len(df), size))
 
     def get_epoch_size(self):
         '''
@@ -413,8 +413,8 @@ class ImplicitSampler():
                         ys += y
                         ws += w.tolist()
                     if x is None or y is None or w is None:
-                        print "for some reason, it returned none?"
-                        print x,y,w
+                        print("for some reason, it returned none?")
+                        print(x,y,w)
                     keras_covars = x.to_keras_flex_format(feature_cols = self.model_features,
                                                  text_dict=self.text_dict,cutoff=self.text_cutoff)
                     if self.keep_noise_probs:
