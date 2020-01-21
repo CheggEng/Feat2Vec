@@ -58,7 +58,7 @@ class TestDeepFM(TestCase):
         groups = []
         groups.append( [("principal", feature_names)] )
         groups.append( [("f1" , feature_names)] )
-        print groups
+        print(groups)
 
         keras_model_collapsed = fm.build_model(dimensions,
                                                collapsed_type=2,
@@ -161,7 +161,7 @@ class TestDeepFM(TestCase):
         groups.append( zip(["principal"] * (len(feature_names)-1), feature_names[1:]) )
         groups.append( zip(["f1"] * (len(feature_names)-2), feature_names[2:]) )
         groups.append([ ("f1", "principal") ] )
-        print groups
+        print(groups)
         keras_model = fm.build_model(dimensions,
                                      deep_out=True,
                                      deep_out_bias=False,
@@ -305,7 +305,7 @@ class TestDeepFM(TestCase):
                     feature_names=feature_names,
                     obj="nce")
         groups = zip(["f1"] * (len(feature_names)-1), feature_names[1:])
-        print groups
+        print(groups)
         model = fm.build_model(10,
                                dropout_layer=0.5,
                                deep_out=True,
@@ -371,13 +371,13 @@ class TestDeepFM(TestCase):
                         realval=realvals)
 
 
-        print feature_dim
-        print features
+        print(feature_dim)
+        print(features)
         embed_dim = 10
         fm = fm_obj.build_model(embed_dim,
                                 l2_bias=0.0, l2_factors=0.0, l2_deep=0.0, deep_out=True,
                                 deep_out_bias=True, deep_out_activation='linear')
-        print fm.summary()
+        print(fm.summary())
 
         train = testdata.iloc[:90000, :]
         test = testdata.iloc[90000:, :]
@@ -401,7 +401,7 @@ class TestDeepFM(TestCase):
             self.skipTest("NLTK is not not installed.  Reinstall with option 'tests'")
 
             # download some text data, process it, and create some feature extraction layer to plug in
-        print "processing text..."
+        print("processing text...")
         samplesize = 2000
         reviews = []
         labels = []
@@ -488,7 +488,7 @@ class TestDeepFM(TestCase):
                                     bias_only=bias_only,
                                     dropout_input=0,
                                     dropout_layer=0)
-        print difm.summary()
+        print(difm.summary())
         earlyend = EarlyStopping(monitor='val_loss')
         difm.compile(loss='binary_crossentropy', metrics=['accuracy'], optimizer=tf.train.AdamOptimizer())
 
