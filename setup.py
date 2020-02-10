@@ -1,9 +1,12 @@
 from setuptools import setup
 
 setup(name='feat2vec',
-      version='0.8.2',
+      version='0.9.0',
       description='Feat2Vec Library',
       author='Anonymous Author for Peer Review',
+      classifiers=[
+          'Programming Language :: Python :: 3.6'
+      ],
       packages=[
                 'feat2vec'
 

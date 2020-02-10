@@ -9,7 +9,7 @@ from keras.models import Model
 from keras.utils.generic_utils import Progbar
 from keras.layers.merge import Add,Multiply,Concatenate,Dot
 from keras.constraints import non_neg
-from scaler import Scaler
+from .scaler import Scaler
 import keras.backend as K
 import itertools
 
@@ -98,11 +98,11 @@ class DeepFM():
             self.deepin_feature = deepin_feature
 
         #construct list of deep-in inputs
-        self.deepin_inputs = [deepin_inputs.pop(0) if self.deepin_feature[i] else None for i in xrange(len(feature_dimensions))]
+        self.deepin_inputs = [deepin_inputs.pop(0) if self.deepin_feature[i] else None for i in range(len(feature_dimensions))]
         assert(len(deepin_inputs) == 0), "provide deep input list of length = #deep features or # features"
 
         #construct list of extracted deep-in features
-        self.deepin_layers = [deepin_layers.pop(0) if self.deepin_feature[i] else None for i in xrange(len(feature_dimensions))  ]
+        self.deepin_layers = [deepin_layers.pop(0) if self.deepin_feature[i] else None for i in range(len(feature_dimensions))  ]
         assert (len(deepin_layers) == 0), "provide deep feature layer list of length = #deep features or # features"
 
     def check_build_params(self,l2_bias, l2_factors, l2_deep,bias_only,embeddings_only,deep_weight_groups,
